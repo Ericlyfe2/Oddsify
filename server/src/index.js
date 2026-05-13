@@ -5,7 +5,7 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { isProd, PORT, GOOGLE, SMTP } from './config/env.js';
+import { isProd, PORT, GOOGLE, SMTP, CORS_ORIGINS } from './config/env.js';
 import { generalLimiter } from './middleware/rateLimit.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { log } from './utils/logger.js';
@@ -45,8 +45,14 @@ app.use(helmet({
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // required by Google Identity Services popup
   crossOriginResourcePolicy: { policy: 'cross-origin' },           // allow Google's button assets
 }));
+const devOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const allowedOrigins = isProd ? CORS_ORIGINS : [...devOrigins, ...CORS_ORIGINS];
 app.use(cors({
-  origin: isProd ? false : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '256kb' }));

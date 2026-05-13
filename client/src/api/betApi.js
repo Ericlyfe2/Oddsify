@@ -5,7 +5,10 @@
  * - Throws an Error with .status/.body on non-2xx.
  */
 
-const API_BASE = '/api';
+// In dev, leave VITE_API_BASE unset — Vite proxies /api to the local server.
+// In production (Vercel), set VITE_API_BASE to the deployed backend, e.g.
+//   VITE_API_BASE=https://stakepoint-api.onrender.com
+const API_BASE = (import.meta.env.VITE_API_BASE || '') + '/api';
 const ACCESS_KEY  = 'bv_access';
 const REFRESH_KEY = 'bv_refresh';
 

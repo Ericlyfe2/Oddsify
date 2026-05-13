@@ -4,7 +4,8 @@
  * in side-by-side in the same browser without stepping on each other.
  */
 
-const API_BASE = '/api/admin';
+// See betApi.js — set VITE_API_BASE in production to point at the backend host.
+const API_BASE = (import.meta.env.VITE_API_BASE || '') + '/api/admin';
 const ACCESS  = 'sp_admin_access';
 const REFRESH = 'sp_admin_refresh';
 
@@ -96,13 +97,13 @@ export const adminCreateInvite   = (body) => post('/auth/invites', body);
 export const adminRevokeInvite   = (id)   => del(`/auth/invites/${id}`);
 // public — no token needed; we hit them through the same admin /api/admin/auth namespace
 export const adminInvitePreview  = async (token) => {
-  const res = await fetch(`/api/admin/auth/signup/${encodeURIComponent(token)}`);
+  const res = await fetch(`${API_BASE}/auth/signup/${encodeURIComponent(token)}`);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) { const err = new Error(body.error || res.statusText); err.status = res.status; throw err; }
   return body;
 };
 export const adminSignup = async (body) => {
-  const res = await fetch('/api/admin/auth/signup', {
+  const res = await fetch(`${API_BASE}/auth/signup`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));

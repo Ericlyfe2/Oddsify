@@ -40,6 +40,14 @@ export const RATE_LIMITS = {
 
 export const ODDS_API_KEY = env.ODDS_API_KEY || '';
 
+// Comma-separated list of allowed origins for CORS in production.
+// Example: "https://stakepoint-client.vercel.app,https://www.example.com"
+// In development, localhost is always allowed.
+export const CORS_ORIGINS = (env.CORS_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 export const PATHS = {
   root: path.resolve(__dirname, '../..'),
   data: path.resolve(__dirname, '../../data'),

@@ -5,7 +5,9 @@
 import { io } from 'socket.io-client';
 import { getAdminAccess } from './adminApi.js';
 
-const URL = (typeof window !== 'undefined' && window.location.origin) || 'http://localhost:5173';
+const URL = import.meta.env.VITE_API_BASE
+  || (typeof window !== 'undefined' && window.location.origin)
+  || 'http://localhost:5173';
 
 let socket = null;
 

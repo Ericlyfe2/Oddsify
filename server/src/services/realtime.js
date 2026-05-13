@@ -30,7 +30,7 @@
 import { Server as IOServer } from 'socket.io';
 import { verifyAccessToken } from './token.js';
 import { getUserById } from '../db/users.js';
-import { isProd } from '../config/env.js';
+import { isProd, CORS_ORIGINS } from '../config/env.js';
 import { log } from '../utils/logger.js';
 
 let io = null;
@@ -46,7 +46,9 @@ export function attachRealtime(httpServer) {
   io = new IOServer(httpServer, {
     path: '/socket.io',
     cors: {
-      origin: isProd ? false : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: isProd
+        ? CORS_ORIGINS
+        : ['http://localhost:5173', 'http://127.0.0.1:5173', ...CORS_ORIGINS],
       credentials: true,
     },
     pingInterval: 25_000,
