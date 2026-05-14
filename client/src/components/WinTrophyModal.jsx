@@ -17,7 +17,13 @@ export default function WinTrophyModal({ wins = [], onClose }) {
     const onCancel = (e) => { e.preventDefault(); onClose?.(); };
     const node = dlgRef.current;
     node?.addEventListener('cancel', onCancel);
-    return () => node?.removeEventListener('cancel', onCancel);
+    // Auto-dismiss the celebration after 45 seconds so the player isn't
+    // blocked from interacting with the rest of the site indefinitely.
+    const autoClose = setTimeout(() => onClose?.(), 45_000);
+    return () => {
+      node?.removeEventListener('cancel', onCancel);
+      clearTimeout(autoClose);
+    };
   }, [wins.length, onClose]);
 
   const totalPayout = useMemo(() => wins.reduce((s, b) => s + (Number(b.potentialWin) || 0), 0), [wins]);

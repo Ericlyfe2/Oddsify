@@ -4,6 +4,7 @@ import AppShell from './layout/AppShell.jsx';
 import Home from './pages/Home.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import WalletPage from './pages/WalletPage.jsx';
 import CasinoPage from './pages/CasinoPage.jsx';
 import VirtualsPage from './pages/VirtualsPage.jsx';
 import JackpotPage from './pages/JackpotPage.jsx';
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="/jackpot"   element={<JackpotPage />} />
               <Route path="/promos"    element={<PromosPage />} />
               <Route path="/profile"   element={<ProfilePage />} />
+              <Route path="/wallet"    element={<WalletPage />} />
               <Route path="/info"      element={<InfoPage />} />
               <Route path="/terms"     element={<Navigate to="/info#terms" replace />} />
               <Route path="/privacy"   element={<Navigate to="/info#privacy" replace />} />

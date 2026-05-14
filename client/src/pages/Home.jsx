@@ -7,6 +7,7 @@ import {
   cashOutBet,
 } from '../api/betApi.js';
 import { useToast, useAccount } from '../layout/AppShell.jsx';
+import BetSuccessModal, { toBookingCode } from '../components/BetSuccessModal.jsx';
 
 const BONUS = 0.08;
 
@@ -73,6 +74,9 @@ export default function Home({ initialChip, initialSlipTab }) {
   const [history, setHistory]       = useState([]);
   const [marketsForMatch, setMarketsForMatch] = useState(null);
   const marketsDlg = useRef(null);
+  const [betHistoryTab, setBetHistoryTab] = useState('open'); // 'open' | 'history'
+  const [successBet, setSuccessBet] = useState(null);
+  const [copiedCode, setCopiedCode] = useState(null);
 
   // Initial sport from URL change
   useEffect(() => { setSportId(sportParam); }, [sportParam]);
@@ -204,9 +208,14 @@ export default function Home({ initialChip, initialSlipTab }) {
           matchId: s.matchId, market: s.market, outcome: s.outcome, odds: s.odds,
         })),
       });
-      adjustBalance(-st, `Bet placed — receipt ${res.bet.id.slice(-6)}.`);
+      adjustBalance(-st, `Bet placed — booking code ${toBookingCode(res.bet.id)}.`);
       setSelections([]);
       setSlipPanel('mybets');
+      setSuccessBet(res.bet);
+      try {
+        const refreshed = await fetchBetHistory();
+        setHistory(refreshed.bets || []);
+      } catch { /* non-fatal */ }
     } catch (e) {
       if (e.status === 409) {
         toast('Odds changed — refreshing.');
@@ -559,24 +568,114 @@ export default function Home({ initialChip, initialSlipTab }) {
                   </div>
                 </div>
               ) : (
-                <div>
-                  {history.length === 0 ? (
-                    <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>No bets yet — place one to see it here.</p>
-                  ) : history.map((b) => (
-                    <div key={b.id} className="selection">
-                      <div className={`bet-status ${b.status === 'open' ? 'open' : b.status === 'cashed_out' ? 'won' : 'lost'}`}>
-                        {b.status === 'open' ? 'Open ticket' : b.status === 'cashed_out' ? `Cashed out · GHS ${formatAmt(b.cashOut)}` : 'Settled'}
-                      </div>
-                      <div className="sel-pick">{b.legs.length}-leg {b.mode}</div>
-                      <div className="sel-market">Stake GHS {formatAmt(b.stake)} · odds {b.totalOdds.toFixed(2)}</div>
-                      <div className="sel-teams">Potential GHS {formatAmt(b.potentialWin)}</div>
-                      {b.status === 'open' && (
-                        <button type="button" className="quick-stake" style={{ marginTop: 6 }} onClick={() => onCashOut(b.id)}>
-                          Cash out
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                <div className="bv-bets-tab">
+                  <div className="bv-bets-subnav">
+                    {[
+                      ['open',    'Open',    history.filter((b) => b.status === 'open').length],
+                      ['history', 'History', history.filter((b) => b.status !== 'open').length],
+                    ].map(([key, label, count]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`bv-bets-subtab${betHistoryTab === key ? ' active' : ''}`}
+                        onClick={() => setBetHistoryTab(key)}
+                      >
+                        {label} <span className="bv-bets-count">{count}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const filtered = history.filter((b) =>
+                      betHistoryTab === 'open' ? b.status === 'open' : b.status !== 'open'
+                    );
+                    if (!filtered.length) {
+                      return (
+                        <p style={{ fontSize: 12, color: 'var(--text-dim)', padding: '12px 0' }}>
+                          {betHistoryTab === 'open'
+                            ? 'No open tickets — place a bet to see it here.'
+                            : 'No settled bets yet.'}
+                        </p>
+                      );
+                    }
+                    return filtered.map((b) => {
+                      const code = toBookingCode(b.id);
+                      const cashOutVal = Number((b.stake * (b.totalOdds * 0.6)).toFixed(2));
+                      const onCopy = async () => {
+                        try {
+                          await navigator.clipboard?.writeText(code);
+                          setCopiedCode(code);
+                          setTimeout(() => setCopiedCode((c) => c === code ? null : c), 1400);
+                        } catch { /* ignore */ }
+                      };
+                      const placedAt = b.placedAt ? new Date(b.placedAt) : null;
+                      const placedLabel = placedAt
+                        ? placedAt.toLocaleDateString('en-GH', { day: '2-digit', month: 'short' }) +
+                          ', ' + placedAt.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
+                        : '';
+                      return (
+                        <article key={b.id} className={`bv-bet-card status-${b.status}`}>
+                          <header className="bv-bet-head">
+                            <span className={`bv-bet-status ${b.status}`}>
+                              {b.status === 'open' ? 'OPEN' :
+                               b.status === 'cashed_out' ? 'CASHED OUT' :
+                               b.status === 'won' ? 'WON' :
+                               b.status === 'lost' ? 'LOST' : 'SETTLED'}
+                            </span>
+                            <span className="bv-bet-when">{placedLabel}</span>
+                          </header>
+
+                          <div className="bv-bet-row">
+                            <span className="lbl">Total Odds</span>
+                            <strong className="val">{b.totalOdds.toFixed(2)}</strong>
+                          </div>
+                          <div className="bv-bet-row">
+                            <span className="lbl">Stake</span>
+                            <strong className="val">GHS {formatAmt(b.stake)}</strong>
+                          </div>
+                          <div className="bv-bet-row">
+                            <span className="lbl">Potential Win</span>
+                            <strong className="val val-accent">GHS {formatAmt(b.potentialWin)}</strong>
+                          </div>
+
+                          <div className="bv-bet-code">
+                            <div className="bv-bet-code-label">Booking Code</div>
+                            <div className="bv-bet-code-row">
+                              <code>{code}</code>
+                              <button type="button" className="bv-bet-copy" onClick={onCopy}>
+                                {copiedCode === code ? '✓ Copied' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {b.status === 'open' && (
+                            <button
+                              type="button"
+                              className="bv-bet-cashout"
+                              onClick={() => onCashOut(b.id)}
+                              title={`Cash out for GHS ${formatAmt(cashOutVal)}`}
+                            >
+                              Cash Out · GHS {formatAmt(cashOutVal)}
+                            </button>
+                          )}
+
+                          {b.legs?.length > 0 && (
+                            <details className="bv-bet-legs">
+                              <summary>{b.legs.length} selection{b.legs.length > 1 ? 's' : ''}</summary>
+                              <ul>
+                                {b.legs.map((l, i) => (
+                                  <li key={i}>
+                                    <span className="leg-teams">{l.home} vs {l.away}</span>
+                                    <span className="leg-pick">{l.marketName || l.market} · {l.outcome} @ {Number(l.odds).toFixed(2)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
+                        </article>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
@@ -646,9 +745,174 @@ export default function Home({ initialChip, initialSlipTab }) {
           </>
         )}
       </dialog>
+
+      <BetSuccessModal
+        bet={successBet}
+        onClose={() => setSuccessBet(null)}
+        onRebet={() => {
+          if (!successBet?.legs) return;
+          setSelections(successBet.legs.map((l) => ({
+            matchId: l.matchId, market: l.market, outcome: l.outcome, odds: l.odds,
+            home: l.home, away: l.away,
+            marketName: l.marketName || l.market,
+            league: '', minute: '', kickoff: '',
+          })));
+          setSlipPanel('slip');
+        }}
+      />
+
+      <style>{BET_HISTORY_CSS}</style>
     </>
   );
 }
+
+const BET_HISTORY_CSS = `
+.bv-bets-tab { display: flex; flex-direction: column; gap: 10px; }
+.bv-bets-subnav {
+  display: flex; gap: 6px;
+  padding: 4px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.bv-bets-subtab {
+  flex: 1;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-soft);
+  font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background .15s ease, color .15s ease;
+}
+.bv-bets-subtab:hover { color: var(--text); }
+.bv-bets-subtab.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+}
+.bv-bets-count {
+  font-size: 10px; font-weight: 700;
+  background: var(--surface);
+  color: var(--text-soft);
+  padding: 2px 6px;
+  border-radius: 999px;
+  min-width: 18px; text-align: center;
+}
+.bv-bets-subtab.active .bv-bets-count { background: var(--surface-2); color: var(--accent); }
+
+.bv-bet-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+  animation: bvBetIn .35s ease both;
+}
+@keyframes bvBetIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.bv-bet-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 2px;
+}
+.bv-bet-status {
+  font-size: 10px; letter-spacing: .12em; font-weight: 800;
+  padding: 3px 8px; border-radius: 999px;
+  text-transform: uppercase;
+}
+.bv-bet-status.open       { color: var(--accent-cool); background: rgba(106,208,255,.12); }
+.bv-bet-status.cashed_out { color: var(--accent);      background: rgba(197,255,61,.12); }
+.bv-bet-status.won        { color: var(--accent);      background: rgba(197,255,61,.18); }
+.bv-bet-status.lost       { color: var(--accent-hot);  background: rgba(255,77,61,.12); }
+.bv-bet-when { font-size: 11px; color: var(--text-dim); }
+
+.bv-bet-row {
+  display: flex; justify-content: space-between;
+  font-size: 13px;
+  padding: 3px 0;
+}
+.bv-bet-row .lbl  { color: var(--text-soft); }
+.bv-bet-row .val  { font-variant-numeric: tabular-nums; }
+.bv-bet-row .val-accent { color: var(--accent); }
+
+.bv-bet-code {
+  margin-top: 6px;
+  background: var(--surface-2);
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(106, 208, 255, .35);
+}
+.bv-bet-code-label {
+  font-size: 10px; letter-spacing: .14em;
+  color: var(--text-dim); text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.bv-bet-code-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+.bv-bet-code-row code {
+  font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+  font-size: 13px;
+  letter-spacing: .06em;
+  color: var(--accent-cool);
+  background: transparent;
+}
+.bv-bet-copy {
+  background: var(--surface);
+  border: 1px solid var(--surface-2);
+  border-radius: 6px;
+  color: var(--text-soft);
+  padding: 5px 10px;
+  font-size: 11px; font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease;
+}
+.bv-bet-copy:hover { border-color: var(--accent); color: var(--accent); }
+
+.bv-bet-cashout {
+  margin-top: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent-warm), #f6a200);
+  color: #1a1100;
+  font-weight: 800; font-size: 13px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.bv-bet-cashout:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(255, 181, 71, .35); }
+
+.bv-bet-legs {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.bv-bet-legs summary {
+  cursor: pointer;
+  color: var(--text-soft);
+  padding: 4px 0;
+}
+.bv-bet-legs ul {
+  list-style: none; padding: 0; margin: 4px 0 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.bv-bet-legs li {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface-2);
+  padding: 6px 8px; border-radius: 8px;
+}
+.bv-bet-legs .leg-teams { font-weight: 600; color: var(--text); }
+.bv-bet-legs .leg-pick  { font-size: 11px; color: var(--text-dim); }
+
+@media (max-width: 720px) {
+  .bv-bet-card { padding: 10px 12px; }
+  .bv-bet-row { font-size: 12.5px; }
+}
+`;
 
 function crestToStyle(str) {
   if (!str || typeof str !== 'string') return {};

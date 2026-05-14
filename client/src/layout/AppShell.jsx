@@ -69,12 +69,19 @@ export default function AppShell() {
             <NavLink to="/jackpot"  className={navCls}>Jackpot</NavLink>
             <NavLink to="/promos"   className={navCls}>Promotions</NavLink>
             <NavLink to="/my-bets"  className={navCls}>My Bets</NavLink>
+            <NavLink to="/wallet"   className={navCls}>Wallet</NavLink>
           </nav>
           <div className="header-right">
-            <div className="balance" title={authed ? account.displayName : 'Not signed in'}>
+            <button
+              type="button"
+              className="balance"
+              title={authed ? `${account.displayName} — open wallet` : 'Not signed in'}
+              onClick={() => authed ? navigate('/wallet') : navigate('/login?next=/wallet')}
+              style={{ cursor: 'pointer', background: 'transparent', border: 'none', font: 'inherit' }}
+            >
               <span style={{ color: 'var(--text-dim)' }}>GHS</span>
               <span className="balance-amt">{formatAmt(balance)}</span>
-            </div>
+            </button>
             <ThemeToggle />
             <button type="button" className="btn btn-ghost" onClick={openDeposit}>Deposit</button>
             {authed && <button type="button" className="btn btn-ghost" onClick={openWithdraw}>Withdraw</button>}
