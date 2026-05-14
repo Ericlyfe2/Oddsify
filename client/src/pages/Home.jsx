@@ -8,6 +8,12 @@ import {
 } from '../api/betApi.js';
 import { useToast, useAccount } from '../layout/AppShell.jsx';
 import BetSuccessModal, { toBookingCode } from '../components/BetSuccessModal.jsx';
+import {
+  SYSTEM_TYPES,
+  eligibleSystemTypes,
+  defaultSystemType,
+  maxSystemReturn,
+} from '../lib/systemBets.js';
 
 const BONUS = 0.08;
 
@@ -46,6 +52,12 @@ function parseStake(raw) {
   return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
 
+function systemTypeHint(count) {
+  if (count < 3) return `${3 - count} more selection${count === 2 ? '' : 's'}`;
+  if (count > 8) return 'fewer selections (max 8 for system bets)';
+  return 'a different combination';
+}
+
 function FormDots({ pattern }) {
   const chars = (pattern || '').split('');
   return (
@@ -66,6 +78,7 @@ export default function Home({ initialChip, initialSlipTab }) {
   const [loadErr, setLoadErr]       = useState(null);
   const [selections, setSelections] = useState([]);
   const [betMode, setBetMode]       = useState('multiple');
+  const [systemType, setSystemType] = useState(null);
   const [slipPanel, setSlipPanel]   = useState(initialSlipTab === 'mybets' ? 'mybets' : 'slip');
   const [chip, setChip]             = useState(initialChip || 'all');
   const [activeLeague, setActiveLeague] = useState(null);
@@ -153,6 +166,26 @@ export default function Home({ initialChip, initialSlipTab }) {
       return;
     }
     if (odds == null) return;
+
+    // In Single mode, only one selection at a time — replace anything else.
+    if (betMode === 'single' && !existing) {
+      setSelections([{
+        id: `sel-${crypto.randomUUID?.() || Date.now()}`,
+        matchId: match.id, market, outcome: key, odds,
+        pickLabel: pickLabel(market, key, match),
+        marketLabel: market === '1X2' || market === 'ML' ? `Match · ${key}` : `${market} · ${key}`,
+        meta: matchMeta(match),
+        trend: null,
+      }]);
+      return;
+    }
+
+    // Hard cap at 12 selections so system-bet combinatorics stay sane.
+    if (!existing && selections.length >= 12) {
+      toast('Slip is full — 12 selections max.');
+      return;
+    }
+
     upsertSelection({
       id: existing?.id || `sel-${crypto.randomUUID?.() || Date.now()}`,
       matchId: match.id,
@@ -164,7 +197,12 @@ export default function Home({ initialChip, initialSlipTab }) {
       meta: matchMeta(match),
       trend: null,
     });
-  }, [selections, upsertSelection, removeBy]);
+  }, [selections, upsertSelection, removeBy, betMode, toast]);
+
+  const clearSlip = useCallback(() => {
+    setSelections([]);
+    toast('Slip cleared.');
+  }, [toast]);
 
   const onHeroPill = (key) => {
     if (!featured) return;
@@ -173,17 +211,62 @@ export default function Home({ initialChip, initialSlipTab }) {
     if (sel) toggleSelection(featured.league, featured.match, m === featured.match.markets?.['1X2'] ? '1X2' : 'ML', key, sel.odds);
   };
 
+  // When mode changes, normalise side-effects:
+  //  - 'single' → drop everything except the most recent pick.
+  //  - 'system' → auto-pick a sensible system type for the current count.
+  useEffect(() => {
+    if (betMode === 'single' && selections.length > 1) {
+      setSelections((prev) => prev.slice(-1));
+    }
+    if (betMode === 'system') {
+      const next = defaultSystemType(selections.length);
+      setSystemType(next);
+    } else {
+      setSystemType(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [betMode, selections.length]);
+
+  // Eligible system types update as the user adds/removes selections.
+  const eligibleSystems = useMemo(
+    () => eligibleSystemTypes(selections.length),
+    [selections.length],
+  );
+
+  const systemDef = systemType ? SYSTEM_TYPES[systemType] : null;
+  const linesCount = systemDef?.totalLines || 0;
+  const stakePerLine = parseStake(stake);
+
   const totalOdds = useMemo(() => {
     if (!selections.length) return 0;
-    if (betMode === 'single') return selections[0].odds;
-    return selections.reduce((p, s) => p * s.odds, 1);
-  }, [selections, betMode]);
+    if (betMode === 'single')   return selections[0].odds;
+    if (betMode === 'multiple') return selections.reduce((p, s) => p * s.odds, 1);
+    // For systems, expose the effective multiplier (max-return / total-stake).
+    if (betMode === 'system' && systemDef && stakePerLine > 0) {
+      const ret = maxSystemReturn(selections.map((s) => s.odds), systemType, stakePerLine);
+      const totalStake = stakePerLine * linesCount;
+      return totalStake > 0 ? ret / totalStake : 0;
+    }
+    return 0;
+  }, [selections, betMode, systemDef, systemType, stakePerLine, linesCount]);
+
+  const totalStake = betMode === 'system'
+    ? Number((stakePerLine * linesCount).toFixed(2))
+    : stakePerLine;
 
   const payout = useMemo(() => {
-    const st = parseStake(stake);
-    if (!selections.length || !totalOdds || st <= 0) return 0;
-    return st * totalOdds * (1 + BONUS);
-  }, [selections.length, stake, totalOdds]);
+    if (!selections.length || stakePerLine <= 0) return 0;
+    if (betMode === 'system') {
+      if (!systemDef) return 0;
+      return maxSystemReturn(selections.map((s) => s.odds), systemType, stakePerLine);
+    }
+    if (!totalOdds) return 0;
+    return stakePerLine * totalOdds * (1 + BONUS);
+  }, [selections, stakePerLine, totalOdds, betMode, systemDef, systemType]);
+
+  // Place a hard cap on the slip so we never reach unboundedly slow
+  // combinatorial expansion in the UI.
+  const slipFull = selections.length >= 12;
 
   const mainClass = useMemo(() => {
     const c = [];
@@ -196,19 +279,29 @@ export default function Home({ initialChip, initialSlipTab }) {
 
   const onPlaceBet = async () => {
     if (!selections.length) { toast('Add at least one selection to your bet slip.'); return; }
-    const st = parseStake(stake);
-    if (st <= 0) { toast('Enter a stake amount.'); return; }
+    if (betMode === 'multiple' && selections.length < 2) {
+      toast('Multiple bets need at least 2 selections.'); return;
+    }
+    if (betMode === 'system' && !systemDef) {
+      toast(`Pick a valid number of selections for a system bet (3–8).`); return;
+    }
+    const linePrice = parseStake(stake);
+    if (linePrice <= 0) { toast('Enter a stake amount.'); return; }
     if (!account) { toast('Sign in to place a bet.'); return; }
-    if (st > account.balance) { toast('Insufficient balance — top up to continue.'); return; }
+    const cost = betMode === 'system' ? linePrice * linesCount : linePrice;
+    if (cost > account.balance) {
+      toast(`Insufficient balance — this ticket costs GHS ${formatAmt(cost)}.`); return;
+    }
     try {
       const res = await placeBet({
         mode: betMode,
-        stake: st,
+        stake: linePrice, // server treats this as per-line for systems, total otherwise
+        ...(betMode === 'system' ? { systemType } : {}),
         selections: selections.map((s) => ({
           matchId: s.matchId, market: s.market, outcome: s.outcome, odds: s.odds,
         })),
       });
-      adjustBalance(-st, `Bet placed — booking code ${toBookingCode(res.bet.id)}.`);
+      adjustBalance(-cost, `Bet placed — booking code ${toBookingCode(res.bet.id)}.`);
       setSelections([]);
       setSlipPanel('mybets');
       setSuccessBet(res.bet);
@@ -550,6 +643,54 @@ export default function Home({ initialChip, initialSlipTab }) {
                       </button>
                     ))}
                   </div>
+
+                  {selections.length > 0 && (
+                    <div className="slip-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                        {selections.length} selection{selections.length === 1 ? '' : 's'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearSlip}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-soft)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '4px 8px' }}
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  )}
+
+                  {betMode === 'system' && (
+                    <div className="slip-system" style={{ margin: '8px 0 4px', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid rgba(255,181,71,.18)', borderRadius: 10 }}>
+                      {eligibleSystems.length === 0 ? (
+                        <p style={{ fontSize: 12, color: 'var(--text-soft)', margin: 0 }}>
+                          Pick {systemTypeHint(selections.length)} to unlock a system bet.
+                        </p>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 6 }}>System type</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {eligibleSystems.map((sys) => (
+                              <button
+                                key={sys.key}
+                                type="button"
+                                onClick={() => setSystemType(sys.key)}
+                                className={`mode-btn${systemType === sys.key ? ' active' : ''}`}
+                                style={{ padding: '6px 10px', fontSize: 12 }}
+                              >
+                                {sys.label} <span style={{ opacity: .6, marginLeft: 2 }}>· {sys.totalLines}L</span>
+                              </button>
+                            ))}
+                          </div>
+                          {systemDef && (
+                            <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-soft)' }}>
+                              <strong style={{ color: 'var(--text)' }}>{systemDef.label}</strong> — {linesCount} line{linesCount > 1 ? 's' : ''} · total stake <strong style={{ color: 'var(--accent-warm)' }}>GHS {formatAmt(totalStake)}</strong>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   {selections.length === 0 && (
                     <p style={{ fontSize: 12, color: 'var(--text-dim)', padding: '12px 0' }}>
                       Tap any odds to add a selection. Mix markets across matches.
@@ -587,13 +728,29 @@ export default function Home({ initialChip, initialSlipTab }) {
                       <button type="button" className="quick-stake" onClick={() => setStake(formatAmt(account?.balance || 0))}>MAX</button>
                     </div>
                     <div className="summary">
-                      <div className="sum-row"><span className="lbl">Total odds</span><span className="val">{selections.length ? totalOdds.toFixed(2) : '—'}</span></div>
-                      <div className="sum-row"><span className="lbl">Stake</span><span className="val">GHS {formatAmt(parseStake(stake))}</span></div>
-                      <div className="sum-row"><span className="lbl">Bonus boost</span><span className="val" style={{ color: 'var(--accent)' }}>+8%</span></div>
-                      <div className="sum-row payout">
-                        <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Potential win</span>
-                        <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
-                      </div>
+                      {betMode === 'system' ? (
+                        <>
+                          <div className="sum-row"><span className="lbl">Stake / line</span><span className="val">GHS {formatAmt(stakePerLine)}</span></div>
+                          <div className="sum-row"><span className="lbl">Lines</span><span className="val">{linesCount || '—'}</span></div>
+                          <div className="sum-row"><span className="lbl">Total stake</span><span className="val">GHS {formatAmt(totalStake)}</span></div>
+                          <div className="sum-row payout">
+                            <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Max return</span>
+                            <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="sum-row"><span className="lbl">Total odds</span><span className="val">{selections.length ? totalOdds.toFixed(2) : '—'}</span></div>
+                          <div className="sum-row"><span className="lbl">Stake</span><span className="val">GHS {formatAmt(stakePerLine)}</span></div>
+                          {betMode === 'multiple' && (
+                            <div className="sum-row"><span className="lbl">Bonus boost</span><span className="val" style={{ color: 'var(--accent)' }}>+8%</span></div>
+                          )}
+                          <div className="sum-row payout">
+                            <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Potential win</span>
+                            <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <button type="button" className="place-bet" onClick={onPlaceBet}>
                       <span>Place bet</span><span className="arrow">→</span>

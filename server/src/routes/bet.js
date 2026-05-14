@@ -28,6 +28,7 @@ import { badRequest, conflict, notFound, unauthorized } from '../utils/httpError
 import { updateUser, logActivity } from '../db/users.js';
 import { pushTx } from './wallet.js';
 import { emitAdmin, emitToUser } from '../services/realtime.js';
+import { SYSTEM_TYPES, maxSystemReturn } from '../lib/systemBets.js';
 
 const router = Router();
 
@@ -46,11 +47,15 @@ function listUserBets(userId) {
 /* ------------ schemas ------------ */
 const placeSchema = z.object({
   mode: z.enum(['single', 'multiple', 'system']).default('multiple'),
+  // For single/multiple this is the total stake. For system it's the
+  // STAKE PER LINE — total stake is line-count × this value.
   stake: z.union([z.number(), z.string()]).transform((v) => {
     const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, ''));
     if (!Number.isFinite(n) || n <= 0) throw new Error('Enter a valid stake amount.');
     return n;
   }),
+  // System-bet metadata — required when mode === 'system'.
+  systemType: z.string().optional(),
   selections: z.array(z.object({
     matchId: z.string().min(1),
     market:  z.string().default('1X2'),
@@ -150,9 +155,8 @@ router.post('/place',
   requireAuth,
   validate(placeSchema),
   asyncHandler(async (req, res) => {
-    const { mode, stake, selections } = req.body;
+    const { mode, stake, selections, systemType } = req.body;
     const user = req.user;
-    if (stake > user.balance) throw badRequest('Insufficient balance.');
 
     const seen = new Set();
     const normalized = [];
@@ -189,10 +193,35 @@ router.post('/place',
       });
     }
     if (mode === 'single' && normalized.length > 1) throw badRequest('Single mode allows only one selection.');
-    if (mode === 'system' && normalized.length < 2) throw badRequest('System bets need at least two selections.');
+    if (mode === 'multiple' && normalized.length < 2) throw badRequest('Multiple bets need at least two selections.');
 
-    const totalOdds = mode === 'single' ? normalized[0].odds : normalized.reduce((acc, s) => acc * s.odds, 1);
-    const potentialWin = stake * totalOdds * (1 + BONUS_RATE);
+    // Compute totals based on the bet mode.
+    let totalOdds, totalStake, potentialWin, systemDef = null, linesCount = null, stakePerLine = null;
+
+    if (mode === 'system') {
+      const key = String(systemType || '').toLowerCase();
+      systemDef = SYSTEM_TYPES[key];
+      if (!systemDef) throw badRequest(`Unknown system type "${systemType}". Pick one of: ${Object.keys(SYSTEM_TYPES).join(', ')}.`);
+      if (normalized.length !== systemDef.selections) {
+        throw badRequest(`${systemDef.label} needs exactly ${systemDef.selections} selections (you have ${normalized.length}).`);
+      }
+      stakePerLine = Number(stake);
+      linesCount   = systemDef.totalLines;
+      totalStake   = Number((stakePerLine * linesCount).toFixed(2));
+      // For system bets, "totalOdds" doesn't really exist; we expose the
+      // max return divided by total stake as a rough headline number so
+      // the bet history list has something useful to show.
+      potentialWin = Number(maxSystemReturn(normalized.map((s) => s.odds), key, stakePerLine).toFixed(2));
+      totalOdds    = Number((potentialWin / totalStake).toFixed(4));
+    } else {
+      totalStake   = Number(stake);
+      totalOdds    = mode === 'single' ? normalized[0].odds : normalized.reduce((acc, s) => acc * s.odds, 1);
+      potentialWin = totalStake * totalOdds * (1 + BONUS_RATE);
+    }
+
+    if (totalStake > user.balance) {
+      throw badRequest(`Insufficient balance. This ticket requires GHS ${totalStake.toFixed(2)} (your balance is GHS ${user.balance.toFixed(2)}).`);
+    }
 
     const id = `bv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const receipt = {
@@ -200,26 +229,32 @@ router.post('/place',
       userId: user.id,
       placedAt: new Date().toISOString(),
       mode,
-      stake: Number(stake.toFixed(2)),
+      stake: Number(totalStake.toFixed(2)),
       currency: CURRENCY,
       totalOdds: Number(totalOdds.toFixed(4)),
       potentialWin: Number(potentialWin.toFixed(2)),
       bonusRate: BONUS_RATE,
       legs: normalized,
       status: 'open',
+      ...(mode === 'system' && {
+        systemType: systemType.toLowerCase(),
+        systemLabel: systemDef.label,
+        linesCount,
+        stakePerLine,
+      }),
     };
     pushBet(receipt);
 
-    const updated = updateUser(user.id, { balance: Number((user.balance - stake).toFixed(2)) });
+    const updated = updateUser(user.id, { balance: Number((user.balance - totalStake).toFixed(2)) });
     pushTx(user.id, {
-      kind: 'bet_placed', amount: -stake, status: 'completed',
+      kind: 'bet_placed', amount: -totalStake, status: 'completed',
       balanceAfter: updated.balance, ref: id,
     });
-    logActivity(user.id, { kind: 'bet_placed', betId: id, stake });
+    logActivity(user.id, { kind: 'bet_placed', betId: id, stake: totalStake });
 
     // Realtime: notify the player's other tabs/devices and the admin observability dashboard.
-    emitToUser(user.id, 'wallet:update', { balance: updated.balance, delta: -stake, reason: 'bet:placed', ref: id });
-    emitAdmin('bet:placed', { betId: id, userId: user.id, stake, mode, legs: normalized.length });
+    emitToUser(user.id, 'wallet:update', { balance: updated.balance, delta: -totalStake, reason: 'bet:placed', ref: id });
+    emitAdmin('bet:placed', { betId: id, userId: user.id, stake: totalStake, mode, legs: normalized.length });
 
     res.status(201).json({
       ok: true,
