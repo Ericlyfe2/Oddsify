@@ -9,10 +9,21 @@ function fmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Numeric 8-digit code shown right after staking. Deterministic from the
+// underlying bet id so the user can find this exact ticket again.
 export function toBookingCode(id) {
   if (!id) return '';
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return String(h % 99999999).padStart(8, '0');
+}
+
+// Alphanumeric "SLIP-XXX" code used after a bet has settled (Win modal,
+// long-term bet history). Easier to read aloud than the placement code.
+export function toSlipCode(id) {
+  if (!id) return '';
   const tail = String(id).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(-10);
-  return tail.padStart(10, '0');
+  return `SLIP-${tail.padStart(10, '0')}`;
 }
 
 export default function BetSuccessModal({ bet, onClose, onRebet }) {

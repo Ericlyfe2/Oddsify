@@ -206,7 +206,11 @@ export default function AppProviders({ children }) {
       <ToastCtx.Provider value={{ toast }}>
         {children}
 
-        <WinTrophyModal wins={wins} onClose={dismissWins} />
+        <WinTrophyModal
+          wins={wins}
+          onClose={dismissWins}
+          onViewSlip={() => navigate('/my-bets')}
+        />
 
         <div className="toast-stack" role="status" aria-live="polite">
           {toasts.map((t) => (

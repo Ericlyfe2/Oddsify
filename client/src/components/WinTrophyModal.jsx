@@ -1,24 +1,53 @@
 /**
  * Celebration modal shown when the player has freshly-settled winning bets
- * they haven't acknowledged yet. Pure SVG trophy + confetti — no assets.
+ * they haven't acknowledged yet.
+ *
+ * Layout:
+ *   ┌────────────────────────────────────────┐
+ *   │ [WIN CONFIRMED]                    [×] │
+ *   │              🏆                        │
+ *   │           Congratulations!             │
+ *   │   Your winning bet has been paid…      │
+ *   │            GHS 29,470.00               │
+ *   │           Single · 1 selection         │
+ *   │  ┌────────────┐  ┌──────────────┐      │
+ *   │  │ Slip Code  │  │   Stake      │      │
+ *   │  │ SLIP-…     │  │  GHS 1,000   │      │
+ *   │  └────────────┘  └──────────────┘      │
+ *   │  ┌─────────────────────────────────┐   │
+ *   │  │ Paid At  10 May 2026, 04:25     │   │
+ *   │  └─────────────────────────────────┘   │
+ *   │  [ View Slip ]  [ AWESOME ]            │
+ *   └────────────────────────────────────────┘
+ *
+ * Auto-dismisses after 45s so the rest of the UI stays interactive.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toSlipCode } from './BetSuccessModal.jsx';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function WinTrophyModal({ wins = [], onClose }) {
+function paidAtLabel(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const dt = d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' });
+  const tm = d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dt}, ${tm}`;
+}
+
+export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
   const dlgRef = useRef(null);
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
     if (!wins.length) return;
+    setIndex(0);
     dlgRef.current?.showModal?.();
     const onCancel = (e) => { e.preventDefault(); onClose?.(); };
     const node = dlgRef.current;
     node?.addEventListener('cancel', onCancel);
-    // Auto-dismiss the celebration after 45 seconds so the player isn't
-    // blocked from interacting with the rest of the site indefinitely.
     const autoClose = setTimeout(() => onClose?.(), 45_000);
     return () => {
       node?.removeEventListener('cancel', onCancel);
@@ -26,61 +55,108 @@ export default function WinTrophyModal({ wins = [], onClose }) {
     };
   }, [wins.length, onClose]);
 
-  const totalPayout = useMemo(() => wins.reduce((s, b) => s + (Number(b.potentialWin) || 0), 0), [wins]);
-  const totalStake  = useMemo(() => wins.reduce((s, b) => s + (Number(b.stake)        || 0), 0), [wins]);
-  const profit      = totalPayout - totalStake;
+  const totalPayout = useMemo(
+    () => wins.reduce((s, b) => s + (Number(b.potentialWin) || 0), 0),
+    [wins]
+  );
 
   if (!wins.length) return null;
 
+  const focus    = wins[Math.min(index, wins.length - 1)];
+  const single   = wins.length === 1;
+  const showPayout = single ? Number(focus.potentialWin || 0) : totalPayout;
+  const legs     = focus.legs?.length || 1;
+  const modeLbl  = focus.mode === 'single' ? 'Single'
+                 : focus.mode === 'multiple' ? 'Multiple'
+                 : focus.mode === 'system' ? 'System' : (focus.mode || 'Bet');
+  const slipCode = toSlipCode(focus.id);
+  const paidAt   = paidAtLabel(focus.settledAt || focus.placedAt);
+
+  const handleViewSlip = () => {
+    onViewSlip?.(focus);
+    onClose?.();
+  };
+
   return (
     <dialog ref={dlgRef} className="bv-trophy">
-      <div className="bv-trophy-bg">
-        <div className="bv-trophy-orb" />
-        <div className="bv-trophy-orb b" />
-      </div>
-
       <Confetti count={48} />
 
       <div className="bv-trophy-card" role="alertdialog" aria-labelledby="bv-trophy-title">
+        <header className="bv-trophy-head">
+          <span className="bv-trophy-badge">WIN CONFIRMED</span>
+          <button
+            type="button"
+            className="bv-trophy-x"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </header>
+
         <div className="bv-trophy-emblem" aria-hidden>
-          <TrophySVG />
+          <TrophyBadge />
         </div>
 
-        <div className="bv-trophy-eyebrow">CONGRATULATIONS</div>
-        <h2 id="bv-trophy-title" className="bv-trophy-title">
-          {wins.length === 1 ? 'You won!' : `You won ${wins.length} bets!`}
-        </h2>
+        <h2 id="bv-trophy-title" className="bv-trophy-title">Congratulations!</h2>
         <p className="bv-trophy-sub">
-          {wins.length === 1
-            ? `Your bet just settled in your favour. The payout has hit your wallet.`
-            : `Multiple tickets just settled in your favour. Payouts are in your wallet.`}
+          Your winning bet has been paid successfully.
         </p>
 
         <div className="bv-trophy-amount">
           <span className="cur">GHS</span>
-          <span className="amt">{fmt(totalPayout)}</span>
+          <span className="amt">{fmt(showPayout)}</span>
         </div>
         <div className="bv-trophy-meta">
-          <span>Stake <strong>GHS {fmt(totalStake)}</strong></span>
-          <span className="dot" />
-          <span>Profit <strong style={{ color: '#18f0a1' }}>+GHS {fmt(profit)}</strong></span>
+          {single
+            ? <>{modeLbl} · {legs} selection{legs > 1 ? 's' : ''}</>
+            : <>{wins.length} winning tickets · combined payout</>}
         </div>
 
-        <ul className="bv-trophy-list">
-          {wins.slice(0, 3).map((b) => (
-            <li key={b.id}>
-              <span className="lbl">
-                {(b.legs?.[0]?.home || 'Bet')} {b.legs?.length > 1 ? <em>+{b.legs.length - 1}</em> : null}
-              </span>
-              <span className="val">GHS {fmt(b.potentialWin)}</span>
-            </li>
-          ))}
-          {wins.length > 3 && <li><span className="lbl">… and {wins.length - 3} more</span></li>}
-        </ul>
+        <div className="bv-trophy-grid">
+          <div className="bv-trophy-stat">
+            <span className="lbl">Slip Code</span>
+            <span className="val val-mono">{slipCode}</span>
+          </div>
+          <div className="bv-trophy-stat">
+            <span className="lbl">Stake</span>
+            <span className="val">GHS {fmt(focus.stake)}</span>
+          </div>
+        </div>
+
+        <div className="bv-trophy-paidat">
+          <span className="lbl">Paid At</span>
+          <span className="val">{paidAt || '—'}</span>
+        </div>
+
+        {wins.length > 1 && (
+          <div className="bv-trophy-pager">
+            {wins.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Show winning ticket ${i + 1} of ${wins.length}`}
+                className={`bv-trophy-dot${i === index ? ' active' : ''}`}
+                onClick={() => setIndex(i)}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="bv-trophy-actions">
-          <button type="button" className="btn btn-primary bv-trophy-btn" onClick={onClose}>
-            Awesome — let&apos;s go
+          <button
+            type="button"
+            className="bv-trophy-btn bv-trophy-btn-ghost"
+            onClick={handleViewSlip}
+          >
+            View Slip
+          </button>
+          <button
+            type="button"
+            className="bv-trophy-btn bv-trophy-btn-primary"
+            onClick={onClose}
+          >
+            Awesome
           </button>
         </div>
       </div>
@@ -90,51 +166,32 @@ export default function WinTrophyModal({ wins = [], onClose }) {
   );
 }
 
-function TrophySVG() {
+function TrophyBadge() {
   return (
-    <svg viewBox="0 0 200 200" width="160" height="160" aria-hidden>
-      <defs>
-        <linearGradient id="cup" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffd76d" />
-          <stop offset=".55" stopColor="#f6a200" />
-          <stop offset="1" stopColor="#c46500" />
-        </linearGradient>
-        <linearGradient id="cup-hi" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff3c4" stopOpacity=".95" />
-          <stop offset="1" stopColor="#fff3c4" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#5b3a1a" />
-          <stop offset="1" stopColor="#2c1c0a" />
-        </linearGradient>
-        <radialGradient id="glow" cx="0.5" cy="0.4" r="0.7">
-          <stop offset="0" stopColor="#ffce5c" stopOpacity=".55" />
-          <stop offset="1" stopColor="#ffce5c" stopOpacity="0" />
-        </radialGradient>
-        <filter id="shine" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
-        </filter>
-      </defs>
-      <circle cx="100" cy="92" r="80" fill="url(#glow)" />
-      {/* Handles */}
-      <path d="M48 60 Q12 60 16 95 Q19 130 60 124" fill="none" stroke="url(#cup)" strokeWidth="10" strokeLinecap="round" />
-      <path d="M152 60 Q188 60 184 95 Q181 130 140 124" fill="none" stroke="url(#cup)" strokeWidth="10" strokeLinecap="round" />
-      {/* Cup body */}
-      <path d="M50 36 H150 V92 Q150 138 100 142 Q50 138 50 92 Z" fill="url(#cup)" stroke="#7a3f00" strokeWidth="2.5" />
-      {/* Highlight */}
-      <path d="M62 42 H92 Q86 80 70 110 Z" fill="url(#cup-hi)" filter="url(#shine)" />
-      {/* Rim */}
-      <ellipse cx="100" cy="38" rx="52" ry="10" fill="#ffe28a" stroke="#7a3f00" strokeWidth="2" />
-      <ellipse cx="100" cy="36" rx="48" ry="6" fill="#fff3c4" opacity=".7" />
-      {/* Star plate */}
-      <circle cx="100" cy="86" r="20" fill="#fff8d6" stroke="#7a3f00" strokeWidth="1.6" />
-      <path d="M100 70 l5.3 11 12 1.6 -9 8.4 2.3 12 -10.6 -6.2 -10.6 6.2 2.3 -12 -9 -8.4 12 -1.6 z" fill="#f6a200" />
-      {/* Stem */}
-      <path d="M86 142 H114 V160 H86 Z" fill="url(#base)" />
-      <path d="M76 158 H124 V170 H76 Z" fill="url(#base)" />
-      <path d="M64 168 H136 V184 H64 Z" fill="url(#base)" />
-      <text x="100" y="180" textAnchor="middle" fontFamily="Inter, system-ui, sans-serif" fontWeight="800" fontSize="9" fill="#ffd76d">CHAMPION</text>
-    </svg>
+    <div className="bv-trophy-disc">
+      <svg viewBox="0 0 64 64" width="42" height="42" aria-hidden>
+        <defs>
+          <linearGradient id="bvCupBody" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0"   stopColor="#fff3b8" />
+            <stop offset=".55" stopColor="#f3a01a" />
+            <stop offset="1"   stopColor="#a86200" />
+          </linearGradient>
+          <linearGradient id="bvCupBase" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#7a3f00" />
+            <stop offset="1" stopColor="#3a1f00" />
+          </linearGradient>
+        </defs>
+        <path d="M14 12 H50 V30 C50 40 42 46 32 46 C22 46 14 40 14 30 Z" fill="url(#bvCupBody)" />
+        <ellipse cx="32" cy="12" rx="18" ry="3.6" fill="#ffe28a" />
+        <path d="M14 18 Q7 18 8 24 Q9 30 16 30" fill="none" stroke="#cc7a00" strokeWidth="3" strokeLinecap="round" />
+        <path d="M50 18 Q57 18 56 24 Q55 30 48 30" fill="none" stroke="#cc7a00" strokeWidth="3" strokeLinecap="round" />
+        <path d="M28 46 H36 V52 H28 Z" fill="url(#bvCupBase)" />
+        <path d="M22 52 H42 V55 H22 Z" fill="url(#bvCupBase)" />
+        <circle cx="32" cy="26" r="6" fill="#fff3b8" opacity=".75" />
+        <path d="M32 22 l1.6 3.2 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5 z"
+              fill="#a86200" />
+      </svg>
+    </div>
   );
 }
 
@@ -144,12 +201,12 @@ function Confetti({ count = 36 }) {
     const delay = Math.random() * 1.4;
     const dur   = 2.4 + Math.random() * 2.2;
     const rot   = Math.random() * 360;
-    const colors = ['#ffd76d', '#7c5cff', '#22d3ee', '#18f0a1', '#ff5fb1', '#4f8bff'];
+    const colors = ['#ffd76d', '#ffb547', '#18f0a1', '#22d3ee', '#c5ff3d', '#ff9f1c'];
     const c = colors[i % colors.length];
     return { left, delay, dur, rot, c, key: i, w: 6 + Math.random() * 6, h: 9 + Math.random() * 9 };
   });
   return (
-    <div className="bv-confetti" aria-hidden>
+    <div className="bv-trophy-confetti" aria-hidden>
       {pieces.map((p) => (
         <span key={p.key} style={{
           left: `${p.left}%`,
@@ -167,133 +224,206 @@ function Confetti({ count = 36 }) {
 const TROPHY_CSS = `
 .bv-trophy {
   border: none; padding: 0; background: transparent;
-  width: min(440px, 92vw); max-width: 100%;
-  border-radius: 24px; overflow: visible;
-  color: #0e1330;
+  width: min(420px, 92vw);
+  border-radius: 22px;
+  color: #ffffff;
 }
 .bv-trophy::backdrop {
-  background: radial-gradient(900px 600px at 50% 30%, rgba(124,92,255,.55), rgba(8, 10, 22, .88));
-  backdrop-filter: blur(8px);
-}
-.bv-trophy-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.bv-trophy-orb {
-  position: absolute; width: 320px; height: 320px;
-  background: radial-gradient(circle, rgba(255, 215, 109, .5), transparent 60%);
-  border-radius: 50%; top: -120px; left: -60px;
-  filter: blur(8px);
-  animation: bvFloat 7s ease-in-out infinite;
-}
-.bv-trophy-orb.b {
-  background: radial-gradient(circle, rgba(124, 92, 255, .55), transparent 60%);
-  top: auto; bottom: -120px; right: -60px; left: auto;
-  animation-delay: 1.5s;
-}
-@keyframes bvFloat {
-  0%,100% { transform: translate(0,0); }
-  50%     { transform: translate(20px, -20px); }
+  background: radial-gradient(800px 600px at 50% 30%, rgba(8, 60, 42, .55), rgba(0, 0, 0, .82));
+  backdrop-filter: blur(6px);
 }
 .bv-trophy-card {
   position: relative; z-index: 2;
-  background: linear-gradient(180deg, #fff 0%, #fff 100%);
-  border-radius: 24px;
-  padding: 18px 26px 26px;
-  box-shadow: 0 20px 80px rgba(8, 12, 40, .55), 0 0 0 1px rgba(255, 215, 109, .55);
-  text-align: center;
+  background:
+    radial-gradient(600px 220px at 80% -10%, rgba(255, 200, 80, .14), transparent 60%),
+    linear-gradient(180deg, #0d2c1d 0%, #0a2418 100%);
+  border-radius: 22px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 200, 80, .18) inset;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  animation: bvPop .35s cubic-bezier(.18, .8, .36, 1.18);
+  animation: bvTrophyPop .38s cubic-bezier(.18, .8, .36, 1.18);
+  text-align: center;
 }
-@keyframes bvPop {
-  from { transform: scale(.86); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
+@keyframes bvTrophyPop {
+  from { transform: scale(.9) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)  translateY(0);   opacity: 1; }
 }
+
+.bv-trophy-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.bv-trophy-badge {
+  font-size: 10px; letter-spacing: .18em; font-weight: 800;
+  color: #ffe28a;
+  background: rgba(255, 200, 80, .08);
+  border: 1px solid rgba(255, 200, 80, .35);
+  padding: 5px 10px; border-radius: 999px;
+}
+.bv-trophy-x {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: transparent;
+  color: rgba(255, 255, 255, .75);
+  font-size: 18px; line-height: 1;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: color .15s ease, border-color .15s ease;
+}
+.bv-trophy-x:hover { color: #fff; border-color: rgba(255, 255, 255, .35); }
+
 .bv-trophy-emblem {
-  margin-top: -78px;
-  display: flex; justify-content: center;
-  filter: drop-shadow(0 14px 24px rgba(255, 184, 50, .55));
-  animation: bvSpin 6s ease-in-out infinite;
+  display: flex; justify-content: center; margin: 6px 0 4px;
+  animation: bvTrophyBounce 2.6s ease-in-out infinite;
 }
-@keyframes bvSpin {
-  0%, 100% { transform: rotate(-3deg); }
-  50%      { transform: rotate(3deg); }
+@keyframes bvTrophyBounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
 }
-.bv-trophy-eyebrow {
-  margin-top: -6px;
-  font-size: 11px; letter-spacing: .42em; font-weight: 800;
-  color: #b07300;
+.bv-trophy-disc {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd76d 0%, #f3a01a 60%, #b06700 100%);
+  display: grid; place-items: center;
+  box-shadow: 0 14px 36px rgba(255, 180, 50, .35),
+              0 0 0 4px rgba(255, 200, 80, .18);
 }
+
 .bv-trophy-title {
-  font-size: 30px; line-height: 1.05;
-  font-weight: 900; letter-spacing: -.02em;
-  margin: 6px 0 6px;
-  background: linear-gradient(120deg, #7c5cff, #f6a200 60%, #ff5fb1);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  margin: 12px 0 4px;
+  font-size: 24px; font-weight: 900;
+  letter-spacing: -.01em;
+  color: #ffffff;
 }
 .bv-trophy-sub {
-  color: #525879;
-  font-size: 13.5px;
   margin: 0 0 14px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .72);
 }
+
 .bv-trophy-amount {
   display: flex; align-items: baseline; justify-content: center; gap: 8px;
-  margin: 6px 0 8px;
-}
-.bv-trophy-amount .cur { font-size: 14px; font-weight: 800; color: #8088b3; letter-spacing: .08em; }
-.bv-trophy-amount .amt {
-  font-size: 44px; font-weight: 900; letter-spacing: -.02em;
-  background: linear-gradient(135deg, #7c5cff, #22d3ee);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  margin: 4px 0 4px;
   font-variant-numeric: tabular-nums;
 }
-.bv-trophy-meta {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  font-size: 13px; color: #525879;
+.bv-trophy-amount .cur {
+  font-size: 14px; font-weight: 700;
+  color: rgba(255, 200, 80, .65);
+  letter-spacing: .08em;
 }
-.bv-trophy-meta .dot { width: 4px; height: 4px; border-radius: 50%; background: #cbd0e6; }
-.bv-trophy-list {
-  list-style: none; padding: 0;
-  margin: 16px 0 12px;
-  display: flex; flex-direction: column; gap: 6px;
+.bv-trophy-amount .amt {
+  font-size: 36px; font-weight: 900;
+  letter-spacing: -.02em;
+  color: #ffc44d;
+  text-shadow: 0 6px 24px rgba(255, 180, 50, .35);
+}
+.bv-trophy-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, .58);
+  margin-bottom: 16px;
+}
+
+.bv-trophy-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bv-trophy-stat,
+.bv-trophy-paidat {
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
   text-align: left;
+}
+.bv-trophy-paidat { margin-bottom: 14px; }
+.bv-trophy-stat .lbl,
+.bv-trophy-paidat .lbl {
+  font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .45);
+}
+.bv-trophy-stat .val,
+.bv-trophy-paidat .val {
+  font-size: 14px; font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+.bv-trophy-stat .val-mono {
+  font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+  letter-spacing: .04em;
+  color: #ffe28a;
+  font-weight: 700;
   font-size: 13px;
 }
-.bv-trophy-list li {
-  display: flex; justify-content: space-between;
-  background: linear-gradient(180deg, rgba(124,92,255,.08), rgba(34,211,238,.05));
-  padding: 8px 12px; border-radius: 10px;
-  border: 1px solid rgba(124,92,255,.18);
+
+.bv-trophy-pager {
+  display: flex; gap: 6px; justify-content: center;
+  margin-bottom: 12px;
 }
-.bv-trophy-list .lbl { color: #2e3559; font-weight: 600; }
-.bv-trophy-list .lbl em { color: #7c5cff; font-style: normal; margin-left: 4px; }
-.bv-trophy-list .val { color: #0e1330; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bv-trophy-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255, 255, 255, .25);
+  border: none; padding: 0;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.bv-trophy-dot.active { background: #ffc44d; transform: scale(1.4); }
+
 .bv-trophy-actions {
-  display: flex; gap: 8px; justify-content: center; margin-top: 4px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 .bv-trophy-btn {
-  background: linear-gradient(135deg, #7c5cff, #4f8bff 60%, #22d3ee);
-  color: #fff; border: none;
-  padding: 12px 22px; border-radius: 12px;
-  font-weight: 800; font-size: 14px;
-  letter-spacing: -.005em;
-  box-shadow: 0 16px 36px rgba(124, 92, 255, .35);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 800; font-size: 13.5px;
+  letter-spacing: .02em;
   cursor: pointer;
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
 }
-.bv-trophy-btn:hover { transform: translateY(-1px); box-shadow: 0 20px 48px rgba(124, 92, 255, .5); }
+.bv-trophy-btn-ghost {
+  background: rgba(255, 255, 255, .06);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+.bv-trophy-btn-ghost:hover {
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .25);
+}
+.bv-trophy-btn-primary {
+  background: linear-gradient(135deg, #ffc44d 0%, #f6a200 100%);
+  color: #2a1700;
+  box-shadow: 0 12px 28px rgba(246, 162, 0, .35);
+}
+.bv-trophy-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px rgba(246, 162, 0, .55);
+}
 
-.bv-confetti {
+.bv-trophy-confetti {
   position: fixed; inset: 0; pointer-events: none; z-index: 1;
   overflow: hidden;
 }
-.bv-confetti span {
+.bv-trophy-confetti span {
   position: absolute;
   top: -16px;
   border-radius: 2px;
   opacity: .92;
-  animation: bvFall linear infinite;
+  animation: bvTrophyFall linear infinite;
 }
-@keyframes bvFall {
+@keyframes bvTrophyFall {
   0%   { transform: translate(0, -20px) rotate(0); opacity: 0; }
   10%  { opacity: .95; }
   100% { transform: translate(20px, 110vh) rotate(720deg); opacity: 0; }
+}
+
+@media (max-width: 380px) {
+  .bv-trophy-card { padding: 18px 16px 16px; }
+  .bv-trophy-title { font-size: 20px; }
+  .bv-trophy-amount .amt { font-size: 32px; }
+  .bv-trophy-stat .val,
+  .bv-trophy-paidat .val { font-size: 13px; }
 }
 `;
