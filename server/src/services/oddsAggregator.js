@@ -31,6 +31,33 @@ let running = false;
 const lastPriceByKey = new Map(); // canonicalKey -> { [market]: { [sel]: odds } }
 const failureStreak  = new Map(); // providerId -> consecutive failures
 
+const liveLastByKey  = new Map(); // fixtureKey -> { scoreHome, scoreAway, minute, redCardsHome, redCardsAway }
+const liveFailureStreak = new Map(); // 'live:<providerId>' -> consecutive failures
+let liveTimer = null;
+let liveRunning = false;
+
+function liveBackoffMs(streak) {
+  // Live track recovers faster than pre-match: cap at 60s.
+  return Math.min(6_000 * Math.pow(2, streak), 60_000);
+}
+
+function deriveEventKind(prev, next) {
+  if (!prev) return next.minute && Number(next.minute) <= 1 ? 'kick_off' : null;
+  if (next.scoreHome > (prev.scoreHome ?? 0)) return 'goal_home';
+  if (next.scoreAway > (prev.scoreAway ?? 0)) return 'goal_away';
+  if ((next.redCardsHome ?? 0) > (prev.redCardsHome ?? 0)) return 'red_card';
+  if ((next.redCardsAway ?? 0) > (prev.redCardsAway ?? 0)) return 'red_card';
+  if (prev.minute !== 'HT' && next.minute === 'HT') return 'half_time';
+  if (prev.minute !== 'FT' && next.minute === 'FT') return 'full_time';
+  return null;
+}
+
+function teamFromKind(kind) {
+  if (kind === 'goal_home') return 'home';
+  if (kind === 'goal_away') return 'away';
+  return undefined;
+}
+
 function backoffMs(streak) {
   return Math.min(POLL_INTERVAL_MS * Math.pow(2, streak), 10 * 60_000);
 }
@@ -187,4 +214,102 @@ export function startAggregator() {
 export function stopAggregator() {
   if (timer) clearInterval(timer);
   timer = null;
+}
+
+/**
+ * Given an array of merged live Odds rows, return a (fixtureKey, market, outcome)
+ * → odds lookup function. cashOutEngine consumes this.
+ */
+function makeOddsLookup(rows) {
+  const idx = new Map();
+  for (const row of rows) {
+    for (const [mk, market] of Object.entries(row.markets || {})) {
+      for (const sel of market.selections || []) {
+        idx.set(`${row.key}::${mk}::${sel.key}`, sel.odds);
+      }
+    }
+  }
+  return (fixtureKey, market, outcome) => idx.get(`${fixtureKey}::${market}::${outcome}`) ?? null;
+}
+
+async function liveLoop() {
+  if (liveRunning) return;
+  liveRunning = true;
+  try {
+    const { fetchLiveOddsAll, fetchLiveScoresAll } = await import('./providerRegistry.js');
+    const [oddsRows, scoreRows] = await Promise.all([
+      fetchLiveOddsAll('football').catch(() => []),
+      fetchLiveScoresAll('football').catch(() => []),
+    ]);
+
+    // 1) Score & match-event emits.
+    const { emitScoreUpdate } = await import('./realtime.js');
+    for (const fx of scoreRows) {
+      const prev = liveLastByKey.get(fx.key);
+      const kind = deriveEventKind(prev, fx);
+      liveLastByKey.set(fx.key, {
+        scoreHome: fx.scoreHome, scoreAway: fx.scoreAway, minute: fx.minute,
+        redCardsHome: fx.redCardsHome, redCardsAway: fx.redCardsAway,
+      });
+      if (!prev
+          || prev.scoreHome !== fx.scoreHome
+          || prev.scoreAway !== fx.scoreAway
+          || prev.minute    !== fx.minute
+          || kind) {
+        emitScoreUpdate({
+          fixtureId: fx.key,
+          sport: fx.sport,
+          scoreHome: fx.scoreHome,
+          scoreAway: fx.scoreAway,
+          minute: fx.minute,
+          eventKind: kind || undefined,
+          team: teamFromKind(kind),
+        });
+      }
+    }
+
+    // 2) Odds emits via existing diffEmit machinery (private to this file).
+    const grouped = new Map(); // key -> Odds[]
+    for (const row of oddsRows) {
+      const arr = grouped.get(row.key) || [];
+      arr.push(row);
+      grouped.set(row.key, arr);
+    }
+    for (const [, rows] of grouped) {
+      const merged = mergeRows(rows);
+      diffEmit(merged);
+    }
+
+    // 3) Cash-out recompute for every fixture we just saw a tick on.
+    const engine = await import('./cashOutEngine.js');
+    const lookup = makeOddsLookup(oddsRows);
+    const { LIVE_BETTING } = await import('../config/env.js');
+    for (const fx of scoreRows) engine.onLiveChange(fx.key, lookup, LIVE_BETTING.houseMargin);
+    engine.sweep();
+
+    liveFailureStreak.clear();
+  } catch (e) {
+    const streak = (liveFailureStreak.get('live') || 0) + 1;
+    liveFailureStreak.set('live', streak);
+    const next = liveBackoffMs(streak);
+    log.warn(`Live track failure ×${streak} — next attempt in ${Math.round(next / 1000)}s: ${e.message}`);
+  } finally {
+    liveRunning = false;
+  }
+}
+
+export async function startLiveTrack() {
+  const { LIVE_BETTING } = await import('../config/env.js');
+  if (liveTimer) return;
+  if (!LIVE_BETTING.apiFootballKey) {
+    log.info('Live track disabled — APIFOOTBALL_KEY not set.');
+    return;
+  }
+  liveTimer = setInterval(() => { liveLoop().catch(() => {}); }, LIVE_BETTING.pollMs);
+  liveLoop().catch(() => {});
+  log.info(`Live track started, polling every ${LIVE_BETTING.pollMs}ms.`);
+}
+
+export function stopLiveTrack() {
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
 }

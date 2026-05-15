@@ -32,7 +32,7 @@ import { initStores } from './db/store.js';
 import { PROMOTIONS } from './matchesData.js';
 import { startSettlementLoop } from './services/settlement.js';
 import { attachRealtime } from './services/realtime.js';
-import { startAggregator } from './services/oddsAggregator.js';
+import { startAggregator, startLiveTrack } from './services/oddsAggregator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -131,6 +131,7 @@ async function boot() {
   try {
     startSettlementLoop();
     startAggregator();
+    startLiveTrack();
   } catch (e) {
     log.error('post-boot error', e?.message || e);
   }
