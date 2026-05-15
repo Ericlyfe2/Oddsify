@@ -29,6 +29,8 @@ import { updateUser, logActivity } from '../db/users.js';
 import { pushTx } from './wallet.js';
 import { emitAdmin, emitToUser } from '../services/realtime.js';
 import { SYSTEM_TYPES, maxSystemReturn } from '../lib/systemBets.js';
+import * as cashOutEngine from '../services/cashOutEngine.js';
+import { LIVE_BETTING } from '../config/env.js';
 
 const router = Router();
 
@@ -66,6 +68,13 @@ const placeSchema = z.object({
 
 const jackpotEnterSchema = z.object({
   picks: z.record(z.string(), z.string()),
+});
+
+const cashoutSchema = z.object({
+  acceptedAmount: z.union([z.number(), z.string()])
+    .optional()
+    .transform((v) => v === undefined ? undefined : Number(v))
+    .refine((v) => v === undefined || (Number.isFinite(v) && v >= 0), 'invalid acceptedAmount'),
 });
 
 /* ------------ public meta ------------ */
@@ -236,6 +245,8 @@ router.post('/place',
       bonusRate: BONUS_RATE,
       legs: normalized,
       status: 'open',
+      lastCashOutOffer: null,
+      cashOutHistory:   [],
       ...(mode === 'system' && {
         systemType: systemType.toLowerCase(),
         systemLabel: systemDef.label,
@@ -244,6 +255,9 @@ router.post('/place',
       }),
     };
     pushBet(receipt);
+
+    // Index this bet so live ticks can recompute its cash-out offer.
+    cashOutEngine.registerBet(receipt);
 
     const updated = updateUser(user.id, { balance: Number((user.balance - totalStake).toFixed(2)) });
     pushTx(user.id, {
@@ -294,30 +308,61 @@ router.get('/bets/:id', requireAuth, (req, res, next) => {
   res.json({ bet });
 });
 
-router.delete('/bets/:id', requireAuth, asyncHandler(async (req, res) => {
-  const bet = betsStore.get(req.params.id);
-  if (!bet || bet.userId !== req.user.id) throw notFound('Bet not found');
-  if (bet.status !== 'open') throw conflict('Bet is already settled and cannot be cashed out.');
+router.delete('/bets/:id',
+  requireAuth,
+  validate(cashoutSchema),
+  asyncHandler(async (req, res) => {
+    const bet = betsStore.get(req.params.id);
+    if (!bet || bet.userId !== req.user.id) throw notFound('Bet not found');
+    if (bet.status !== 'open') throw conflict('Bet is already settled and cannot be cashed out.', { code: 'ALREADY_SETTLED' });
 
-  const cashOut = Number((bet.stake * (bet.totalOdds * 0.6)).toFixed(2));
-  bet.status = 'cashed_out';
-  bet.cashOut = cashOut;
-  betsStore.set(bet.id, bet);
+    let cashOut;
+    if (bet.mode === 'system') {
+      // System bets keep the legacy formula in v1. acceptedAmount ignored.
+      cashOut = Number((bet.stake * bet.totalOdds * 0.6).toFixed(2));
+    } else {
+      const last = cashOutEngine.getLastOffer(bet.id);
+      if (!last) {
+        // No live offer recorded yet (no tick has happened since /place).
+        // Fall back to a conservative offer based on stake and the house margin.
+        cashOut = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+      } else {
+        cashOut = last.cashOut;
+        if (req.body?.acceptedAmount !== undefined) {
+          const drift = Math.abs(req.body.acceptedAmount - cashOut) / Math.max(cashOut, 1);
+          if (drift > LIVE_BETTING.driftTolerance) {
+            throw conflict('Cash-out offer changed before you confirmed. Refresh and try again.', {
+              code: 'OFFER_STALE', currentOffer: cashOut,
+            });
+          }
+        }
+      }
+    }
 
-  const updated = updateUser(req.user.id, {
-    balance: Number((req.user.balance + cashOut).toFixed(2)),
-  });
-  pushTx(req.user.id, {
-    kind: 'cash_out', amount: cashOut, status: 'completed',
-    balanceAfter: updated.balance, ref: bet.id,
-  });
-  logActivity(req.user.id, { kind: 'cash_out', betId: bet.id, cashOut });
+    bet.status = 'cashed_out';
+    bet.cashOut = cashOut;
+    bet.cashOutAt = new Date().toISOString();
+    betsStore.set(bet.id, bet);
+    cashOutEngine.unregisterBet(bet.id);
 
-  res.json({
-    ok: true, bet,
-    account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
-  });
-}));
+    const updated = updateUser(req.user.id, {
+      balance: Number((req.user.balance + cashOut).toFixed(2)),
+    });
+    pushTx(req.user.id, {
+      kind: 'cash_out', amount: cashOut, status: 'completed',
+      balanceAfter: updated.balance, ref: bet.id,
+    });
+    logActivity(req.user.id, { kind: 'cash_out', betId: bet.id, cashOut });
+
+    emitToUser(req.user.id, 'wallet:update', { balance: updated.balance, delta: cashOut, reason: 'cash_out', ref: bet.id });
+    emitAdmin('cashout:executed', { betId: bet.id, userId: req.user.id, cashOut, ts: Date.now() });
+
+    res.json({
+      ok: true, bet,
+      account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
+    });
+  })
+);
 
 /* ------------ casino, virtuals, jackpot, promos ------------ */
 
@@ -363,6 +408,14 @@ router.post('/jackpot/enter',
 router.get('/promos', (_req, res) => {
   const fromStore = listActivePromotions();
   res.json({ promotions: fromStore.length ? fromStore : PROMOTIONS });
+});
+
+cashOutEngine.onOffer((bet, payload) => {
+  const fresh = betsStore.get(bet.id);
+  if (!fresh || fresh.status !== 'open') return;
+  fresh.lastCashOutOffer = { amount: payload.cashOut, ts: payload.ts };
+  fresh.cashOutHistory = [...(fresh.cashOutHistory || []).slice(-19), { ts: payload.ts, amount: payload.cashOut }];
+  betsStore.set(fresh.id, fresh);
 });
 
 export default router;

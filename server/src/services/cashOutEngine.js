@@ -118,6 +118,7 @@ export function onLiveChange(fixtureKey, oddsLookup, houseMargin) {
     };
     lastOfferByBet.set(betId, { cashOut: payload.cashOut, ts: payload.ts });
     _emit(bet.userId, 'cashout:offer', payload);
+    if (_onOffer) try { _onOffer(bet, payload); } catch { /* never break the loop */ }
   }
 }
 
@@ -139,6 +140,7 @@ export function onLegSettled(fixtureKey, won) {
       const payload = { betId, cashOut: 0, potentialWin: Number((bet.stake * bet.totalOdds).toFixed(2)), ts: Date.now(), reason: 'leg_lost' };
       lastOfferByBet.set(betId, { cashOut: 0, ts: payload.ts });
       _emit(bet.userId, 'cashout:offer', payload);
+      if (_onOffer) try { _onOffer(bet, payload); } catch { /* never break the loop */ }
     }
   }
 }
@@ -153,3 +155,7 @@ export function sweep() {
     if (set.size === 0) openBetsByFixture.delete(fixtureKey);
   }
 }
+
+let _onOffer = null;
+/** Register a side-effect callback invoked every time cashout:offer is emitted. */
+export function onOffer(handler) { _onOffer = handler; }
