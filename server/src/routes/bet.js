@@ -322,19 +322,25 @@ router.delete('/bets/:id',
       cashOut = Number((bet.stake * bet.totalOdds * 0.6).toFixed(2));
     } else {
       const last = cashOutEngine.getLastOffer(bet.id);
-      if (!last) {
+      if (last) {
+        if (last.cashOut === 0) {
+          throw conflict('This bet has busted — cash-out is no longer available. The natural settlement will run shortly.', { code: 'OFFER_ZERO' });
+        }
+        cashOut = last.cashOut;
+      } else {
         // No live offer recorded yet (no tick has happened since /place).
         // Fall back to a conservative offer based on stake and the house margin.
         cashOut = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
-      } else {
-        cashOut = last.cashOut;
-        if (req.body?.acceptedAmount !== undefined) {
-          const drift = Math.abs(req.body.acceptedAmount - cashOut) / Math.max(cashOut, 1);
-          if (drift > LIVE_BETTING.driftTolerance) {
-            throw conflict('Cash-out offer changed before you confirmed. Refresh and try again.', {
-              code: 'OFFER_STALE', currentOffer: cashOut,
-            });
-          }
+      }
+      // Validate drift in both paths when client provided acceptedAmount.
+      if (req.body?.acceptedAmount !== undefined) {
+        const drift = cashOut > 0
+          ? Math.abs(req.body.acceptedAmount - cashOut) / cashOut
+          : Math.abs(req.body.acceptedAmount - cashOut);
+        if (drift > LIVE_BETTING.driftTolerance) {
+          throw conflict('Cash-out offer changed before you confirmed. Refresh and try again.', {
+            code: 'OFFER_STALE', currentOffer: cashOut,
+          });
         }
       }
     }
