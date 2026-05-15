@@ -36,7 +36,23 @@ export class ApiFootballProvider extends Provider {
     if (!this.enabled || sport !== 'football') return [];
     const url = `https://${this.host}/fixtures?live=all`;
     const json = await this.http(url, { headers: this.headers() });
-    return (json?.response || []).map((r) => normaliseFixture(r, this.id));
+    return (json?.response || []).map((r) => {
+      const fx = normaliseFixture(r, this.id);
+      const reds = (r.events || []).filter((e) => e.type === 'Card' && e.detail === 'Red Card');
+      fx.redCardsHome = reds.filter((e) => e.team?.id === r.teams?.home?.id).length;
+      fx.redCardsAway = reds.filter((e) => e.team?.id === r.teams?.away?.id).length;
+      fx.providerKey = fx.key;
+      return fx;
+    });
+  }
+
+  async fetchOdds(sport = 'football', opts = {}) {
+    if (!this.enabled || sport !== 'football') return [];
+    const url = opts.live
+      ? `https://${this.host}/odds/live`
+      : `https://${this.host}/odds?date=${new Date().toISOString().slice(0, 10)}`;
+    const json = await this.http(url, { headers: this.headers() });
+    return (json?.response || []).map((r) => normaliseOdds(r, this.id));
   }
 }
 
@@ -60,4 +76,85 @@ function normaliseFixture(r, providerId) {
     scoreAway: r.goals?.away ?? null,
     updatedAt: new Date().toISOString(),
   };
+}
+
+function normaliseOdds(r, providerId) {
+  // Build canonical fixture key the same way fetchFixtures does, so odds
+  // join with fixtures via key.
+  const home = r?.teams?.home?.name || r?.fixture?.home || '';
+  const away = r?.teams?.away?.name || r?.fixture?.away || '';
+  const date = r?.fixture?.date || '';
+  const key  = fixtureKey('football', home, away, date);
+
+  const markets = {};
+
+  // api-football returns a list of bookmakers; we fold every supported bet
+  // type from every bookmaker into one canonical market, keeping the highest
+  // odds per selection (the aggregator further merges across providers).
+  for (const bm of r?.bookmakers || []) {
+    for (const bet of bm?.bets || []) {
+      const name = String(bet?.name || '').toLowerCase();
+
+      // Match Winner -> 1X2
+      if (name === 'match winner' || name === '1x2' || name === 'fulltime result') {
+        const m = markets['1X2'] = markets['1X2'] || { name: 'Match Winner', selections: [] };
+        for (const v of bet?.values || []) {
+          const value = String(v?.value || '').toLowerCase();
+          const odds  = Number(v?.odd);
+          if (!Number.isFinite(odds)) continue;
+          let selKey = null, label = null;
+          if (value === 'home' || value === '1') { selKey = '1'; label = 'Home'; }
+          else if (value === 'draw' || value === 'x') { selKey = 'X'; label = 'Draw'; }
+          else if (value === 'away' || value === '2') { selKey = '2'; label = 'Away'; }
+          if (!selKey) continue;
+          upsertSelection(m.selections, selKey, label, odds);
+        }
+        continue;
+      }
+
+      // Goals Over/Under (only the 2.5 line goes into OU25)
+      if (name === 'goals over/under' || name === 'over/under') {
+        const m = markets['OU25'] = markets['OU25'] || { name: 'Over/Under 2.5', selections: [] };
+        for (const v of bet?.values || []) {
+          const value = String(v?.value || '').toLowerCase();
+          const odds  = Number(v?.odd);
+          if (!Number.isFinite(odds)) continue;
+          if (value === 'over 2.5')  upsertSelection(m.selections, 'Over',  'Over 2.5',  odds);
+          if (value === 'under 2.5') upsertSelection(m.selections, 'Under', 'Under 2.5', odds);
+        }
+        continue;
+      }
+
+      // Both Teams to Score -> BTTS
+      if (name === 'both teams to score' || name === 'both teams score' || name === 'btts') {
+        const m = markets['BTTS'] = markets['BTTS'] || { name: 'Both Teams to Score', selections: [] };
+        for (const v of bet?.values || []) {
+          const value = String(v?.value || '').toLowerCase();
+          const odds  = Number(v?.odd);
+          if (!Number.isFinite(odds)) continue;
+          if (value === 'yes') upsertSelection(m.selections, 'Yes', 'Yes', odds);
+          if (value === 'no')  upsertSelection(m.selections, 'No',  'No',  odds);
+        }
+        continue;
+      }
+
+      // Other markets are ignored in v1 — markets-expansion is its own
+      // spec. Adding more markets here later is mechanical.
+    }
+  }
+
+  return {
+    key,
+    sourceId: r?.fixture?.id ?? null,
+    provider: providerId,
+    bookmaker: 'aggregated',
+    markets,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function upsertSelection(arr, key, label, odds) {
+  const existing = arr.find((s) => s.key === key);
+  if (!existing) { arr.push({ key, label, odds }); return; }
+  if (odds > existing.odds) existing.odds = odds;
 }
