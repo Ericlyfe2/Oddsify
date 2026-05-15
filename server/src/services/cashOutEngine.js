@@ -33,10 +33,23 @@ export function __resetForTests({ emitToUser } = {}) {
 
 export function registerBet(bet) {
   if (!bet || bet.status !== 'open') return;
-  betsById.set(bet.id, bet);
-  for (const leg of bet.legs || []) {
+  // Clone the receipt + each leg so engine-local mutations (e.g. marking
+  // legs finished in onLegSettled) don't write through to the shared bet
+  // store. The receipt-side `status`, `lastCashOutOffer`, and `cashOutHistory`
+  // are still updated by routes/bet.js via the store's set() method.
+  const cloned = {
+    id: bet.id,
+    userId: bet.userId,
+    mode: bet.mode,
+    stake: bet.stake,
+    totalOdds: bet.totalOdds,
+    status: bet.status,
+    legs: (bet.legs || []).map((l) => ({ ...l })),
+  };
+  betsById.set(cloned.id, cloned);
+  for (const leg of cloned.legs) {
     const set = openBetsByFixture.get(leg.matchId) || new Set();
-    set.add(bet.id);
+    set.add(cloned.id);
     openBetsByFixture.set(leg.matchId, set);
   }
 }
