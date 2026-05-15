@@ -178,22 +178,24 @@ function pickToken(socket) {
 
 export function emitOddsTick(payload) {
   if (!liveNs) return;
-  const room = `fixture:${payload.fixtureId || payload.key}`;
-  // Selections coming in may already include `direction`. If not, default 'same'.
-  if (payload.selections) {
-    payload.selections = payload.selections.map((s) => ({
-      ...s,
-      direction: s.direction || 'same',
-    }));
+  const fixtureId = payload.fixtureId || payload.key;
+  const room = `fixture:${fixtureId}`;
+
+  // Normalize selections without mutating the caller's payload.
+  const selections = Array.isArray(payload.selections)
+    ? payload.selections.map((s) => ({ ...s, direction: s.direction || 'same' }))
+    : payload.selections;
+  const out = selections === payload.selections ? payload : { ...payload, selections };
+
+  // Merge this market's selections into the rolling snapshot.
+  if (fixtureId && payload.market) {
+    const prev = liveSnapshots.get(fixtureId);
+    const markets = { ...(prev?.markets || {}), [payload.market]: selections };
+    updateSnapshot(fixtureId, { fixtureId, markets });
   }
-  // Merge the new market state into the rolling snapshot.
-  if (payload.fixtureId && payload.market) {
-    const snap = liveSnapshots.get(payload.fixtureId) || { fixtureId: payload.fixtureId, markets: {} };
-    snap.markets = { ...(snap.markets || {}), [payload.market]: payload.selections };
-    updateSnapshot(payload.fixtureId, { markets: snap.markets });
-  }
-  liveNs.to(room).emit('odds:tick', payload);
-  if (payload.sport) liveNs.to(`sport:${payload.sport}`).emit('odds:tick', payload);
+
+  liveNs.to(room).emit('odds:tick', out);
+  if (payload.sport) liveNs.to(`sport:${payload.sport}`).emit('odds:tick', out);
 }
 
 export function emitOddsMovement(payload) {
