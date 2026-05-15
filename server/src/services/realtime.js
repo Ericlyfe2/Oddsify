@@ -7,20 +7,24 @@
  *   /admin  — admin-only. Token required and scope=admin. Rooms: 'global',
  *             'provider:<id>'.
  *
- * Event names (server -> client):
- *   /live:
- *     - odds:tick      { key, fixtureId, market, selections, provider }
- *     - odds:movement  { key, fixtureId, market, selection, prev, next }
- *     - score:update   { fixtureId, scoreHome, scoreAway, minute }
- *     - bet:settled    { betId, status, payout }                 (user room only)
- *     - bet:won        { betId, payout }                         (user room only)
- *     - wallet:update  { balance, delta, reason }                (user room only)
- *   /admin:
- *     - audit:event    Audit log row
- *     - provider:health Provider snapshot
- *     - bet:placed     New bet
- *     - bet:settled    Settled bet (any user)
- *     - kpi:tick       Lightweight KPI delta (online users, etc.)
+ * Server -> client events (/live):
+ *   odds:tick      { key, fixtureId, market, selections: [{ key, label, odds, direction }], sport?, provider? }
+ *   odds:movement  { key, fixtureId, market, selection, prev, next }
+ *   score:update   { fixtureId, scoreHome, scoreAway, minute, sport?, eventKind?, team? }
+ *   match:event    { fixtureId, kind, minute, scoreHome, scoreAway, team?, ts }  // emitted only on real events
+ *   live:snapshot  { fixtureId, scoreHome, scoreAway, minute, markets, ts }      // sent to a single socket on subscribe
+ *   bet:settled    { betId, status, payout }                                     // user room only
+ *   bet:won        { betId, payout }                                             // user room only
+ *   wallet:update  { balance, delta, reason }                                    // user room only
+ *   cashout:offer  { betId, cashOut, potentialWin, ts, reason? }                 // user room only
+ *
+ * Server -> client events (/admin):
+ *   audit:event       Audit log row
+ *   provider:health   Provider snapshot
+ *   bet:placed        New bet
+ *   bet:settled       Settled bet (any user)
+ *   kpi:tick          Lightweight KPI delta (online users, etc.)
+ *   cashout:executed  { betId, userId, cashOut, ts }
  *
  * Client -> server commands:
  *   /live   subscribe   { fixtureIds: string[], sportIds: string[] }
@@ -40,6 +44,18 @@ let adminNs = null;
 // Track sockets per user / per admin for monitoring
 const liveByUser = new Map();   // userId -> Set<socket>
 const adminSockets = new Set();
+
+// Per-fixture rolling snapshot of the last known live state. Pushed to
+// reconnecting sockets when they re-join a fixture room, so the UI has
+// something to render before the next tick arrives.
+const liveSnapshots = new Map(); // fixtureKey -> { fixtureId, scoreHome, scoreAway, minute, markets, ts }
+
+function updateSnapshot(fixtureKey, patch) {
+  const prev = liveSnapshots.get(fixtureKey) || {};
+  const next = { ...prev, ...patch, ts: Date.now() };
+  liveSnapshots.set(fixtureKey, next);
+  return next;
+}
 
 export function attachRealtime(httpServer) {
   if (io) return io;
@@ -88,8 +104,14 @@ export function attachRealtime(httpServer) {
 
     socket.on('subscribe', (payload = {}) => {
       const { fixtureIds = [], sportIds = [] } = payload;
-      for (const id of fixtureIds.slice(0, 200)) socket.join(`fixture:${id}`);
-      for (const id of sportIds.slice(0, 10))    socket.join(`sport:${id}`);
+      for (const id of fixtureIds.slice(0, 200)) {
+        socket.join(`fixture:${id}`);
+        // Send the current snapshot (if any) to *this socket only* — late
+        // joiners get state before the next tick.
+        const snap = liveSnapshots.get(id);
+        if (snap) socket.emit('live:snapshot', snap);
+      }
+      for (const id of sportIds.slice(0, 10)) socket.join(`sport:${id}`);
     });
 
     socket.on('unsubscribe', (payload = {}) => {
@@ -157,6 +179,19 @@ function pickToken(socket) {
 export function emitOddsTick(payload) {
   if (!liveNs) return;
   const room = `fixture:${payload.fixtureId || payload.key}`;
+  // Selections coming in may already include `direction`. If not, default 'same'.
+  if (payload.selections) {
+    payload.selections = payload.selections.map((s) => ({
+      ...s,
+      direction: s.direction || 'same',
+    }));
+  }
+  // Merge the new market state into the rolling snapshot.
+  if (payload.fixtureId && payload.market) {
+    const snap = liveSnapshots.get(payload.fixtureId) || { fixtureId: payload.fixtureId, markets: {} };
+    snap.markets = { ...(snap.markets || {}), [payload.market]: payload.selections };
+    updateSnapshot(payload.fixtureId, { markets: snap.markets });
+  }
   liveNs.to(room).emit('odds:tick', payload);
   if (payload.sport) liveNs.to(`sport:${payload.sport}`).emit('odds:tick', payload);
 }
@@ -169,13 +204,43 @@ export function emitOddsMovement(payload) {
 
 export function emitScoreUpdate(payload) {
   if (!liveNs) return;
+  // Snapshot first so reconnects get the latest score.
+  if (payload.fixtureId) {
+    updateSnapshot(payload.fixtureId, {
+      fixtureId: payload.fixtureId,
+      scoreHome: payload.scoreHome,
+      scoreAway: payload.scoreAway,
+      minute: payload.minute,
+    });
+  }
   liveNs.to(`fixture:${payload.fixtureId}`).emit('score:update', payload);
   if (payload.sport) liveNs.to(`sport:${payload.sport}`).emit('score:update', payload);
+
+  // Promote a meaningful state change into a separate match:event so the UI
+  // can fire the ribbon animation independently of the score pulse.
+  if (payload.eventKind) {
+    const ev = {
+      fixtureId: payload.fixtureId,
+      kind: payload.eventKind,
+      minute: payload.minute,
+      scoreHome: payload.scoreHome,
+      scoreAway: payload.scoreAway,
+      team: payload.team,
+      ts: Date.now(),
+    };
+    liveNs.to(`fixture:${payload.fixtureId}`).emit('match:event', ev);
+  }
 }
 
 export function emitToUser(userId, event, payload) {
   if (!liveNs || !userId) return;
   liveNs.to(`user:${userId}`).emit(event, payload);
+}
+
+/** Push a cash-out offer to a specific user's room. */
+export function emitCashoutOffer(userId, payload) {
+  if (!liveNs || !userId) return;
+  liveNs.to(`user:${userId}`).emit('cashout:offer', payload);
 }
 
 export function emitAdmin(event, payload) {
