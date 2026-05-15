@@ -54,6 +54,25 @@ export const PATHS = {
   clientDist: path.resolve(__dirname, '../../../client/dist'),
 };
 
+// ---- Live betting -----------------------------------------------------------
+export const LIVE_BETTING = {
+  // apiFootball API key for live odds & live scores. If empty, the live
+  // track no-ops; pre-match polling continues normally.
+  apiFootballKey: env.APIFOOTBALL_KEY || env.APIFOOTBALL_TOKEN || '',
+  // Cadence of the live track, in ms. Lower bound 3000 to respect provider
+  // rate limits. Default 6000.
+  pollMs: Math.max(3000, Number(env.LIVE_POLL_MS) || 6000),
+  // House margin applied to live cash-out offers (0–1).
+  houseMargin: Math.min(0.5, Math.max(0, Number(env.CASHOUT_HOUSE_MARGIN) || 0.05)),
+  // Maximum acceptable drift between the client's acceptedAmount and the
+  // server's current offer (0–1). Default 1%.
+  driftTolerance: Math.min(0.2, Math.max(0, Number(env.CASHOUT_DRIFT_TOLERANCE) || 0.01)),
+};
+
+if (!LIVE_BETTING.apiFootballKey) {
+  console.warn('[env] APIFOOTBALL_KEY not set — live betting track will no-op (pre-match unaffected).');
+}
+
 if (!isProd && JWT.secret === 'dev-only-secret-change-me') {
   console.warn('[env] JWT_SECRET not set — using dev default. Override in .env for production.');
 }
