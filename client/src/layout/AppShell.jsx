@@ -34,7 +34,7 @@ function ThemeToggle() {
   );
 }
 
-function MobileHeader({ account, onSignIn, onSignUp, onAvatar, onSearch }) {
+function MobileHeader({ account, onSignIn, onSignUp, onAvatar, onSearch, onBalanceClick }) {
   const authed = !!account;
   return (
     <div className="sb-mobile-header">
@@ -51,10 +51,15 @@ function MobileHeader({ account, onSignIn, onSignUp, onAvatar, onSearch }) {
 
       {authed ? (
         <>
-          <span className="sb-balance-chip">
+          <button
+            type="button"
+            className="sb-balance-chip"
+            onClick={onBalanceClick}
+            style={{ cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--surface-2)', font: 'inherit' }}
+          >
             <span style={{ color: 'var(--text-dim)' }}>GHS</span>
             <b>{formatAmt(account.balance)}</b>
-          </span>
+          </button>
           <button type="button" className="sb-avatar" onClick={onAvatar} aria-label="Account">
             {(account.displayName || account.email || '?').charAt(0).toUpperCase()}
           </button>
@@ -253,6 +258,7 @@ export default function AppShell() {
 
   // --- Search functionality ---
   const searchDlg = useRef(null);
+  const walletMenuDlg = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -297,6 +303,7 @@ export default function AppShell() {
         onSignUp={() => navigate('/login?next=/wallet')}
         onAvatar={() => navigate('/profile')}
         onSearch={openSearch}
+        onBalanceClick={() => walletMenuDlg.current?.showModal()}
       />
 
       {/* === mobile-only feature promos + quick actions === */}
@@ -342,8 +349,8 @@ export default function AppShell() {
             <button
               type="button"
               className="balance"
-              title={authed ? `${account.displayName} — open wallet` : 'Not signed in'}
-              onClick={() => authed ? navigate('/wallet') : navigate('/login?next=/wallet')}
+              title={authed ? `${account.displayName} — open wallet manager` : 'Not signed in'}
+              onClick={() => authed ? walletMenuDlg.current?.showModal() : navigate('/login?next=/')}
               style={{ cursor: 'pointer', background: 'transparent', border: 'none', font: 'inherit' }}
             >
               <span style={{ color: 'var(--text-dim)' }}>GHS</span>
@@ -450,6 +457,104 @@ export default function AppShell() {
               </div>
             </div>
           ))}
+        </div>
+      </dialog>
+
+      {/* === wallet actions modal === */}
+      <dialog ref={walletMenuDlg} className="bv-dialog wallet-menu-dialog" style={{ maxWidth: 360, width: '90%' }}>
+        <div className="wallet-menu-inner" style={{ padding: '4px 2px' }}>
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>Xenbet Wallet</h3>
+            <button type="button" className="btn btn-ghost" onClick={() => walletMenuDlg.current?.close()} style={{ padding: '6px 10px', fontSize: 16 }}>✕</button>
+          </header>
+          
+          <div className="wallet-menu-card" style={{
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14,
+            padding: '20px 18px',
+            marginBottom: 20,
+            textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%', background: 'radial-gradient(circle, rgba(197,255,61,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
+            <div style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>Available Balance</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--accent)' }}>
+              ₵{formatAmt(balance)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 4 }}>Currency: Ghana Cedis (GHS)</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => { walletMenuDlg.current?.close(); openDeposit(); }}
+              style={{
+                width: '100%',
+                padding: '12px 18px',
+                fontSize: 14,
+                fontWeight: 800,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                background: 'linear-gradient(135deg, var(--accent), #b0e82d)',
+                color: '#0a0d0c',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Deposit Funds
+            </button>
+
+            <button
+              type="button"
+              className="btn"
+              onClick={() => { walletMenuDlg.current?.close(); openWithdraw(); }}
+              style={{
+                width: '100%',
+                padding: '12px 18px',
+                fontSize: 14,
+                fontWeight: 800,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                background: 'linear-gradient(135deg, #ff4d3d, #cc3a2e)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 7l-5 5-5-5M12 17V5"/></svg>
+              Withdraw Funds
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => { walletMenuDlg.current?.close(); navigate('/wallet'); }}
+              style={{
+                width: '100%',
+                padding: '10px 18px',
+                fontSize: 13,
+                fontWeight: 700,
+                borderRadius: 8,
+                border: '1px solid var(--line)',
+                background: 'transparent',
+                color: 'var(--text-soft)',
+                cursor: 'pointer',
+                marginTop: 4
+              }}
+            >
+              Go to Wallet History
+            </button>
+          </div>
         </div>
       </dialog>
     </>
