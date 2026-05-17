@@ -51,6 +51,9 @@ const allowedOrigins = isProd ? CORS_ORIGINS : [...devOrigins, ...CORS_ORIGINS];
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
+    if (!isProd && (origin.startsWith('http://localhost') || origin.startsWith('http://192.168.') || origin.startsWith('http://127.0.0.1'))) {
+      return cb(null, true);
+    }
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error(`CORS: origin ${origin} not allowed`));
   },

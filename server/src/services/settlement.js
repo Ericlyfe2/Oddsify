@@ -57,7 +57,15 @@ function simulateScore(sport, match) {
 /** Parse a fixture's kickoff into a timestamp; falls back to "in the past" for fixtures already marked live. */
 function kickoffTs(match) {
   if (match.finishedAt) return new Date(match.finishedAt).getTime();
-  if (match.isLive) return Date.now() - SIM_AFTER_MS; // already underway → due to finish
+  if (match.isLive) {
+    // Estimate elapsed time from match.minute (e.g., "56'", "45+2'", "HT").
+    // Without this, an isLive match would be SIM_AFTER_MS old on first sweep
+    // and auto-settle instantly — closing the market and breaking /bet/place
+    // for every live fixture (returns 409 MARKET_CLOSED).
+    const minNum = parseInt(String(match.minute || '').replace(/[^\d]/g, ''), 10);
+    const elapsedMs = Number.isFinite(minNum) && minNum > 0 ? minNum * 60_000 : 0;
+    return Date.now() - elapsedMs;
+  }
   if (!match.kickoff) return 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);

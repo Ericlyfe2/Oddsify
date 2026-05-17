@@ -145,6 +145,34 @@ export function addCustomFixture(fx) {
   const cur = store.get('custom') || {};
   store.set('custom', { ...cur, [fx.id]: fx });
 }
+
+/** Add a new market (with selections) to a custom fixture. */
+export function addMarketToFixture(matchId, marketKey, marketDef) {
+  const cur = store.get('custom') || {};
+  const fx = cur[matchId];
+  if (!fx) return null;
+  const markets = { ...(fx.markets || {}) };
+  if (markets[marketKey]) return null; // already exists
+  markets[marketKey] = {
+    name: marketDef.name || marketKey,
+    selections: (marketDef.selections || []).map((s) => ({
+      key: s.key, label: s.label || s.key, odds: Number(s.odds),
+    })),
+  };
+  store.set('custom', { ...cur, [matchId]: { ...fx, markets, moreMarkets: Object.keys(markets).length } });
+  return markets[marketKey];
+}
+
+/** Remove a market from a custom fixture. */
+export function removeMarketFromFixture(matchId, marketKey) {
+  const cur = store.get('custom') || {};
+  const fx = cur[matchId];
+  if (!fx || !fx.markets?.[marketKey]) return false;
+  const markets = { ...fx.markets };
+  delete markets[marketKey];
+  store.set('custom', { ...cur, [matchId]: { ...fx, markets, moreMarkets: Object.keys(markets).length } });
+  return true;
+}
 export function deleteCustomFixture(id) {
   const cur = store.get('custom') || {};
   if (cur[id]) {

@@ -151,6 +151,8 @@ export const adminRecordResult  = (id, body) => post(`/sports/fixtures/${encodeU
 export const adminTriggerSettle = (id)     => post(`/sports/fixtures/${encodeURIComponent(id)}/settle`);
 export const adminLeagues       = ()       => get('/sports/leagues');
 export const adminCreateLeague  = (body)   => post('/sports/leagues', body);
+export const adminAddMarket     = (id, body) => post(`/sports/fixtures/${encodeURIComponent(id)}/markets`, body);
+export const adminRemoveMarket  = (id, marketKey) => del(`/sports/fixtures/${encodeURIComponent(id)}/markets/${encodeURIComponent(marketKey)}`);
 
 /* promotions */
 export const adminListPromotions  = ()     => get('/promotions');

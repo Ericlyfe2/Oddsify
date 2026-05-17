@@ -34,6 +34,27 @@ import { LIVE_BETTING } from '../config/env.js';
 
 const router = Router();
 
+// AF36513 — 2 uppercase letters + 5 digits.
+function generateBookingCode() {
+  const A = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; // dropped 'O' to avoid 0/O confusion
+  const D = '123456789';
+  const letters = A[Math.floor(Math.random() * A.length)] + A[Math.floor(Math.random() * A.length)];
+  let digits = '';
+  for (let i = 0; i < 5; i++) digits += D[Math.floor(Math.random() * D.length)];
+  return letters + digits;
+}
+
+function uniqueBookingCode() {
+  const all = betsStore.all();
+  for (let i = 0; i < 25; i++) {
+    const code = generateBookingCode();
+    const taken = Object.values(all).some((b) => b.bookingCode === code);
+    if (!taken) return code;
+  }
+  // 7-char namespace is huge; this is just paranoia.
+  return generateBookingCode() + Math.floor(Math.random() * 9 + 1);
+}
+
 const betsStore        = createStore('bets', {});         // { betId: receipt }
 const jackpotStore     = createStore('jackpot_entries', {});
 
@@ -43,7 +64,18 @@ function pushBet(receipt) {
 function listUserBets(userId) {
   return Object.values(betsStore.all())
     .filter((b) => b.userId === userId)
-    .sort((a, b) => (a.placedAt < b.placedAt ? 1 : -1));
+    .sort((a, b) => (a.placedAt < b.placedAt ? 1 : -1))
+    .map(attachCashoutOffer);
+}
+
+/** Attach the cash-out display value consistent with what the server would offer. */
+function attachCashoutOffer(bet) {
+  if (bet.status !== 'open') return bet;
+  if (bet.lastCashOutOffer?.amount != null) return bet;
+  const cashoutOffer = bet.mode === 'system'
+    ? Number((bet.stake * bet.totalOdds * 0.6).toFixed(2))
+    : Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+  return { ...bet, cashoutOffer };
 }
 
 /* ------------ schemas ------------ */
@@ -160,6 +192,14 @@ router.get('/leagues/:leagueId/matches', asyncHandler(async (req, res) => {
 
 /* ------------ authenticated bet operations ------------ */
 
+router.get('/code/:code', (req, res, next) => {
+  const code = String(req.params.code || '').toUpperCase();
+  const bet = Object.values(betsStore.all()).find((b) => b.bookingCode === code);
+  if (!bet) return next(notFound('Booking code not found'));
+  const { userId, ...publicBet } = bet;
+  res.json({ bet: publicBet });
+});
+
 router.post('/place',
   requireAuth,
   validate(placeSchema),
@@ -171,14 +211,16 @@ router.post('/place',
     const normalized = [];
     for (const sel of selections) {
       const dedupe = `${sel.matchId}:${sel.market}:${sel.outcome}`;
-      if (seen.has(dedupe)) throw badRequest(`Duplicate selection ${sel.market} ${sel.outcome}.`);
+      if (seen.has(dedupe)) return res.json({ success: false, error: `Duplicate selection ${sel.market} ${sel.outcome}.` });
       seen.add(dedupe);
       const found = adminLookupSelection({ matchId: sel.matchId, market: sel.market, outcome: sel.outcome });
-      if (!found) throw badRequest(`Invalid selection ${sel.market} ${sel.outcome} for match ${sel.matchId}.`);
+      if (!found) return res.json({ success: false, error: `Invalid selection ${sel.market} ${sel.outcome} for match ${sel.matchId}.` });
       const fxView = found.row?.match || found.row;
-      if (fxView?.finished || fxView?.suspended) throw conflict('Market closed — fixture is no longer available.', { code: 'MARKET_CLOSED' });
+      if (fxView?.finished || fxView?.suspended) {
+        return res.json({ success: false, error: 'Market closed — fixture is no longer available.', code: 'MARKET_CLOSED' });
+      }
       if (found.market?.suspended || found.selection?.suspended) {
-        throw conflict('Selection suspended — refresh and try a different market.', { code: 'SELECTION_SUSPENDED' });
+        return res.json({ success: false, error: 'Selection suspended — refresh and try a different market.', code: 'SELECTION_SUSPENDED' });
       }
       const serverOdds = found.selection.odds;
       // Live odds drift constantly. Only reject when the price *dropped*
@@ -187,7 +229,9 @@ router.post('/place',
       const clientOdds = Number.isFinite(sel.odds) ? sel.odds : serverOdds;
       const droppedTooMuch = serverOdds < clientOdds * 0.85;
       if (droppedTooMuch) {
-        throw conflict('Odds dropped significantly — refresh the fixture list.', {
+        return res.json({
+          success: false,
+          error: 'Odds dropped significantly — refresh the fixture list.',
           code: 'ODDS_CHANGED',
           matchId: sel.matchId,
           market: sel.market,
@@ -201,8 +245,8 @@ router.post('/place',
         marketName: found.row.match.markets?.[sel.market]?.name || sel.market,
       });
     }
-    if (mode === 'single' && normalized.length > 1) throw badRequest('Single mode allows only one selection.');
-    if (mode === 'multiple' && normalized.length < 2) throw badRequest('Multiple bets need at least two selections.');
+    if (mode === 'single' && normalized.length > 1) return res.json({ success: false, error: 'Single mode allows only one selection.' });
+    if (mode === 'multiple' && normalized.length < 2) return res.json({ success: false, error: 'Multiple bets need at least two selections.' });
 
     // Compute totals based on the bet mode.
     let totalOdds, totalStake, potentialWin, systemDef = null, linesCount = null, stakePerLine = null;
@@ -210,9 +254,9 @@ router.post('/place',
     if (mode === 'system') {
       const key = String(systemType || '').toLowerCase();
       systemDef = SYSTEM_TYPES[key];
-      if (!systemDef) throw badRequest(`Unknown system type "${systemType}". Pick one of: ${Object.keys(SYSTEM_TYPES).join(', ')}.`);
+      if (!systemDef) return res.json({ success: false, error: `Unknown system type "${systemType}". Pick one of: ${Object.keys(SYSTEM_TYPES).join(', ')}.` });
       if (normalized.length !== systemDef.selections) {
-        throw badRequest(`${systemDef.label} needs exactly ${systemDef.selections} selections (you have ${normalized.length}).`);
+        return res.json({ success: false, error: `${systemDef.label} needs exactly ${systemDef.selections} selections (you have ${normalized.length}).` });
       }
       stakePerLine = Number(stake);
       linesCount   = systemDef.totalLines;
@@ -229,12 +273,14 @@ router.post('/place',
     }
 
     if (totalStake > user.balance) {
-      throw badRequest(`Insufficient balance. This ticket requires GHS ${totalStake.toFixed(2)} (your balance is GHS ${user.balance.toFixed(2)}).`);
+      return res.json({ success: false, error: `Insufficient balance. This ticket requires GHS ${totalStake.toFixed(2)} (your balance is GHS ${user.balance.toFixed(2)}).` });
     }
 
     const id = `bv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const bookingCode = uniqueBookingCode();
     const receipt = {
       id,
+      bookingCode,
       userId: user.id,
       placedAt: new Date().toISOString(),
       mode,

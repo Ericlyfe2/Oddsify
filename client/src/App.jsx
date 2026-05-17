@@ -5,6 +5,7 @@ import Home from './pages/Home.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import WalletPage from './pages/WalletPage.jsx';
+import WithdrawPage from './pages/WithdrawPage.jsx';
 import BetHistoryPage from './pages/BetHistoryPage.jsx';
 import CasinoPage from './pages/CasinoPage.jsx';
 import VirtualsPage from './pages/VirtualsPage.jsx';
@@ -70,7 +71,6 @@ export default function App() {
             <Route path="/reset-password"   element={<Navigate to="/login" replace />} />
             <Route element={<AppShell />}>
               <Route path="/"          element={<Home />} />
-              <Route path="/live"      element={<Home initialChip="live" />} />
               <Route path="/my-bets"   element={<BetHistoryPage />} />
               <Route path="/casino"    element={<CasinoPage />} />
               <Route path="/virtuals"  element={<VirtualsPage />} />
@@ -78,6 +78,7 @@ export default function App() {
               <Route path="/promos"    element={<PromosPage />} />
               <Route path="/profile"   element={<ProfilePage />} />
               <Route path="/wallet"    element={<WalletPage />} />
+              <Route path="/withdraw"  element={<WithdrawPage />} />
               <Route path="/info"      element={<InfoPage />} />
               <Route path="/terms"     element={<Navigate to="/info#terms" replace />} />
               <Route path="/privacy"   element={<Navigate to="/info#privacy" replace />} />

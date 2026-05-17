@@ -37,7 +37,7 @@ export default function AppProviders({ children }) {
   const depositDlg  = useRef(null);
   const withdrawDlg = useRef(null);
   const MIN_DEPOSIT  = 300;
-  const MIN_WITHDRAW = 10_000;
+  const MIN_WITHDRAW = 550;
   const WITHDRAW_DEPOSIT_RATIO = 0.10;
   const [depositAmt,  setDepositAmt]   = useState(String(MIN_DEPOSIT));
   const [withdrawAmt, setWithdrawAmt]  = useState(String(MIN_WITHDRAW));
@@ -147,8 +147,7 @@ export default function AppProviders({ children }) {
 
   const openWithdraw = useCallback(() => {
     if (!account) { toast('Sign in to withdraw.'); navigate('/login'); return; }
-    setErr(''); setWithdrawAmt(String(MIN_WITHDRAW));
-    withdrawDlg.current?.showModal();
+    navigate('/withdraw');
   }, [account, toast, navigate]);
 
   const submitDeposit = async (e) => {

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   fetchMatches,
   placeBet,
-  fetchBetHistory,
-  cashOutBet,
+  fetchBetByCode,
 } from '../api/betApi.js';
 import { useToast, useAccount } from '../layout/AppShell.jsx';
 import BetSuccessModal, { toBookingCode } from '../components/BetSuccessModal.jsx';
@@ -58,38 +57,64 @@ function systemTypeHint(count) {
   return 'a different combination';
 }
 
-function FormDots({ pattern }) {
-  const chars = (pattern || '').split('');
-  return (
-    <span className="form-dots">
-      {chars.map((c, i) => <span key={i} className={`form-dot ${c}`} />)}
-    </span>
-  );
+// Returns the column keys for the current market chip, with fallbacks.
+function columnsFor(marketChip, match) {
+  // Aliases — fall back to 1X2 / ML if the chip's market isn't priced.
+  if (marketChip === '1X2') {
+    const m = match.markets?.['1X2'] || match.markets?.['ML'];
+    if (!m) return null;
+    return { market: match.markets?.['1X2'] ? '1X2' : 'ML', selections: m.selections };
+  }
+  if (marketChip === 'OU25') {
+    const m = match.markets?.['OU25'];
+    if (!m) return null;
+    return { market: 'OU25', selections: m.selections };
+  }
+  if (marketChip === 'DC') {
+    const m = match.markets?.['DC'];
+    if (!m) return null;
+    return { market: 'DC', selections: m.selections };
+  }
+  if (marketChip === 'HT') {
+    // first-half O/U; if not provided, no row
+    const m = match.markets?.['HT_OU15'] || match.markets?.['HT_OU05'] || match.markets?.['BTTS'];
+    if (!m) return null;
+    return { market: m.id || 'HT', selections: m.selections };
+  }
+  return null;
 }
 
-export default function Home({ initialChip, initialSlipTab }) {
+export default function Home({ initialChip }) {
   const { toast } = useToast();
   const { account, adjustBalance } = useAccount();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sportParam = searchParams.get('sport') || 'football';
 
-  const [sportId, setSportId]       = useState(sportParam);
-  const [snapshot, setSnapshot]     = useState(null);
-  const [loadErr, setLoadErr]       = useState(null);
-  const [selections, setSelections] = useState([]);
-  const [betMode, setBetMode]       = useState('multiple');
-  const [systemType, setSystemType] = useState(null);
-  const [slipPanel, setSlipPanel]   = useState(initialSlipTab === 'mybets' ? 'mybets' : 'slip');
-  const [chip, setChip]             = useState(initialChip || 'all');
+  const [sportId, setSportId]         = useState(sportParam);
+  const [snapshot, setSnapshot]       = useState(null);
+  const [loadErr, setLoadErr]         = useState(null);
+  const [selections, setSelections]   = useState([]);
+  const [betMode, setBetMode]         = useState('multiple');
+  const [systemType, setSystemType]   = useState(null);
+  const [stake, setStake]             = useState('50.00');
   const [activeLeague, setActiveLeague] = useState(null);
-  const [stake, setStake]           = useState('50.00');
-  const [starred, setStarred]       = useState({});
-  const [history, setHistory]       = useState([]);
+
+  // new mobile-first UI state
+  const [subTab, setSubTab]           = useState(initialChip === 'live' ? 'today' : 'highlights');
+  const [marketChip, setMarketChip]   = useState('1X2');
+  const [collapsed, setCollapsed]     = useState({});
+  const [slipOpen, setSlipOpen]       = useState(false);
+  const [payslip, setPayslip]         = useState('');
+  const [successBet, setSuccessBet]   = useState(null);
   const [marketsForMatch, setMarketsForMatch] = useState(null);
-  const marketsDlg = useRef(null);
-  const [betHistoryTab, setBetHistoryTab] = useState('open'); // 'open' | 'history'
-  const [successBet, setSuccessBet] = useState(null);
-  const [copiedCode, setCopiedCode] = useState(null);
+  const [featuredTab, setFeaturedTab] = useState('featured');
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [slipErr, setSlipErr] = useState('');
+  const [isPlacing, setIsPlacing] = useState(false);
+
+  const slipDlg     = useRef(null);
+  const marketsDlg  = useRef(null);
 
   // Initial sport from URL change
   useEffect(() => { setSportId(sportParam); }, [sportParam]);
@@ -115,12 +140,6 @@ export default function Home({ initialChip, initialSlipTab }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sportId]);
 
-  // Refresh My Bets when tab opens
-  useEffect(() => {
-    if (slipPanel !== 'mybets') return;
-    fetchBetHistory().then((d) => setHistory(d.bets || [])).catch(() => {});
-  }, [slipPanel]);
-
   // 30-second odds refresh on football
   useEffect(() => {
     if (sportId !== 'football') return;
@@ -130,16 +149,14 @@ export default function Home({ initialChip, initialSlipTab }) {
     return () => clearInterval(t);
   }, [sportId]);
 
-  const featured = useMemo(() => {
-    if (!snapshot?.leagues?.length) return null;
-    const id = snapshot.featuredMatchId;
-    for (const lg of snapshot.leagues) {
-      const m = lg.matches.find((x) => x.id === id);
-      if (m) return { league: lg, match: m };
-    }
-    const lg = snapshot.leagues[0];
-    return { league: lg, match: lg.matches[0] };
-  }, [snapshot]);
+  // Bottom-sheet open/close wiring
+  useEffect(() => {
+    const dlg = slipDlg.current;
+    if (!dlg) return;
+    if (slipOpen && !dlg.open) dlg.showModal();
+    if (!slipOpen && dlg.open) dlg.close();
+    if (slipOpen) setSlipErr(''); // clear error when reopening
+  }, [slipOpen]);
 
   const upsertSelection = useCallback((row) => {
     setSelections((prev) => {
@@ -167,7 +184,6 @@ export default function Home({ initialChip, initialSlipTab }) {
     }
     if (odds == null) return;
 
-    // In Single mode, only one selection at a time — replace anything else.
     if (betMode === 'single' && !existing) {
       setSelections([{
         id: `sel-${crypto.randomUUID?.() || Date.now()}`,
@@ -180,7 +196,6 @@ export default function Home({ initialChip, initialSlipTab }) {
       return;
     }
 
-    // Hard cap at 12 selections so system-bet combinatorics stay sane.
     if (!existing && selections.length >= 12) {
       toast('Slip is full — 12 selections max.');
       return;
@@ -204,16 +219,7 @@ export default function Home({ initialChip, initialSlipTab }) {
     toast('Slip cleared.');
   }, [toast]);
 
-  const onHeroPill = (key) => {
-    if (!featured) return;
-    const m = featured.match.markets?.['1X2'] || featured.match.markets?.['ML'];
-    const sel = m?.selections.find((s) => s.key === key);
-    if (sel) toggleSelection(featured.league, featured.match, m === featured.match.markets?.['1X2'] ? '1X2' : 'ML', key, sel.odds);
-  };
-
-  // When mode changes, normalise side-effects:
-  //  - 'single' → drop everything except the most recent pick.
-  //  - 'system' → auto-pick a sensible system type for the current count.
+  // Side-effects when bet mode changes
   useEffect(() => {
     if (betMode === 'single' && selections.length > 1) {
       setSelections((prev) => prev.slice(-1));
@@ -227,21 +233,41 @@ export default function Home({ initialChip, initialSlipTab }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [betMode, selections.length]);
 
-  // Eligible system types update as the user adds/removes selections.
+  // Keep slip odds in sync with the live snapshot
+  useEffect(() => {
+    if (!snapshot) return;
+    setSelections((prev) => {
+      let changed = false;
+      const next = prev.map((s) => {
+        const match = snapshot.leagues
+          .flatMap((lg) => lg.matches)
+          .find((m) => m.id === s.matchId);
+        if (!match) { changed = true; return null; } // match finished or removed
+        const mkt = match.markets?.[s.market];
+        if (!mkt || mkt.suspended) { changed = true; return null; } // market closed
+        const sel = mkt.selections?.find((x) => x.key === s.outcome);
+        if (!sel || sel.suspended) { changed = true; return null; } // selection closed
+        if (sel.odds === s.odds) return s;
+        changed = true;
+        return { ...s, odds: sel.odds, trend: sel.odds > s.odds ? '↑' : '↓' };
+      }).filter(Boolean); // actually remove the nulls
+      return changed ? next : prev;
+    });
+  }, [snapshot]);
+
   const eligibleSystems = useMemo(
     () => eligibleSystemTypes(selections.length),
     [selections.length],
   );
 
-  const systemDef = systemType ? SYSTEM_TYPES[systemType] : null;
-  const linesCount = systemDef?.totalLines || 0;
+  const systemDef    = systemType ? SYSTEM_TYPES[systemType] : null;
+  const linesCount   = systemDef?.totalLines || 0;
   const stakePerLine = parseStake(stake);
 
   const totalOdds = useMemo(() => {
     if (!selections.length) return 0;
     if (betMode === 'single')   return selections[0].odds;
     if (betMode === 'multiple') return selections.reduce((p, s) => p * s.odds, 1);
-    // For systems, expose the effective multiplier (max-return / total-stake).
     if (betMode === 'system' && systemDef && stakePerLine > 0) {
       const ret = maxSystemReturn(selections.map((s) => s.odds), systemType, stakePerLine);
       const totalStake = stakePerLine * linesCount;
@@ -264,76 +290,71 @@ export default function Home({ initialChip, initialSlipTab }) {
     return stakePerLine * totalOdds * (1 + BONUS);
   }, [selections, stakePerLine, totalOdds, betMode, systemDef, systemType]);
 
-  // Place a hard cap on the slip so we never reach unboundedly slow
-  // combinatorial expansion in the UI.
-  const slipFull = selections.length >= 12;
-
-  const mainClass = useMemo(() => {
-    const c = [];
-    if (chip === 'live') c.push('main-filter-live');
-    if (chip === 'soon') c.push('main-filter-soon');
-    if (chip === 'africa') c.push('main-region-africa');
-    if (chip === 'europe') c.push('main-region-europe');
-    return c.join(' ');
-  }, [chip]);
-
   const onPlaceBet = async () => {
-    if (!selections.length) { toast('Add at least one selection to your bet slip.'); return; }
+    setSlipErr('');
+    if (!selections.length) { setSlipErr('Add at least one selection to your bet slip.'); return; }
     if (betMode === 'multiple' && selections.length < 2) {
-      toast('Multiple bets need at least 2 selections.'); return;
+      setSlipErr('Multiple bets need at least 2 selections.'); return;
     }
     if (betMode === 'system' && !systemDef) {
-      toast(`Pick a valid number of selections for a system bet (3–8).`); return;
+      setSlipErr('Pick a valid number of selections for a system bet (3–8).'); return;
     }
     const linePrice = parseStake(stake);
-    if (linePrice <= 0) { toast('Enter a stake amount.'); return; }
-    if (!account) { toast('Sign in to place a bet.'); return; }
+    if (linePrice <= 0) { setSlipErr('Enter a stake amount.'); return; }
+    if (!account) { 
+      setSlipOpen(false);
+      navigate('/login?next=/');
+      toast('Sign in to place a bet.'); 
+      return; 
+    }
     const cost = betMode === 'system' ? linePrice * linesCount : linePrice;
     if (cost > account.balance) {
-      toast(`Insufficient balance — this ticket costs GHS ${formatAmt(cost)}.`); return;
+      setSlipErr(`Insufficient balance — this ticket costs GHS ${formatAmt(cost)}.`); 
+      return;
     }
+    
+    setIsPlacing(true);
     try {
       const res = await placeBet({
         mode: betMode,
-        stake: linePrice, // server treats this as per-line for systems, total otherwise
+        stake: linePrice,
         ...(betMode === 'system' ? { systemType } : {}),
         selections: selections.map((s) => ({
           matchId: s.matchId, market: s.market, outcome: s.outcome, odds: s.odds,
         })),
       });
-      adjustBalance(-cost, `Bet placed — booking code ${toBookingCode(res.bet.id)}.`);
+      adjustBalance(-cost, `Bet placed — booking code ${res.bet.bookingCode}.`);
       setSelections([]);
-      setSlipPanel('mybets');
+      setSlipOpen(false);
       setSuccessBet(res.bet);
-      try {
-        const refreshed = await fetchBetHistory();
-        setHistory(refreshed.bets || []);
-      } catch { /* non-fatal */ }
     } catch (e) {
       if (e.status === 409) {
-        toast('Odds changed — refreshing.');
+        setSlipErr(e.message || 'Odds changed or market closed — refreshing.');
+        setSelections([]); // Clear invalid selections
         try { setSnapshot(await fetchMatches(sportId)); } catch {/* ignore */}
       } else {
-        toast(e.message || 'Could not place bet.');
+        setSlipErr(e.message || 'Could not place bet.');
       }
-    }
-  };
-
-  const onCashOut = async (id) => {
-    try {
-      const res = await cashOutBet(id);
-      const cash = res.bet.cashOut || 0;
-      adjustBalance(cash, `Cashed out: GHS ${formatAmt(cash)}.`);
-      const refreshed = await fetchBetHistory();
-      setHistory(refreshed.bets || []);
-    } catch (e) {
-      toast(e.message || 'Cash-out unavailable.');
+    } finally {
+      setIsPlacing(false);
     }
   };
 
   const openMarkets = (league, match) => {
     setMarketsForMatch({ league, match });
     requestAnimationFrame(() => marketsDlg.current?.showModal());
+  };
+
+  const onPayslip = async (e) => {
+    e.preventDefault();
+    const code = payslip.trim().toUpperCase();
+    if (!code) return;
+    try {
+      await fetchBetByCode(code);
+      navigate(`/my-bets?code=${encodeURIComponent(code)}`);
+    } catch {
+      toast(`Booking code ${code} not found.`);
+    }
   };
 
   if (loadErr) {
@@ -346,557 +367,539 @@ export default function Home({ initialChip, initialSlipTab }) {
   }
   if (!snapshot) return <main style={{ padding: 48, textAlign: 'center', color: 'var(--text-dim)' }}>Loading fixtures…</main>;
 
-  const isStarred = (m) => (starred[m.id] === undefined ? !!m.starred : starred[m.id]);
-  const heroMain  = featured?.match.markets?.['1X2'] || featured?.match.markets?.['ML'];
-  const heroKeys  = heroMain?.selections.map((s) => s.key) || [];
-  const heroPick  = heroMain && selections.find((s) => s.matchId === featured.match.id && (s.market === '1X2' || s.market === 'ML'))?.outcome;
+  const sportTabs = snapshot.sports || [{ id: 'football', name: 'Football' }];
+
+  // Category quick links (SportyBet-style)
+  const categoryLinks = [
+    { id: 'today_football', label: "Today's Football" },
+    { id: 'next_3h', label: 'Football In Next 3 Hours' },
+    { id: 'epl', label: 'England Premier League' },
+    { id: 'laliga', label: 'Spain La Liga' },
+    { id: 'serie_a', label: 'Italy Serie A' },
+    { id: 'bundesliga', label: 'Germany Bundesliga' },
+    { id: 'ligue1', label: 'France Ligue 1' },
+  ];
+
+  // Sample featured booking codes (SportyBet-style)
+  const sampleCodes = [
+    {
+      id: 'code1', code: 'AL4LU6', folds: 4, odds: 22.52,
+      legs: [
+        { pick: 'Away @2.18', type: '1X2', match: 'Caykur Rizes... vs Besiktas Ista...', time: 'Today 17:00', dot: 'away' },
+        { pick: 'Home @1.82', type: '1X2', match: 'Saint-Etienne vs Rodez Aveyro...', time: 'Today 18:30', dot: 'home' },
+        { pick: 'Away @2.45', type: '1X2', match: 'Oud-Heverlee... vs Royal Antwer...', time: 'Today 18:45', dot: 'away' },
+      ],
+    },
+    {
+      id: 'code2', code: 'BK9XM3', folds: 3, odds: 8.74,
+      legs: [
+        { pick: 'Home @1.65', type: '1X2', match: 'Arsenal vs Chelsea', time: 'Today 20:00', dot: 'home' },
+        { pick: 'Over 2.5 @1.90', type: 'O/U', match: 'Barcelona vs Real Madrid', time: 'Today 21:00', dot: 'draw' },
+        { pick: 'BTTS Yes @1.78', type: 'BTTS', match: 'Liverpool vs Man City', time: 'Tomorrow 16:00', dot: 'home' },
+      ],
+    },
+  ];
 
   const visibleLeagues = activeLeague
     ? snapshot.leagues.filter((l) => l.id === activeLeague)
     : snapshot.leagues;
 
-  const sportTabs = snapshot.sports || [{ id: 'football', name: 'Football' }];
+  // Today = matches whose `day` doesn't read like a date string ("Sun", "Mon", a future date).
+  // Live always counts as today.
+  const filteredLeagues = subTab === 'today'
+    ? visibleLeagues
+        .map((lg) => ({ ...lg, matches: lg.matches.filter((m) => m.isLive || /today/i.test(String(m.day || ''))) }))
+        .filter((lg) => lg.matches.length > 0)
+    : visibleLeagues;
+
+  // Three top winners (placeholder when no settled bets yet — adapted to your real
+  // bet history once any are won/cashed-out).
+  const winners = [
+    { id: 'w1', who: 'GHS***044', amt: 53501.75, src: `in ${snapshot.sport === 'football' ? 'Sports' : snapshot.sport}`, ago: '1 min ago' },
+    { id: 'w2', who: 'GHS***118', amt:  4120.00, src: 'in Sports', ago: '1 min ago' },
+    { id: 'w3', who: 'GHS***ABC', amt: 10250.00, src: 'in Sports', ago: '1 min ago' },
+  ];
+
+  const marketChips = [
+    ['1X2',  '1X2'],
+    ['OU25', 'O/U'],
+    ['DC',   'DC'],
+    ['HT',   '1st Half O/U'],
+  ];
 
   return (
     <>
-      {featured && (
-      <section className="hero">
-        <div className="hero-main fade-up" style={{ animationDelay: '0.05s' }}>
-          <div className="hero-content">
-            <div className="live-badge">
-              {featured.match.isLive ? `LIVE NOW · ${featured.match.minute || ''}` : 'FEATURED MATCH'}
-            </div>
-            <h1>Bet beyond <em>the whistle.</em></h1>
-            <p className="hero-sub">Sharper odds. Cleaner cash-outs. Built for the way you actually watch — every league, every market, in real time.</p>
-            <div className="match-card">
-              <div className="team">
-                <div className="team-crest" style={{ background: '#ef0107' }}>
-                  {featured.match.home.slice(0, 3).toUpperCase()}
-                </div>
-                <div>
-                  <div className="team-name">{featured.match.home}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>{featured.league.name.slice(0,4).toUpperCase()} · HOME</div>
-                </div>
-              </div>
-              <div>
-                <div className="score">
-                  {featured.match.isLive
-                    ? <>{featured.match.scoreHome} — {featured.match.scoreAway}</>
-                    : <>vs</>}
-                </div>
-                <div className="score-meta">
-                  {featured.match.isLive ? `● ${featured.match.minute || ''}` : `${featured.match.kickoff || ''} · ${featured.match.day || ''}`}
-                </div>
-              </div>
-              <div className="team away">
-                <div className="team-crest" style={{ background: '#034694', color: '#fff' }}>
-                  {featured.match.away.slice(0, 3).toUpperCase()}
-                </div>
-                <div>
-                  <div className="team-name">{featured.match.away}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>{featured.league.name.slice(0,4).toUpperCase()} · AWAY</div>
-                </div>
-              </div>
-              <div className="hero-odds">
-                {heroKeys.map((k) => {
-                  const sel = heroMain.selections.find((s) => s.key === k);
-                  return (
-                    <button
-                      key={k}
-                      type="button"
-                      className={`odd-pill${heroPick === k ? ' selected' : ''}`}
-                      onClick={() => onHeroPill(k)}
-                    >
-                      <div className="label">{k}</div>
-                      <div className="val">{sel?.odds.toFixed(2)}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="hero-side">
-          <div className="promo promo-1 fade-up" style={{ animationDelay: '0.15s' }}>
-            <div>
-              <div className="promo-tag">welcome bonus</div>
-              <h3>200% on your <em>first deposit</em></h3>
-            </div>
-            <a href="/promos" className="promo-cta">Claim bonus →</a>
-          </div>
-          <div className="promo promo-2 fade-up" style={{ animationDelay: '0.25s' }}>
-            <div>
-              <div className="promo-tag" style={{ color: 'var(--accent-warm)' }}>mega-13 jackpot</div>
-              <h3>GHS <em>1.84M</em><br />up for grabs</h3>
-            </div>
-            <a href="/jackpot" className="promo-cta">Play jackpot →</a>
-          </div>
-        </div>
-      </section>
-      )}
-
-      <div className="sports-tabs-wrap">
-        <div className="sports-tabs">
-          {sportTabs.map((s) => (
-            <a
-              key={s.id}
-              href={`?sport=${s.id}`}
-              className={`sport-tab${sportId === s.id ? ' active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault();
-                window.history.replaceState({}, '', `?sport=${s.id}`);
-                setSportId(s.id);
-                setActiveLeague(null);
-              }}
-            >
-              {s.name} <span className="count">{s.count}</span>
-            </a>
-          ))}
-        </div>
+      {/* ─── Sport tabs (with Live) ─── */}
+      <div className="sb-sport-tabs">
+        <button
+          type="button"
+          className="sb-sport-tab"
+          style={{ fontWeight: 800, color: 'var(--text)' }}
+        >
+          Sports
+        </button>
+        {sportTabs.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`sb-sport-tab${sportId === s.id ? ' active' : ''}`}
+            onClick={() => {
+              window.history.replaceState({}, '', `?sport=${s.id}`);
+              setSportId(s.id);
+              setActiveLeague(null);
+            }}
+          >
+            {s.name}
+            {s.count != null && <span className="ct">{s.count}</span>}
+          </button>
+        ))}
       </div>
 
-      <section className="main-grid" id="fixtures">
-        <aside className="rail">
-          <h4>{snapshot.sport === 'football' ? 'Top Leagues' : 'Competitions'}</h4>
-          <div className="league-list">
-            <span
-              className={`league${activeLeague === null ? ' active' : ''}`}
-              onClick={() => setActiveLeague(null)}
-              style={{ cursor: 'pointer' }}
+      {/* ─── Category quick links (SportyBet-style) ─── */}
+      <div className="sb-category-pills">
+        {categoryLinks.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            className={`sb-category-pill${activeCategory === cat.id ? ' active' : ''}`}
+            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Featured section (SportyBet Codes style) ─── */}
+      <section className="sb-featured">
+        <div className="sb-featured-tabs">
+          {[
+            ['featured',  'Featured'],
+            ['matches',   'Matches'],
+            ['games',     'Games'],
+            ['codes',     'Codes'],
+            ['virtuals',  'Virtuals'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`sb-featured-tab${featuredTab === key ? ' active' : ''}`}
+              onClick={() => setFeaturedTab(key)}
             >
-              <span className="league-name">All competitions</span>
-              <span className="league-count">{snapshot.leagues.reduce((n, l) => n + l.matches.length, 0)}</span>
-            </span>
-            {snapshot.leagues.map((lg) => (
-              <span
-                key={lg.id}
-                className={`league${activeLeague === lg.id ? ' active' : ''}`}
-                onClick={() => setActiveLeague(lg.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <span className="league-name">{lg.name}</span>
-                <span className="league-count">{lg.matches.length}</span>
-              </span>
-            ))}
-          </div>
-        </aside>
-
-        <main id="main-matches" className={mainClass}>
-          {chip === 'live' ? (() => {
-            const liveCount = visibleLeagues.reduce(
-              (n, l) => n + l.matches.filter((m) => m.isLive).length, 0,
-            );
-            return (
-              <div className="live-banner">
-                <div className="live-banner-pulse" aria-hidden />
-                <div className="live-banner-text">
-                  <h2><span className="live-dot" /> Live now</h2>
-                  <p>
-                    {liveCount > 0
-                      ? `${liveCount} match${liveCount === 1 ? '' : 'es'} happening right now — odds update in real time.`
-                      : 'No matches are live this moment — check back any minute.'}
-                  </p>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="sb-featured-body">
+          {sampleCodes.map((sc) => (
+            <div key={sc.id} className="sb-code-card">
+              <div className="sb-code-header">
+                <span className="sb-code-id">{sc.code}</span>
+                <div className="sb-code-meta">
+                  <span>Folds: <strong>{sc.folds}</strong></span>
+                  <span>Odds: <span className="odds-val">{sc.odds.toFixed(2)}</span></span>
                 </div>
-                <button type="button" className="btn btn-ghost" onClick={() => setChip('all')}>
-                  Show all matches
+              </div>
+              {sc.legs.map((leg, li) => (
+                <div key={li} className="sb-code-leg">
+                  <span className={`sb-code-leg-dot ${leg.dot}`} />
+                  <div className="sb-code-leg-info">
+                    <div className="sb-code-leg-pick">{leg.pick} | {leg.type}</div>
+                    <div className="sb-code-leg-match">{leg.match}</div>
+                  </div>
+                  <span className="sb-code-leg-time">{leg.time}</span>
+                </div>
+              ))}
+              <div className="sb-code-actions">
+                <button type="button" className="sb-code-share">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                  Share
                 </button>
-              </div>
-            );
-          })() : (
-            <div className="col-header">
-              <h2>{sportTabs.find((s) => s.id === sportId)?.name || 'Sports'} <em>today</em></h2>
-              <div className="meta">
-                {visibleLeagues.reduce((n, l) => n + l.matches.length, 0)} matches · auto-refreshed every 30s
-              </div>
-            </div>
-          )}
-
-          <div className="filter-bar">
-            {[
-              ['all', 'All matches'],
-              ['live', 'Live now'],
-              ['soon', 'Starting soon'],
-              ['africa', 'Africa'],
-              ['europe', 'Europe'],
-            ].map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`chip${chip === key ? ' active' : ''}`}
-                onClick={() => setChip(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {chip === 'live' && visibleLeagues.every((lg) => lg.matches.every((m) => !m.isLive)) && (
-            <div className="live-empty fade-up">
-              <div className="live-empty-icon" aria-hidden>📡</div>
-              <h3>Nothing live right now</h3>
-              <p>The next kickoff will appear here automatically — no refresh needed.</p>
-              <button type="button" className="btn btn-primary" onClick={() => setChip('soon')}>
-                See starting soon
-              </button>
-            </div>
-          )}
-
-          {visibleLeagues.map((lg) => (
-            <div key={lg.id} className="league-section fade-up" data-region={lg.region}>
-              <div className="league-bar">
-                <div className="crest" style={crestToStyle(lg.crest?.style)}>{lg.crest?.label}</div>
-                <h5>{lg.name}</h5>
-                <span className="country">{lg.countryMeta}</span>
-              </div>
-              <div className="odds-headers">
-                <span>Time</span>
-                <span>Match</span>
-                {(lg.matches[0]?.markets?.['1X2'] || lg.matches[0]?.markets?.['ML'])?.selections.map((s) => (
-                  <span key={s.key}>{s.key}</span>
-                ))}
-                {/* spacer for +N + star buttons */}
-                <span></span>
-                <span></span>
-              </div>
-              <div className="matches">
-                {lg.matches.map((match) => {
-                  const main = match.markets?.['1X2'] || match.markets?.['ML'];
-                  if (!main) return null;
-                  const myMain = selections.find((s) => s.matchId === match.id && (s.market === '1X2' || s.market === 'ML'));
-                  return (
-                    <div key={match.id} className={`match${match.isLive ? ' live' : ''}`}>
-                      <div className={`match-time${match.isLive ? ' live-time' : ''}`}>
-                        {match.isLive ? (
-                          <>
-                            <div>● LIVE</div>
-                            <div className="scoreline">{match.scoreHome}-{match.scoreAway}</div>
-                            <div className="date">{match.minute}</div>
-                          </>
-                        ) : (
-                          <>
-                            <div>{match.kickoff}</div>
-                            <div className="date">{match.day}</div>
-                          </>
-                        )}
-                      </div>
-                      <div className="teams-stack">
-                        <div className="team-line">
-                          {match.home}
-                          {match.form?.home && <FormDots pattern={match.form.home.join('')} />}
-                        </div>
-                        <div className="team-line">
-                          {match.away}
-                          {match.form?.away && <FormDots pattern={match.form.away.join('')} />}
-                        </div>
-                      </div>
-                      {main.selections.map((s) => {
-                        const isSel = myMain?.outcome === s.key;
-                        const oc = match.oddClasses?.[s.key];
-                        return (
-                          <button
-                            key={s.key}
-                            type="button"
-                            className={`odd-btn${isSel ? ' selected' : ''}${oc ? ` ${oc}` : ''}`}
-                            onClick={() => toggleSelection(lg, match, match.markets['1X2'] ? '1X2' : 'ML', s.key, s.odds)}
-                          >
-                            <span className="ol">{s.key}</span>
-                            <span className="ov">{s.odds.toFixed(2)}</span>
-                          </button>
-                        );
-                      })}
-                      <button type="button" className="more-markets" onClick={() => openMarkets(lg, match)}>
-                        +{match.moreMarkets}
-                      </button>
-                      <button
-                        type="button"
-                        className={`star-btn${isStarred(match) ? ' starred' : ''}`}
-                        onClick={() => setStarred((prev) => {
-                          const cur = prev[match.id] === undefined ? !!match.starred : prev[match.id];
-                          return { ...prev, [match.id]: !cur };
-                        })}
-                      >★</button>
-                    </div>
-                  );
-                })}
+                <button type="button" className="sb-code-add" onClick={() => toast(`Code ${sc.code} added to slip.`)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Add to Betslip
+                </button>
               </div>
             </div>
           ))}
-        </main>
+        </div>
+      </section>
 
-        <aside className="betslip-wrap">
-          <div className="betslip fade-up" style={{ animationDelay: '0.2s' }}>
-            <div className="slip-tabs">
-              <button type="button" className={`slip-tab${slipPanel === 'slip' ? ' active' : ''}`} onClick={() => setSlipPanel('slip')}>
-                Bet slip <span className="badge">{selections.length}</span>
-              </button>
-              <button type="button" className={`slip-tab${slipPanel === 'mybets' ? ' active' : ''}`} onClick={() => setSlipPanel('mybets')}>
-                My bets <span className="badge badge-muted">{history.length}</span>
-              </button>
-            </div>
-            <div className="slip-body">
-              {slipPanel === 'slip' ? (
-                <div>
-                  <div className="slip-mode">
-                    {(['single', 'multiple', 'system']).map((m) => (
-                      <button key={m} type="button" className={`mode-btn${betMode === m ? ' active' : ''}`} onClick={() => setBetMode(m)}>
-                        {m === 'single' ? 'Single' : m === 'multiple' ? 'Multiple' : 'System'}
-                      </button>
-                    ))}
-                  </div>
+      {/* ─── Secondary tabs ─── */}
+      <div className="sb-sub-tabs">
+        {[
+          ['highlights', 'Highlights'],
+          ['today',      'Today'],
+          ['countries',  'Countries'],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={`sb-sub-tab${subTab === key ? ' active' : ''}`}
+            onClick={() => setSubTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-                  {selections.length > 0 && (
-                    <div className="slip-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-                        {selections.length} selection{selections.length === 1 ? '' : 's'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={clearSlip}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-soft)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '4px 8px' }}
-                      >
-                        Clear all
-                      </button>
+      {/* ─── Market chips ─── */}
+      <div className="sb-market-chips">
+        {marketChips.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={`sb-chip${marketChip === key ? ' active' : ''}`}
+            onClick={() => setMarketChip(key)}
+          >
+            {label}
+          </button>
+        ))}
+        <button type="button" className="sb-chip sb-chip-icon" aria-label="Region">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+          </svg>
+        </button>
+        <button type="button" className="sb-chip sb-chip-icon" aria-label="Filters">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 6h16M7 12h10M10 18h4" />
+          </svg>
+        </button>
+      </div>
+
+      {/* ─── Countries view ─── */}
+      {subTab === 'countries' ? (
+        <div style={{ padding: '8px 12px 24px' }}>
+          {visibleLeagues.map((lg) => (
+            <button
+              key={lg.id}
+              type="button"
+              className="sb-league"
+              style={{ display: 'block', width: '100%', textAlign: 'left' }}
+              onClick={() => {
+                setActiveLeague(lg.id);
+                setSubTab('highlights');
+              }}
+            >
+              <div className="sb-league-head">
+                <span className="sb-flag">{lg.crest?.label?.slice(0, 2) || lg.name.slice(0, 2).toUpperCase()}</span>
+                <span>{lg.name}</span>
+                <span className="sb-count">{lg.matches.length}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <>
+          {filteredLeagues.length === 0 && (
+            <p style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: 13 }}>
+              Nothing here yet — try “Highlights”.
+            </p>
+          )}
+
+          {filteredLeagues.map((lg, lgIdx) => {
+            const isCollapsed = !!collapsed[lg.id];
+            // Determine column structure from the first match in this league.
+            const sample = lg.matches[0] && columnsFor(marketChip, lg.matches[0]);
+            const colCount = sample?.selections?.length || 3;
+            const gridClass = colCount === 2 ? 'cols-2' : '';
+
+            return (
+              <Fragment key={lg.id}>
+                <section className={`sb-league${isCollapsed ? ' collapsed' : ''}`}>
+                  <header
+                    className="sb-league-head"
+                    onClick={() => setCollapsed((prev) => ({ ...prev, [lg.id]: !prev[lg.id] }))}
+                  >
+                    <svg className="sb-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                    <span className="sb-flag">{(lg.crest?.label || lg.name).slice(0, 2).toUpperCase()}</span>
+                    <span>{lg.name}</span>
+                    <span className="sb-count">{lg.matches.length}</span>
+                  </header>
+
+                  <div className="sb-league-body">
+                    <div className={`sb-league-cols ${gridClass}`}>
+                      <span>Time</span>
+                      <span>Match</span>
+                      {sample?.selections?.map((s) => <span key={s.key}>{s.key}</span>)
+                        || <><span>1</span><span>X</span><span>2</span></>}
                     </div>
-                  )}
 
-                  {betMode === 'system' && (
-                    <div className="slip-system" style={{ margin: '8px 0 4px', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid rgba(255,181,71,.18)', borderRadius: 10 }}>
-                      {eligibleSystems.length === 0 ? (
-                        <p style={{ fontSize: 12, color: 'var(--text-soft)', margin: 0 }}>
-                          Pick {systemTypeHint(selections.length)} to unlock a system bet.
-                        </p>
-                      ) : (
-                        <>
-                          <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 6 }}>System type</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {eligibleSystems.map((sys) => (
-                              <button
-                                key={sys.key}
-                                type="button"
-                                onClick={() => setSystemType(sys.key)}
-                                className={`mode-btn${systemType === sys.key ? ' active' : ''}`}
-                                style={{ padding: '6px 10px', fontSize: 12 }}
-                              >
-                                {sys.label} <span style={{ opacity: .6, marginLeft: 2 }}>· {sys.totalLines}L</span>
-                              </button>
-                            ))}
-                          </div>
-                          {systemDef && (
-                            <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-soft)' }}>
-                              <strong style={{ color: 'var(--text)' }}>{systemDef.label}</strong> — {linesCount} line{linesCount > 1 ? 's' : ''} · total stake <strong style={{ color: 'var(--accent-warm)' }}>GHS {formatAmt(totalStake)}</strong>
-                            </div>
+                    {lg.matches.map((match) => {
+                      const cols = columnsFor(marketChip, match);
+                      const market = cols?.market;
+                      const myMain = selections.find((s) => s.matchId === match.id && s.market === market);
+
+                      return (
+                        <div key={match.id} className={`sb-match ${gridClass}`}>
+                          <button
+                            type="button"
+                            className="sb-match-time"
+                            onClick={() => openMarkets(lg, match)}
+                            style={{ textAlign: 'left' }}
+                          >
+                            {match.isLive ? (
+                              <>
+                                <span className="live">● LIVE</span>
+                                <span className="score">{match.scoreHome}-{match.scoreAway}</span>
+                                <span>{match.minute || ''}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>{match.kickoff || ''}</span>
+                                <span>{match.day || ''}</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="sb-match-teams"
+                            onClick={() => openMarkets(lg, match)}
+                            style={{ textAlign: 'left' }}
+                          >
+                            <span className="row">{match.home}</span>
+                            <span className="row">{match.away}</span>
+                          </button>
+
+                          {cols ? (
+                            cols.selections.map((s) => {
+                              const isSel = myMain?.outcome === s.key;
+                              return (
+                                <button
+                                  key={s.key}
+                                  type="button"
+                                  className={`sb-odd${isSel ? ' selected' : ''}`}
+                                  onClick={() => toggleSelection(lg, match, market, s.key, s.odds)}
+                                >
+                                  {s.odds?.toFixed(2)}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <>
+                              <span className="sb-odd disabled">—</span>
+                              <span className="sb-odd disabled">—</span>
+                              <span className="sb-odd disabled">—</span>
+                            </>
                           )}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {selections.length === 0 && (
-                    <p style={{ fontSize: 12, color: 'var(--text-dim)', padding: '12px 0' }}>
-                      Tap any odds to add a selection. Mix markets across matches.
-                    </p>
-                  )}
-                  <div className="selections">
-                    {selections.map((s) => (
-                      <div key={s.id} className="selection">
-                        <button type="button" className="x" aria-label="Remove" onClick={() => removeById(s.id)}>×</button>
-                        <div className="sel-pick">{s.pickLabel}</div>
-                        <div className="sel-market">{s.marketLabel}</div>
-                        <div className="sel-teams">{s.meta}</div>
-                        <div className="sel-odds">
-                          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>@{s.odds.toFixed(2)}</span>
-                          <span className="sel-odds-val">{s.odds.toFixed(2)}</span>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                  <div className="stake-block">
-                    <div className="stake-input">
-                      <span>GHS</span>
-                      <input
-                        type="text"
-                        value={stake}
-                        onChange={(e) => setStake(e.target.value)}
-                        inputMode="decimal"
-                        autoComplete="off"
-                      />
+                </section>
+
+                {/* Inject winners card right after the first league */}
+                {lgIdx === 0 && (
+                  <section className="sb-winners">
+                    <div className="sb-winners-head">
+                      <h3>Grand Prize Winners</h3>
+                      <a href="/my-bets">View More ›</a>
                     </div>
-                    <div className="quick-stakes">
-                      {[10, 50, 100].map((n) => (
-                        <button key={n} type="button" className="quick-stake" onClick={() => setStake(formatAmt(parseStake(stake) + n))}>+{n}</button>
+                    <div className="sb-winners-scroll">
+                      {winners.map((w) => (
+                        <div key={w.id} className="sb-winner">
+                          <div className="sb-winner-bg-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19,5h-2V3c0-0.55-0.45-1-1-1H8C7.45,2,7,2.45,7,3v2H5C3.9,5,3,5.9,3,7v1c0,2.55,1.92,4.63,4.39,4.94C8.23,14.73,9.44,16,11,16v3H7v2h10v-2h-4v-3c1.56,0,2.77-1.27,3.61-3.06C19.08,12.63,21,10.55,21,8V7C21,5.9,20.1,5,19,5z M5,8V7h2v3.82C5.84,10.4,5,9.3,5,8z M19,8c0,1.3-0.84,2.4-2,2.82V7h2V8z"/></svg>
+                          </div>
+                          <span className="who">{w.who}</span>
+                          <span className="amt">GHS{formatAmt(w.amt)}</span>
+                          <span className="src">{w.src}</span>
+                          <span className="ago">{w.ago}</span>
+                        </div>
                       ))}
-                      <button type="button" className="quick-stake" onClick={() => setStake(formatAmt(account?.balance || 0))}>MAX</button>
                     </div>
-                    <div className="summary">
-                      {betMode === 'system' ? (
-                        <>
-                          <div className="sum-row"><span className="lbl">Stake / line</span><span className="val">GHS {formatAmt(stakePerLine)}</span></div>
-                          <div className="sum-row"><span className="lbl">Lines</span><span className="val">{linesCount || '—'}</span></div>
-                          <div className="sum-row"><span className="lbl">Total stake</span><span className="val">GHS {formatAmt(totalStake)}</span></div>
-                          <div className="sum-row payout">
-                            <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Max return</span>
-                            <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="sum-row"><span className="lbl">Total odds</span><span className="val">{selections.length ? totalOdds.toFixed(2) : '—'}</span></div>
-                          <div className="sum-row"><span className="lbl">Stake</span><span className="val">GHS {formatAmt(stakePerLine)}</span></div>
-                          {betMode === 'multiple' && (
-                            <div className="sum-row"><span className="lbl">Bonus boost</span><span className="val" style={{ color: 'var(--accent)' }}>+8%</span></div>
-                          )}
-                          <div className="sum-row payout">
-                            <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Potential win</span>
-                            <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
-                          </div>
-                        </>
-                      )}
+                  </section>
+                )}
+              </Fragment>
+            );
+          })}
+        </>
+      )}
+
+      {/* ─── Compliance / sponsors ─── */}
+      <div className="sb-compliance">
+        <div className="badge18">18+</div>
+        <div className="legal">© {new Date().getFullYear()} Xenbet GH · Licensed by the Gaming Commission of Ghana</div>
+        <div className="sponsors">
+          <span className="sponsor">Real Madrid</span>
+          <span className="sponsor">LaLiga</span>
+        </div>
+        <div className="tagline">The world's sharper betting platform</div>
+      </div>
+
+      {/* ─── Payslip ─── */}
+      <form className="sb-payslip" onSubmit={onPayslip}>
+        <div className="sb-payslip-label">Payslip</div>
+        <div className="sb-payslip-input">
+          <input
+            placeholder="*711+222#"
+            value={payslip}
+            onChange={(e) => setPayslip(e.target.value.toUpperCase())}
+            inputMode="text"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button type="submit">Check</button>
+        </div>
+        <div className="sb-payslip-foot">Enter a booking code to view a slip</div>
+      </form>
+
+      {/* ─── Floating slip pill (mobile only via CSS) ─── */}
+      {selections.length > 0 && (
+        <button type="button" className="sb-slip-pill" onClick={() => setSlipOpen(true)}>
+          <span className="ct">{selections.length}</span>
+          <span>Bet slip</span>
+          <span className="odds">@ {totalOdds.toFixed(2)}</span>
+        </button>
+      )}
+
+      {/* ─── Slip bottom sheet ─── */}
+      <dialog ref={slipDlg} className="sb-sheet" onClose={() => setSlipOpen(false)}>
+        <div className="sb-sheet-grip" />
+        <div className="sb-sheet-head">
+          <h3>Bet slip · <span style={{ color: 'var(--accent)' }}>{selections.length}</span></h3>
+          <button type="button" className="sb-sheet-close" onClick={() => setSlipOpen(false)} aria-label="Close">×</button>
+        </div>
+        <div className="sb-sheet-body">
+          <div className="betslip">
+            <div className="slip-mode">
+              {(['single', 'multiple', 'system']).map((m) => (
+                <button key={m} type="button" className={`mode-btn${betMode === m ? ' active' : ''}`} onClick={() => setBetMode(m)}>
+                  {m === 'single' ? 'Single' : m === 'multiple' ? 'Multiple' : 'System'}
+                </button>
+              ))}
+            </div>
+
+            {selections.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                  {selections.length} selection{selections.length === 1 ? '' : 's'}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearSlip}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-soft)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '4px 8px' }}
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+
+            {betMode === 'system' && (
+              <div style={{ margin: '8px 0 4px', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid rgba(255,181,71,.18)', borderRadius: 10 }}>
+                {eligibleSystems.length === 0 ? (
+                  <p style={{ fontSize: 12, color: 'var(--text-soft)', margin: 0 }}>
+                    Pick {systemTypeHint(selections.length)} to unlock a system bet.
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 10, letterSpacing: '.1em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 6 }}>System type</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {eligibleSystems.map((sys) => (
+                        <button
+                          key={sys.key}
+                          type="button"
+                          onClick={() => setSystemType(sys.key)}
+                          className={`mode-btn${systemType === sys.key ? ' active' : ''}`}
+                          style={{ padding: '6px 10px', fontSize: 12 }}
+                        >
+                          {sys.label} <span style={{ opacity: .6, marginLeft: 2 }}>· {sys.totalLines}L</span>
+                        </button>
+                      ))}
                     </div>
-                    <button type="button" className="place-bet" onClick={onPlaceBet}>
-                      <span>Place bet</span><span className="arrow">→</span>
-                    </button>
+                    {systemDef && (
+                      <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-soft)' }}>
+                        <strong style={{ color: 'var(--text)' }}>{systemDef.label}</strong> — {linesCount} line{linesCount > 1 ? 's' : ''} · total stake <strong style={{ color: 'var(--accent-warm)' }}>GHS {formatAmt(totalStake)}</strong>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {selections.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', padding: '12px 0' }}>
+                Tap any odds to add a selection. Mix markets across matches.
+              </p>
+            )}
+
+            <div className="selections">
+              {selections.map((s) => (
+                <div key={s.id} className="selection">
+                  <button type="button" className="x" aria-label="Remove" onClick={() => removeById(s.id)}>×</button>
+                  <div className="sel-pick">{s.pickLabel}</div>
+                  <div className="sel-market">{s.marketLabel}</div>
+                  <div className="sel-teams">{s.meta}</div>
+                  <div className="sel-odds">
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>@{s.odds.toFixed(2)}</span>
+                    <span className="sel-odds-val">{s.odds.toFixed(2)}</span>
                   </div>
                 </div>
-              ) : (
-                <div className="bv-bets-tab">
-                  <div className="bv-bets-subnav">
-                    {[
-                      ['open',    'Open',    history.filter((b) => b.status === 'open').length],
-                      ['history', 'History', history.filter((b) => b.status !== 'open').length],
-                    ].map(([key, label, count]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        className={`bv-bets-subtab${betHistoryTab === key ? ' active' : ''}`}
-                        onClick={() => setBetHistoryTab(key)}
-                      >
-                        {label} <span className="bv-bets-count">{count}</span>
-                      </button>
-                    ))}
-                  </div>
+              ))}
+            </div>
 
-                  {(() => {
-                    const filtered = history.filter((b) =>
-                      betHistoryTab === 'open' ? b.status === 'open' : b.status !== 'open'
-                    );
-                    if (!filtered.length) {
-                      return (
-                        <p style={{ fontSize: 12, color: 'var(--text-dim)', padding: '12px 0' }}>
-                          {betHistoryTab === 'open'
-                            ? 'No open tickets — place a bet to see it here.'
-                            : 'No settled bets yet.'}
-                        </p>
-                      );
-                    }
-                    return filtered.map((b) => {
-                      const code = toBookingCode(b.id);
-                      const cashOutVal = Number((b.stake * (b.totalOdds * 0.6)).toFixed(2));
-                      const onCopy = async () => {
-                        try {
-                          await navigator.clipboard?.writeText(code);
-                          setCopiedCode(code);
-                          setTimeout(() => setCopiedCode((c) => c === code ? null : c), 1400);
-                        } catch { /* ignore */ }
-                      };
-                      const placedAt = b.placedAt ? new Date(b.placedAt) : null;
-                      const placedLabel = placedAt
-                        ? placedAt.toLocaleDateString('en-GH', { day: '2-digit', month: 'short' }) +
-                          ', ' + placedAt.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
-                        : '';
-                      return (
-                        <article key={b.id} className={`bv-bet-card status-${b.status}`}>
-                          <header className="bv-bet-head">
-                            <span className={`bv-bet-status ${b.status}`}>
-                              {b.status === 'open' ? 'OPEN' :
-                               b.status === 'cashed_out' ? 'CASHED OUT' :
-                               b.status === 'won' ? 'WON' :
-                               b.status === 'lost' ? 'LOST' : 'SETTLED'}
-                            </span>
-                            <span className="bv-bet-when">{placedLabel}</span>
-                          </header>
-
-                          <div className="bv-bet-row">
-                            <span className="lbl">Total Odds</span>
-                            <strong className="val">{b.totalOdds.toFixed(2)}</strong>
-                          </div>
-                          <div className="bv-bet-row">
-                            <span className="lbl">Stake</span>
-                            <strong className="val">GHS {formatAmt(b.stake)}</strong>
-                          </div>
-                          <div className="bv-bet-row">
-                            <span className="lbl">Potential Win</span>
-                            <strong className="val val-accent">GHS {formatAmt(b.potentialWin)}</strong>
-                          </div>
-
-                          <div className="bv-bet-code">
-                            <div className="bv-bet-code-label">Booking Code</div>
-                            <div className="bv-bet-code-row">
-                              <code>{code}</code>
-                              <button type="button" className="bv-bet-copy" onClick={onCopy}>
-                                {copiedCode === code ? '✓ Copied' : 'Copy'}
-                              </button>
-                            </div>
-                          </div>
-
-                          {b.status === 'open' && (
-                            <button
-                              type="button"
-                              className="bv-bet-cashout"
-                              onClick={() => onCashOut(b.id)}
-                              title={`Cash out for GHS ${formatAmt(cashOutVal)}`}
-                            >
-                              Cash Out · GHS {formatAmt(cashOutVal)}
-                            </button>
-                          )}
-
-                          {b.legs?.length > 0 && (
-                            <details className="bv-bet-legs">
-                              <summary>{b.legs.length} selection{b.legs.length > 1 ? 's' : ''}</summary>
-                              <ul>
-                                {b.legs.map((l, i) => (
-                                  <li key={i}>
-                                    <span className="leg-teams">{l.home} vs {l.away}</span>
-                                    <span className="leg-pick">{l.marketName || l.market} · {l.outcome} @ {Number(l.odds).toFixed(2)}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </details>
-                          )}
-                        </article>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
+            <div className="stake-block">
+              <div className="stake-input">
+                <span>GHS</span>
+                <input
+                  type="text"
+                  value={stake}
+                  onChange={(e) => setStake(e.target.value)}
+                  inputMode="decimal"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="quick-stakes">
+                {[10, 50, 100].map((n) => (
+                  <button key={n} type="button" className="quick-stake" onClick={() => setStake(formatAmt(parseStake(stake) + n))}>+{n}</button>
+                ))}
+                <button type="button" className="quick-stake" onClick={() => setStake(formatAmt(account?.balance || 0))}>MAX</button>
+              </div>
+              <div className="summary">
+                {betMode === 'system' ? (
+                  <>
+                    <div className="sum-row"><span className="lbl">Stake / line</span><span className="val">GHS {formatAmt(stakePerLine)}</span></div>
+                    <div className="sum-row"><span className="lbl">Lines</span><span className="val">{linesCount || '—'}</span></div>
+                    <div className="sum-row"><span className="lbl">Total stake</span><span className="val">GHS {formatAmt(totalStake)}</span></div>
+                    <div className="sum-row payout">
+                      <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Max return</span>
+                      <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="sum-row"><span className="lbl">Total odds</span><span className="val">{selections.length ? totalOdds.toFixed(2) : '—'}</span></div>
+                    <div className="sum-row"><span className="lbl">Stake</span><span className="val">GHS {formatAmt(stakePerLine)}</span></div>
+                    {betMode === 'multiple' && (
+                      <div className="sum-row"><span className="lbl">Bonus boost</span><span className="val" style={{ color: 'var(--accent)' }}>+8%</span></div>
+                    )}
+                    <div className="sum-row payout">
+                      <span className="lbl" style={{ color: 'var(--text)', fontWeight: 700 }}>Potential win</span>
+                      <span className="val">{payout > 0 ? `GHS ${formatAmt(payout)}` : '—'}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              {slipErr && <div style={{ color: 'var(--danger, #ff5d5d)', fontSize: 13, textAlign: 'center', marginBottom: 12, fontWeight: 700 }}>{slipErr}</div>}
+              <button type="button" className="place-bet" onClick={onPlaceBet} disabled={isPlacing}>
+                <span>{isPlacing ? 'Placing...' : 'Place bet'}</span><span className="arrow">→</span>
+              </button>
             </div>
           </div>
-        </aside>
-      </section>
+        </div>
+      </dialog>
 
-      <section className="stats-strip fade-up" style={{ animationDelay: '0.5s' }}>
-        <div className="stat">
-          <div className="stat-label">Live matches</div>
-          <div className="stat-value">{visibleLeagues.reduce((n, l) => n + l.matches.filter((m) => m.isLive).length, 0)}<em>/{visibleLeagues.reduce((n, l) => n + l.matches.length, 0)}</em></div>
-          <div className="stat-trend">● refreshing every 30s</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">My selections</div>
-          <div className="stat-value">{selections.length}<em> on slip</em></div>
-          <div className="stat-trend">{selections.length ? `Total @ ${totalOdds.toFixed(2)}` : 'Tap odds to add'}</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">Open tickets</div>
-          <div className="stat-value">{history.filter((b) => b.status === 'open').length}</div>
-          <div className="stat-trend">Cash-out enabled live</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">Mega-13 jackpot</div>
-          <div className="stat-value">1.84<em>M</em></div>
-          <div className="stat-trend">Drops in 4d 12h 32m</div>
-        </div>
-      </section>
-
-      {/* Markets dialog */}
+      {/* ─── Markets dialog (per match) ─── */}
       <dialog ref={marketsDlg} className="bv-dialog markets-dlg" style={{ maxWidth: 560 }}>
         {marketsForMatch && (
           <>
@@ -928,7 +931,7 @@ export default function Home({ initialChip, initialSlipTab }) {
             ))}
             <div className="bv-dialog-actions">
               <button type="button" className="btn btn-ghost" onClick={() => marketsDlg.current?.close()}>Close</button>
-              <button type="button" className="btn btn-primary" onClick={() => { marketsDlg.current?.close(); setSlipPanel('slip'); }}>
+              <button type="button" className="btn btn-primary" onClick={() => { marketsDlg.current?.close(); setSlipOpen(true); }}>
                 Done · {selections.length} on slip
               </button>
             </div>
@@ -947,172 +950,9 @@ export default function Home({ initialChip, initialSlipTab }) {
             marketName: l.marketName || l.market,
             league: '', minute: '', kickoff: '',
           })));
-          setSlipPanel('slip');
+          setSlipOpen(true);
         }}
       />
-
-      <style>{BET_HISTORY_CSS}</style>
     </>
   );
-}
-
-const BET_HISTORY_CSS = `
-.bv-bets-tab { display: flex; flex-direction: column; gap: 10px; }
-.bv-bets-subnav {
-  display: flex; gap: 6px;
-  padding: 4px;
-  background: var(--surface-2);
-  border-radius: 10px;
-  margin-bottom: 4px;
-}
-.bv-bets-subtab {
-  flex: 1;
-  padding: 8px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--text-soft);
-  font-size: 12px; font-weight: 700;
-  cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  transition: background .15s ease, color .15s ease;
-}
-.bv-bets-subtab:hover { color: var(--text); }
-.bv-bets-subtab.active {
-  background: var(--surface);
-  color: var(--accent);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
-}
-.bv-bets-count {
-  font-size: 10px; font-weight: 700;
-  background: var(--surface);
-  color: var(--text-soft);
-  padding: 2px 6px;
-  border-radius: 999px;
-  min-width: 18px; text-align: center;
-}
-.bv-bets-subtab.active .bv-bets-count { background: var(--surface-2); color: var(--accent); }
-
-.bv-bet-card {
-  background: var(--surface);
-  border: 1px solid var(--surface-2);
-  border-radius: 12px;
-  padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 6px;
-  animation: bvBetIn .35s ease both;
-}
-@keyframes bvBetIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.bv-bet-head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 2px;
-}
-.bv-bet-status {
-  font-size: 10px; letter-spacing: .12em; font-weight: 800;
-  padding: 3px 8px; border-radius: 999px;
-  text-transform: uppercase;
-}
-.bv-bet-status.open       { color: var(--accent-cool); background: rgba(106,208,255,.12); }
-.bv-bet-status.cashed_out { color: var(--accent);      background: rgba(197,255,61,.12); }
-.bv-bet-status.won        { color: var(--accent);      background: rgba(197,255,61,.18); }
-.bv-bet-status.lost       { color: var(--accent-hot);  background: rgba(255,77,61,.12); }
-.bv-bet-when { font-size: 11px; color: var(--text-dim); }
-
-.bv-bet-row {
-  display: flex; justify-content: space-between;
-  font-size: 13px;
-  padding: 3px 0;
-}
-.bv-bet-row .lbl  { color: var(--text-soft); }
-.bv-bet-row .val  { font-variant-numeric: tabular-nums; }
-.bv-bet-row .val-accent { color: var(--accent); }
-
-.bv-bet-code {
-  margin-top: 6px;
-  background: var(--surface-2);
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px dashed rgba(106, 208, 255, .35);
-}
-.bv-bet-code-label {
-  font-size: 10px; letter-spacing: .14em;
-  color: var(--text-dim); text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.bv-bet-code-row {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-}
-.bv-bet-code-row code {
-  font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
-  font-size: 13px;
-  letter-spacing: .06em;
-  color: var(--accent-cool);
-  background: transparent;
-}
-.bv-bet-copy {
-  background: var(--surface);
-  border: 1px solid var(--surface-2);
-  border-radius: 6px;
-  color: var(--text-soft);
-  padding: 5px 10px;
-  font-size: 11px; font-weight: 700;
-  cursor: pointer;
-  transition: border-color .15s ease, color .15s ease;
-}
-.bv-bet-copy:hover { border-color: var(--accent); color: var(--accent); }
-
-.bv-bet-cashout {
-  margin-top: 6px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: none;
-  background: linear-gradient(135deg, var(--accent-warm), #f6a200);
-  color: #1a1100;
-  font-weight: 800; font-size: 13px;
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-.bv-bet-cashout:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(255, 181, 71, .35); }
-
-.bv-bet-legs {
-  margin-top: 4px;
-  font-size: 12px;
-}
-.bv-bet-legs summary {
-  cursor: pointer;
-  color: var(--text-soft);
-  padding: 4px 0;
-}
-.bv-bet-legs ul {
-  list-style: none; padding: 0; margin: 4px 0 0;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.bv-bet-legs li {
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--surface-2);
-  padding: 6px 8px; border-radius: 8px;
-}
-.bv-bet-legs .leg-teams { font-weight: 600; color: var(--text); }
-.bv-bet-legs .leg-pick  { font-size: 11px; color: var(--text-dim); }
-
-@media (max-width: 720px) {
-  .bv-bet-card { padding: 10px 12px; }
-  .bv-bet-row { font-size: 12.5px; }
-}
-`;
-
-function crestToStyle(str) {
-  if (!str || typeof str !== 'string') return {};
-  const o = {};
-  str.split(';').forEach((segment) => {
-    const i = segment.indexOf(':');
-    if (i === -1) return;
-    const k = segment.slice(0, i).trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    const v = segment.slice(i + 1).trim();
-    if (k) o[k] = v;
-  });
-  return o;
 }

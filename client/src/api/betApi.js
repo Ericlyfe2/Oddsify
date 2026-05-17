@@ -60,9 +60,14 @@ async function rawFetch(path, opts = {}, retry = true) {
 
 async function jsonOrThrow(res) {
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
+  if (!res.ok || body.success === false) {
     const err = new Error(body.error || res.statusText || 'Request failed');
-    err.status = res.status;
+    // Maintain internal 409 status for odds drift / market closures so UI logic works perfectly
+    if (res.ok && (body.code === 'ODDS_CHANGED' || body.code === 'MARKET_CLOSED' || body.code === 'SELECTION_SUSPENDED')) {
+      err.status = 409;
+    } else {
+      err.status = res.ok ? 400 : res.status;
+    }
     err.body = body;
     throw err;
   }
@@ -71,7 +76,7 @@ async function jsonOrThrow(res) {
 
 const get  = (p)        => rawFetch(p).then(jsonOrThrow);
 const post = (p, body)  => rawFetch(p, { method: 'POST',   body: JSON.stringify(body || {}) }).then(jsonOrThrow);
-const del  = (p)        => rawFetch(p, { method: 'DELETE' }).then(jsonOrThrow);
+const del  = (p, body) => rawFetch(p, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }).then(jsonOrThrow);
 const patch= (p, body)  => rawFetch(p, { method: 'PATCH',  body: JSON.stringify(body || {}) }).then(jsonOrThrow);
 
 /* meta */
@@ -89,7 +94,8 @@ export const fetchLeagueMatches = (id)           => get(`/bet/leagues/${encodeUR
 export const placeBet       = (payload) => post('/bet/place', payload);
 export const fetchBetHistory= ()        => get('/bet/history');
 export const fetchBet       = (id)      => get(`/bet/bets/${encodeURIComponent(id)}`);
-export const cashOutBet     = (id)      => del (`/bet/bets/${encodeURIComponent(id)}`);
+export const fetchBetByCode = (code)    => get(`/bet/code/${encodeURIComponent(code)}`);
+export const cashOutBet     = (id, acceptedAmount) => del(`/bet/bets/${encodeURIComponent(id)}`, acceptedAmount != null ? { acceptedAmount } : {});
 export const fetchUnacknowledgedWins = () => get('/bet/bets/unacknowledged');
 export const acknowledgeBet = (id) => post(`/bet/bets/${encodeURIComponent(id)}/ack`);
 

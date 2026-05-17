@@ -24,6 +24,7 @@ import {
   patchOverride, setOddsOverride, clearOddsOverride,
   setSuspension, clearSuspension, setResult,
   addCustomFixture, deleteCustomFixture, addCustomLeague,
+  addMarketToFixture, removeMarketFromFixture,
 } from '../../db/sportsAdmin.js';
 import { settleNow } from '../../services/settlement.js';
 
@@ -84,12 +85,21 @@ router.post('/leagues',
   }
 );
 
+const extraMarketItem = z.object({
+  market: z.string().min(1),
+  type: z.enum(['overunder', 'yesno', 'dc']),
+  over: z.number().positive().optional(),
+  under: z.number().positive().optional(),
+  yes: z.number().positive().optional(),
+  no: z.number().positive().optional(),
+}).passthrough();
+
 const createFixtureSchema = z.object({
   sport: z.enum(['football', 'basketball', 'tennis']),
   leagueId: z.string().min(1),
   home: z.string().min(1),
   away: z.string().min(1),
-  kickoff: z.string().optional(), // 'HH:MM'
+  kickoff: z.string().optional(),
   day: z.string().optional(),
   isLive: z.boolean().optional(),
   scoreHome: z.number().optional(),
@@ -99,6 +109,7 @@ const createFixtureSchema = z.object({
     draw: z.number().positive().optional(),
     away: z.number().positive(),
   }),
+  extraMarkets: z.array(extraMarketItem).optional(),
 });
 
 router.post('/fixtures',
@@ -107,39 +118,7 @@ router.post('/fixtures',
   (req, res) => {
     const b = req.body;
     const id = `adm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const markets = (b.sport === 'football')
-      ? {
-          '1X2': { name: 'Match Result', selections: [
-            { key: '1', label: `${b.home} to win`, odds: b.odds.home },
-            { key: 'X', label: 'Draw',             odds: b.odds.draw ?? 3.2 },
-            { key: '2', label: `${b.away} to win`, odds: b.odds.away },
-          ]},
-          'OU25': { name: 'Total Goals (Over/Under 2.5)', selections: [
-            { key: 'Over',  label: 'Over 2.5',  odds: 1.95 },
-            { key: 'Under', label: 'Under 2.5', odds: 1.85 },
-          ]},
-          'BTTS': { name: 'Both Teams To Score', selections: [
-            { key: 'Yes', label: 'Yes', odds: 1.78 },
-            { key: 'No',  label: 'No',  odds: 1.98 },
-          ]},
-        }
-      : b.sport === 'basketball'
-        ? {
-            'ML': { name: 'Money Line', selections: [
-              { key: '1', label: `${b.home} to win`, odds: b.odds.home },
-              { key: '2', label: `${b.away} to win`, odds: b.odds.away },
-            ]},
-            'TP': { name: 'Total Points', selections: [
-              { key: 'Over',  label: 'Over 220.5',  odds: 1.9 },
-              { key: 'Under', label: 'Under 220.5', odds: 1.9 },
-            ]},
-          }
-        : {
-            'ML': { name: 'Match Winner', selections: [
-              { key: '1', label: b.home, odds: b.odds.home },
-              { key: '2', label: b.away, odds: b.odds.away },
-            ]},
-          };
+    const markets = buildFixtureMarkets(b);
     const fx = {
       id, sport: b.sport,
       leagueId: b.leagueId,
@@ -159,6 +138,66 @@ router.post('/fixtures',
     res.status(201).json({ fixture: fx });
   }
 );
+
+function buildFixtureMarkets(b) {
+  const extra = b.extraMarkets || [];
+  const fromExtra = {};
+  for (const em of extra) {
+    if (em.type === 'overunder') {
+      fromExtra[em.market] = {
+        name: em.market === 'TP' ? 'Total Points' : `Over/Under ${em.market.replace('OU', '').replace(/^0/, '')}`,
+        selections: [
+          { key: 'Over', label: 'Over', odds: em.over ?? 1.9 },
+          { key: 'Under', label: 'Under', odds: em.under ?? 1.9 },
+        ],
+      };
+    } else if (em.type === 'yesno') {
+      fromExtra[em.market] = {
+        name: em.market === 'BTTS' ? 'Both Teams To Score' : em.market,
+        selections: [
+          { key: 'Yes', label: 'Yes', odds: em.yes ?? 1.78 },
+          { key: 'No', label: 'No', odds: em.no ?? 1.98 },
+        ],
+      };
+    } else if (em.type === 'dc') {
+      fromExtra[em.market] = {
+        name: 'Double Chance',
+        selections: [
+          { key: '1X', label: 'Home or Draw', odds: em['1X'] ?? 1.25 },
+          { key: 'X2', label: 'Draw or Away', odds: em.X2 ?? 1.35 },
+          { key: '12', label: 'Home or Away', odds: em['12'] ?? 1.20 },
+        ],
+      };
+    }
+  }
+
+  if (b.sport === 'football') {
+    return {
+      '1X2': { name: 'Match Result', selections: [
+        { key: '1', label: `${b.home} to win`, odds: b.odds.home },
+        { key: 'X', label: 'Draw',             odds: b.odds.draw ?? 3.2 },
+        { key: '2', label: `${b.away} to win`, odds: b.odds.away },
+      ]},
+      ...fromExtra,
+    };
+  }
+  if (b.sport === 'basketball') {
+    return {
+      'ML': { name: 'Money Line', selections: [
+        { key: '1', label: `${b.home} to win`, odds: b.odds.home },
+        { key: '2', label: `${b.away} to win`, odds: b.odds.away },
+      ]},
+      ...fromExtra,
+    };
+  }
+  return {
+    'ML': { name: 'Match Winner', selections: [
+      { key: '1', label: b.home, odds: b.odds.home },
+      { key: '2', label: b.away, odds: b.odds.away },
+    ]},
+    ...fromExtra,
+  };
+}
 
 router.patch('/fixtures/:id',
   requireAdmin, requireRole('odds_manager'),
@@ -259,5 +298,39 @@ router.post('/fixtures/:id/settle', requireAdmin, requireRole('odds_manager'), (
   audit(req, { action: 'sports.settle', target: req.params.id, targetType: 'fixture', meta: settled });
   res.json({ ok: true, settled });
 });
+
+/* ------------ market management (custom fixtures only) ------------ */
+
+const addMarketSchema = z.object({
+  marketKey: z.string().min(1),
+  name: z.string().min(1).max(100),
+  selections: z.array(z.object({
+    key: z.string().min(1),
+    label: z.string().optional(),
+    odds: z.number().positive().max(1000),
+  })).min(2, 'At least 2 selections required.'),
+});
+
+router.post('/fixtures/:id/markets',
+  requireAdmin, requireRole('odds_manager'),
+  validate(addMarketSchema),
+  (req, res, next) => {
+    const { marketKey, name, selections } = req.body;
+    const result = addMarketToFixture(req.params.id, marketKey, { name, selections });
+    if (result === null) return next(notFound('Fixture not found or market already exists.'));
+    audit(req, { action: 'sports.market.add', target: req.params.id, targetType: 'fixture', meta: { marketKey, name, selections: selections.length } });
+    res.status(201).json({ ok: true, market: result });
+  }
+);
+
+router.delete('/fixtures/:id/markets/:marketKey',
+  requireAdmin, requireRole('odds_manager'),
+  (req, res, next) => {
+    const ok = removeMarketFromFixture(req.params.id, req.params.marketKey);
+    if (!ok) return next(notFound('Fixture or market not found.'));
+    audit(req, { action: 'sports.market.delete', target: req.params.id, targetType: 'fixture', meta: { marketKey: req.params.marketKey } });
+    res.json({ ok: true });
+  }
+);
 
 export default router;

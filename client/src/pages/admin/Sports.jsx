@@ -11,11 +11,12 @@ import {
   adminFixtures, adminFixture, adminCreateFixture, adminPatchFixture, adminDeleteFixture,
   adminPatchOdds, adminResetOdds, adminSuspend, adminClearSuspend,
   adminRecordResult, adminTriggerSettle, adminLeagues, adminCreateLeague,
+  adminAddMarket, adminRemoveMarket,
 } from '../../api/adminApi.js';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
 import { Card, Badge, Drawer, Modal, Empty, SkeletonRow, moneyFmt, numFmt, ago } from '../../components/admin/primitives.jsx';
 import {
-  IconSearch, IconRefresh, IconLive, IconBan, IconCheck, IconSettle, IconBook, IconAlert,
+  IconSearch, IconRefresh, IconLive, IconBan, IconCheck, IconSettle, IconBook, IconAlert, IconClose,
 } from '../../components/admin/Icons.jsx';
 
 export default function SportsAdmin() {
@@ -195,6 +196,7 @@ function StatTile({ label, value }) {
 function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange }) {
   const [fx, setFx] = useState(null);
   const [resultModal, setResultModal] = useState(false);
+  const [addMarketOpen, setAddMarketOpen] = useState(false);
 
   async function reload() {
     if (!fixtureId) return;
@@ -244,6 +246,11 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
       await reload(); onChange?.();
     } catch (e) { showToast(e.message, 'error'); }
   }
+  async function removeMarket(mk) {
+    if (!confirm(`Remove market "${mk}"?`)) return;
+    try { await adminRemoveMarket(fx.id, mk); await reload(); onChange?.(); showToast(`Market "${mk}" removed.`); }
+    catch (e) { showToast(e.message, 'error'); }
+  }
 
   return (
     <Drawer
@@ -286,7 +293,10 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
           {Object.entries(fx.markets || {}).map(([mk, market]) => (
             <Card key={mk} title={market.name || mk}
                   action={hasRole('odds_manager') && !fx.finished && (
-                    <button className="adm-btn sm warn" onClick={() => suspendMarket(mk)}><IconBan size={12} /> Suspend</button>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="adm-btn sm warn" onClick={() => suspendMarket(mk)}><IconBan size={12} /> Suspend</button>
+                      <button className="adm-btn sm ghost" onClick={() => removeMarket(mk)}><IconClose size={10} /></button>
+                    </div>
                   )}
                   pill={market.suspended ? <Badge tone="warn">Suspended</Badge> : null}>
               <table className="adm-table">
@@ -301,10 +311,22 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
               </table>
             </Card>
           ))}
+
+          {hasRole('odds_manager') && !fx.finished && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+              <button className="adm-btn" onClick={() => setAddMarketOpen(true)}>
+                + Add market
+              </button>
+            </div>
+          )}
         </>
       )}
 
       <ResultModal open={resultModal} onClose={() => setResultModal(false)} fx={fx} onSubmit={recordResult} />
+      <AddMarketModal open={addMarketOpen} onClose={() => setAddMarketOpen(false)} fx={fx} onSubmit={async (data) => {
+        try { await adminAddMarket(fx.id, data); setAddMarketOpen(false); await reload(); onChange?.(); showToast(`Market "${data.marketKey}" added.`); }
+        catch (e) { showToast(e.message, 'error'); }
+      }} />
     </Drawer>
   );
 }
@@ -368,10 +390,99 @@ function Side({ label, value, onChange }) {
   );
 }
 
+/* ----------- add market modal ----------- */
+
+function AddMarketModal({ open, onClose, fx, onSubmit }) {
+  const [marketKey, setMarketKey] = useState('');
+  const [name, setName] = useState('');
+  const [selections, setSelections] = useState([{ key: '', label: '', odds: '2.00' }, { key: '', label: '', odds: '2.00' }]);
+
+  useEffect(() => { if (open) { setMarketKey(''); setName(''); setSelections([{ key: '', label: '', odds: '2.00' }, { key: '', label: '', odds: '2.00' }]); } }, [open]);
+
+  const addSel = () => setSelections((s) => [...s, { key: '', label: '', odds: '2.00' }]);
+  const rmSel = (i) => setSelections((s) => s.filter((_, idx) => idx !== i));
+  const updSel = (i, field, val) => setSelections((s) => s.map((sel, idx) => idx === i ? { ...sel, [field]: val } : sel));
+
+  const marketOpts = [
+    { key: '1X2', name: 'Match Result (1/X/2)' },
+    { key: 'OU25', name: 'Over/Under 2.5' },
+    { key: 'OU05', name: 'Over/Under 0.5' },
+    { key: 'OU15', name: 'Over/Under 1.5' },
+    { key: 'OU35', name: 'Over/Under 3.5' },
+    { key: 'OU45', name: 'Over/Under 4.5' },
+    { key: 'BTTS', name: 'Both Teams To Score' },
+    { key: 'DC', name: 'Double Chance (1X/X2/12)' },
+    { key: 'ML', name: 'Money Line' },
+    { key: 'TP', name: 'Total Points' },
+    { key: 'HCAP', name: 'Handicap' },
+    { key: 'CS', name: 'Correct Score' },
+  ];
+
+  const pickPreset = (mk) => {
+    setMarketKey(mk);
+    const presets = {
+      '1X2': { name: 'Match Result', selections: [{ key: '1', label: 'Home', odds: '2.10' }, { key: 'X', label: 'Draw', odds: '3.40' }, { key: '2', label: 'Away', odds: '3.10' }] },
+      'OU25': { name: 'Over/Under 2.5', selections: [{ key: 'Over', label: 'Over 2.5', odds: '1.95' }, { key: 'Under', label: 'Under 2.5', odds: '1.85' }] },
+      'OU05': { name: 'Over/Under 0.5', selections: [{ key: 'Over', label: 'Over 0.5', odds: '1.15' }, { key: 'Under', label: 'Under 0.5', odds: '5.50' }] },
+      'OU15': { name: 'Over/Under 1.5', selections: [{ key: 'Over', label: 'Over 1.5', odds: '1.55' }, { key: 'Under', label: 'Under 1.5', odds: '2.40' }] },
+      'OU35': { name: 'Over/Under 3.5', selections: [{ key: 'Over', label: 'Over 3.5', odds: '2.50' }, { key: 'Under', label: 'Under 3.5', odds: '1.50' }] },
+      'OU45': { name: 'Over/Under 4.5', selections: [{ key: 'Over', label: 'Over 4.5', odds: '4.00' }, { key: 'Under', label: 'Under 4.5', odds: '1.22' }] },
+      'BTTS': { name: 'Both Teams To Score', selections: [{ key: 'Yes', label: 'Yes', odds: '1.78' }, { key: 'No', label: 'No', odds: '1.98' }] },
+      'DC': { name: 'Double Chance', selections: [{ key: '1X', label: 'Home or Draw', odds: '1.25' }, { key: 'X2', label: 'Draw or Away', odds: '1.35' }, { key: '12', label: 'Home or Away', odds: '1.20' }] },
+      'ML': { name: 'Money Line', selections: [{ key: '1', label: 'Home', odds: '2.10' }, { key: '2', label: 'Away', odds: '1.70' }] },
+      'TP': { name: 'Total Points', selections: [{ key: 'Over', label: 'Over', odds: '1.90' }, { key: 'Under', label: 'Under', odds: '1.90' }] },
+      'HCAP': { name: 'Handicap', selections: [{ key: '1H', label: 'Home', odds: '1.90' }, { key: '2H', label: 'Away', odds: '1.90' }] },
+      'CS': { name: 'Correct Score', selections: [{ key: '1-0', label: '1-0', odds: '7.00' }, { key: '2-0', label: '2-0', odds: '9.00' }, { key: '2-1', label: '2-1', odds: '8.00' }, { key: '0-0', label: '0-0', odds: '6.00' }, { key: '1-1', label: '1-1', odds: '6.50' }, { key: '0-1', label: '0-1', odds: '7.50' }, { key: '0-2', label: '0-2', odds: '10.00' }, { key: '1-2', label: '1-2', odds: '9.00' }] },
+    };
+    const p = presets[mk];
+    if (p) { setName(p.name); setSelections(p.selections); }
+  };
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!marketKey || !name) return;
+    const parsed = selections.map((s) => ({ key: s.key, label: s.label || s.key, odds: Number(s.odds) }));
+    if (parsed.some((s) => !s.key || !Number.isFinite(s.odds) || s.odds < 1.01)) return;
+    await onSubmit({ marketKey, name, selections: parsed });
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Add market" description={`Add a new market to ${fx ? `${fx.home} — ${fx.away}` : 'this fixture'}.`}>
+      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="adm-field">
+          <label>Market preset</label>
+          <select className="adm-select" value="" onChange={(e) => e.target.value && pickPreset(e.target.value)}>
+            <option value="">— pick a preset —</option>
+            {marketOpts.map((o) => <option key={o.key} value={o.key}>{o.name}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="adm-field"><label>Market key</label><input className="adm-input" value={marketKey} onChange={(e) => setMarketKey(e.target.value)} required placeholder="e.g. OU25" /></div>
+          <div className="adm-field"><label>Display name</label><input className="adm-input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Over/Under 2.5" /></div>
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: 4 }}>Selections</div>
+        {selections.map((sel, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 90px 30px', gap: 6, alignItems: 'center' }}>
+            <input className="adm-input" placeholder="Key" value={sel.key} onChange={(e) => updSel(i, 'key', e.target.value)} required style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }} />
+            <input className="adm-input" placeholder="Label" value={sel.label} onChange={(e) => updSel(i, 'label', e.target.value)} />
+            <input className="adm-input" type="number" step="0.01" min="1.01" placeholder="Odds" value={sel.odds} onChange={(e) => updSel(i, 'odds', e.target.value)} required style={{ textAlign: 'right' }} />
+            <button type="button" className="adm-btn sm ghost" onClick={() => rmSel(i)} disabled={selections.length <= 2}><IconClose size={12} /></button>
+          </div>
+        ))}
+        <button type="button" className="adm-btn sm" onClick={addSel}>+ Add selection</button>
+        <div className="adm-modal-actions" style={{ marginTop: 4 }}>
+          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="adm-btn primary">Add market</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 /* ----------- create modals ----------- */
 
 function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
-  const [form, setForm] = useState({ sport: 'football', leagueId: '', home: '', away: '', kickoff: '', day: 'Today', isLive: false, homeOdds: '2.10', drawOdds: '3.40', awayOdds: '3.10' });
+  const [form, setForm] = useState({ sport: 'football', leagueId: '', home: '', away: '', kickoff: '', day: 'Today', isLive: false, homeOdds: '2.10', drawOdds: '3.40', awayOdds: '3.10', ouOver: '1.95', ouUnder: '1.85', bttsYes: '1.78', bttsNo: '1.98', dc1X: '1.25', dcX2: '1.35', dc12: '1.20' });
   const eligible = leagues.filter((l) => l.sport === form.sport);
   useEffect(() => { if (open) setForm((f) => ({ ...f, leagueId: '' })); }, [open]);
 
@@ -392,6 +503,13 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
           draw: form.sport === 'football' ? Number(form.drawOdds) : undefined,
           away: Number(form.awayOdds),
         },
+        extraMarkets: form.sport === 'football' ? [
+          { market: 'OU25', type: 'overunder', over: Number(form.ouOver), under: Number(form.ouUnder) },
+          { market: 'BTTS', type: 'yesno', yes: Number(form.bttsYes), no: Number(form.bttsNo) },
+          { market: 'DC', type: 'dc', '1X': Number(form.dc1X), X2: Number(form.dcX2), '12': Number(form.dc12) },
+        ] : form.sport === 'basketball' ? [
+          { market: 'TP', type: 'overunder', over: Number(form.ouOver), under: Number(form.ouUnder) },
+        ] : [],
       });
       onCreated();
     } catch (e) { showToast(e.message, 'error'); }
@@ -421,11 +539,34 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
           </select>
         </div>
         <div className="adm-field"><label>Kick-off (HH:MM)</label><input className="adm-input" placeholder="20:00" value={form.kickoff} onChange={(e) => setForm((f) => ({ ...f, kickoff: e.target.value }))} /></div>
-        <div className="adm-field"><label>Home odds</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.homeOdds} onChange={(e) => setForm((f) => ({ ...f, homeOdds: e.target.value }))} /></div>
-        {form.sport === 'football' && (
-          <div className="adm-field"><label>Draw odds</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.drawOdds} onChange={(e) => setForm((f) => ({ ...f, drawOdds: e.target.value }))} /></div>
+        <details style={{ gridColumn: '1 / -1', fontSize: 13 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-soft)' }}>Main market odds</summary>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 10 }}>
+            <div className="adm-field"><label>{form.sport === 'football' ? 'Home (1)' : 'Home'} odds</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.homeOdds} onChange={(e) => setForm((f) => ({ ...f, homeOdds: e.target.value }))} /></div>
+            {form.sport === 'football' && (
+              <div className="adm-field"><label>Draw (X) odds</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.drawOdds} onChange={(e) => setForm((f) => ({ ...f, drawOdds: e.target.value }))} /></div>
+            )}
+            <div className="adm-field"><label>Away {form.sport === 'football' ? '(2)' : ''} odds</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.awayOdds} onChange={(e) => setForm((f) => ({ ...f, awayOdds: e.target.value }))} /></div>
+          </div>
+        </details>
+        {(form.sport === 'football' || form.sport === 'basketball') && (
+          <details style={{ gridColumn: '1 / -1', fontSize: 13 }} open>
+            <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-soft)' }}>Additional market odds</summary>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 10 }}>
+              <div className="adm-field"><label>Over {form.sport === 'basketball' ? 'points' : '2.5'}</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.ouOver} onChange={(e) => setForm((f) => ({ ...f, ouOver: e.target.value }))} /></div>
+              <div className="adm-field"><label>Under {form.sport === 'basketball' ? 'points' : '2.5'}</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.ouUnder} onChange={(e) => setForm((f) => ({ ...f, ouUnder: e.target.value }))} /></div>
+              {form.sport === 'football' && (
+                <>
+                  <div className="adm-field"><label>BTTS Yes</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.bttsYes} onChange={(e) => setForm((f) => ({ ...f, bttsYes: e.target.value }))} /></div>
+                  <div className="adm-field"><label>BTTS No</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.bttsNo} onChange={(e) => setForm((f) => ({ ...f, bttsNo: e.target.value }))} /></div>
+                  <div className="adm-field"><label>DC 1X (Home/Draw)</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.dc1X} onChange={(e) => setForm((f) => ({ ...f, dc1X: e.target.value }))} /></div>
+                  <div className="adm-field"><label>DC X2 (Draw/Away)</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.dcX2} onChange={(e) => setForm((f) => ({ ...f, dcX2: e.target.value }))} /></div>
+                  <div className="adm-field"><label>DC 12 (Home/Away)</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.dc12} onChange={(e) => setForm((f) => ({ ...f, dc12: e.target.value }))} /></div>
+                </>
+              )}
+            </div>
+          </details>
         )}
-        <div className="adm-field"><label>Away odds</label><input className="adm-input" type="number" step="0.01" min="1.01" value={form.awayOdds} onChange={(e) => setForm((f) => ({ ...f, awayOdds: e.target.value }))} /></div>
         <div className="adm-field" style={{ gridColumn: '1 / -1' }}>
           <label><input type="checkbox" checked={form.isLive} onChange={(e) => setForm((f) => ({ ...f, isLive: e.target.checked }))} /> Mark as live now</label>
         </div>

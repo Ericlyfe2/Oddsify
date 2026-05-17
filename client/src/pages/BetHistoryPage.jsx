@@ -61,9 +61,9 @@ export default function BetHistoryPage() {
     settledCount: settled.length,
   }), [openBets, settled]);
 
-  const onCashOut = async (id) => {
+  const onCashOut = async (id, expectedAmount) => {
     try {
-      const res = await cashOutBet(id);
+      const res = await cashOutBet(id, expectedAmount);
       const cash = res.bet.cashOut || 0;
       adjustBalance(cash, `Cashed out: GHS ${fmt(cash)}.`);
       const refreshed = await fetchBetHistory();
@@ -142,9 +142,9 @@ export default function BetHistoryPage() {
         ) : (
           <ul className="bh-list">
             {visible.map((b) => {
-              const code = toBookingCode(b.id);
+              const code = b.bookingCode || toBookingCode(b.id);
               const isOpen = b.status === 'open';
-              const cashOutVal = Number((b.stake * (b.totalOdds * 0.6)).toFixed(2));
+              const cashOutAmount = isOpen ? (b.lastCashOutOffer?.amount ?? b.cashoutOffer ?? Number((b.stake * (b.totalOdds * 0.6)).toFixed(2))) : 0;
               const hasLegs = b.legs?.length > 0;
               const firstLeg = hasLegs ? b.legs[0] : null;
               return (
@@ -177,18 +177,41 @@ export default function BetHistoryPage() {
                   <div className="bh-code">
                     <span className="bh-code-label">Booking Code</span>
                     <code className="bh-code-value">{code}</code>
-                    <button type="button" className="bh-copy" onClick={() => onCopy(code)}>
-                      {copiedCode === code ? '✓ Copied' : 'Copy'}
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button type="button" className="bh-copy" onClick={() => onCopy(code)}>
+                        {copiedCode === code ? '✓ Copied' : 'Copy'}
+                      </button>
+                      {navigator.share && (
+                        <button 
+                          type="button" 
+                          className="bh-copy" 
+                          onClick={() => {
+                            navigator.share({
+                              title: 'My Xenbet Slip',
+                              text: `Check out my bet slip on Xenbet! Booking Code: ${code}`,
+                            }).catch(() => {});
+                          }}
+                        >
+                          Share
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {b.mode === 'system' && (
+                    <div className="bh-system-info">
+                      <span className="bh-system-badge">{b.systemLabel || b.systemType}</span>
+                      <span>{b.linesCount} lines · GHS {fmt(b.stakePerLine || 0)}/line</span>
+                    </div>
+                  )}
 
                   {isOpen && (
                     <button
                       type="button"
                       className="bh-cashout"
-                      onClick={() => onCashOut(b.id)}
+                      onClick={() => onCashOut(b.id, cashOutAmount)}
                     >
-                      Cash Out · GHS {fmt(cashOutVal)}
+                      Cash Out · GHS {fmt(cashOutAmount)}
                     </button>
                   )}
 
@@ -415,6 +438,16 @@ const BH_CSS = `
 .bh-leg-odds { color: var(--accent-cool); font-variant-numeric: tabular-nums; }
 
 .bh-leg-summary { margin: 0; font-size: 12.5px; color: var(--text-soft); }
+.bh-system-info {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: var(--text-soft);
+}
+.bh-system-badge {
+  font-size: 10px; font-weight: 800; letter-spacing: .08em;
+  padding: 3px 8px; border-radius: 6px;
+  background: rgba(197, 255, 61, .12);
+  color: var(--accent);
+}
 
 .fade-up { animation: bhFade .4s ease both; }
 @keyframes bhFade {

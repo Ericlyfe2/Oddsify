@@ -23,7 +23,7 @@
  * Auto-dismisses after 45s so the rest of the UI stays interactive.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { toSlipCode } from './BetSuccessModal.jsx';
+import { toBookingCode } from './BetSuccessModal.jsx';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -69,7 +69,7 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
   const modeLbl  = focus.mode === 'single' ? 'Single'
                  : focus.mode === 'multiple' ? 'Multiple'
                  : focus.mode === 'system' ? 'System' : (focus.mode || 'Bet');
-  const slipCode = toSlipCode(focus.id);
+  const slipCode = focus.bookingCode || toBookingCode(focus.id);
   const paidAt   = paidAtLabel(focus.settledAt || focus.placedAt);
 
   const handleViewSlip = () => {

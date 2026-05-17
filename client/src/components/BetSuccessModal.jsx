@@ -1,222 +1,91 @@
-/**
- * Shown immediately after a bet is placed.
- * Mirrors the "Bet Successful" pattern: stake / potential win / booking code
- * (with copy), plus Rebet and OK actions.
- */
-import { useEffect, useRef, useState } from 'react';
+// components/BetSuccessModal.jsx
+import { useEffect, useRef } from 'react';
 
-function fmt(n) {
+// Fallback derivation for older receipts that pre-date server-side codes.
+export function toBookingCode(id = '') {
+  const s = String(id).replace(/[^a-z0-9]/gi, '').toUpperCase();
+  if (!s) return 'XX00000';
+  const letters = (s.match(/[A-Z]/g) || ['X', 'X']).slice(0, 2).join('').padEnd(2, 'X');
+  const digits  = (s.match(/[0-9]/g) || ['0']).slice(-5).join('').padStart(5, '0');
+  return letters + digits;
+}
+
+function formatAmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Visually-distinct chars only — no 0/O, no 1/I — so codes read aloud cleanly.
-const ALNUM = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const SPECIALS = ['#', '@', '$', '!'];
-
-// Deterministic hash so the SAME bet always produces the SAME code.
-function hash32(id) {
-  let h = 2166136261;
-  for (const c of String(id)) {
-    h ^= c.charCodeAt(0);
-    h = (h * 16777619) >>> 0;
-  }
-  return h;
-}
-
-/** Compact placement code with special chars — example: `XB#9K@21`. */
-export function toBookingCode(id) {
-  if (!id) return '';
-  const h = hash32(id);
-  const a = ALNUM[(h >>> 0)  % ALNUM.length];
-  const b = ALNUM[(h >>> 5)  % ALNUM.length];
-  const c = ALNUM[(h >>> 10) % ALNUM.length];
-  const d = ALNUM[(h >>> 15) % ALNUM.length];
-  const s1 = SPECIALS[(h >>> 20) % SPECIALS.length];
-  const s2 = SPECIALS[(h >>> 24) % SPECIALS.length];
-  return `XB${s1}${a}${b}${s2}${c}${d}`;
-}
-
-/** Longer settled-ticket code, e.g. `SLIP-XB#9K@21F7`. */
-export function toSlipCode(id) {
-  if (!id) return '';
-  const base = toBookingCode(id);
-  const h = hash32(id + ':slip');
-  const x = ALNUM[(h >>> 0) % ALNUM.length];
-  const y = ALNUM[(h >>> 8) % ALNUM.length];
-  return `SLIP-${base}${x}${y}`;
-}
-
 export default function BetSuccessModal({ bet, onClose, onRebet }) {
-  const dlgRef = useRef(null);
-  const [copied, setCopied] = useState(false);
+  const dlg = useRef(null);
 
   useEffect(() => {
-    if (!bet) return;
-    dlgRef.current?.showModal?.();
-    setCopied(false);
-    const onCancel = (e) => { e.preventDefault(); onClose?.(); };
-    const node = dlgRef.current;
-    node?.addEventListener('cancel', onCancel);
-    return () => node?.removeEventListener('cancel', onCancel);
-  }, [bet, onClose]);
+    if (!bet || !dlg.current) return;
+    if (!dlg.current.open) dlg.current.showModal();
+  }, [bet]);
 
   if (!bet) return null;
-
-  const code = toBookingCode(bet.id);
+  const code = bet.bookingCode || toBookingCode(bet.id);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard?.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch { /* ignore */ }
+    try { await navigator.clipboard.writeText(code); } catch {/* ignore */}
   };
 
   return (
-    <dialog ref={dlgRef} className="bv-success">
-      <div className="bv-success-card" role="alertdialog" aria-labelledby="bv-success-title">
-        <div className="bv-success-emblem" aria-hidden>
-          <svg viewBox="0 0 64 64" width="56" height="56">
-            <defs>
-              <linearGradient id="bvSuccessCup" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="var(--accent, #c5ff3d)" />
-                <stop offset="1" stopColor="#9be800" />
-              </linearGradient>
-            </defs>
-            <circle cx="32" cy="32" r="30" fill="var(--accent, #c5ff3d)" opacity=".15" />
-            <path d="M20 14h24v18c0 8-6 14-12 14s-12-6-12-14V14z" fill="url(#bvSuccessCup)" />
-            <path d="M22 18h20v2H22z" fill="#ffffff" opacity=".55" />
-            <path d="M28 46h8v6h-8z" fill="#33402a" />
-            <path d="M22 52h20v3H22z" fill="#33402a" />
-          </svg>
+    <dialog
+      ref={dlg}
+      className="bv-dialog success-dlg"
+      onClose={onClose}
+      style={{ 
+        maxWidth: 360, 
+        padding: '32px 24px 24px', 
+        border: 'none', 
+        borderRadius: 24, 
+        background: '#ffffff', 
+        color: '#000000',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+      }}
+    >
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <div style={{
+          width: 72, height: 72, margin: '0 auto 16px',
+          borderRadius: '50%', background: '#f0f9f3',
+          display: 'grid', placeItems: 'center', fontSize: 32,
+        }}>🏆</div>
+        <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#111' }}>Bet Successful</h3>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: '#666' }}>
+          Bet successful
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        <div style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid #f0f0f0', background: '#fafafa' }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Total Stake</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>GHS {formatAmt(bet.stake)}</div>
         </div>
-
-        <h2 id="bv-success-title" className="bv-success-title">Bet Successful</h2>
-        <p className="bv-success-sub">Your ticket has been placed.</p>
-
-        <div className="bv-success-grid">
-          <div className="bv-success-stat">
-            <span className="lbl">Total Stake</span>
-            <span className="val">GHS {fmt(bet.stake)}</span>
-          </div>
-          <div className="bv-success-stat">
-            <span className="lbl">Potential Win</span>
-            <span className="val val-accent">GHS {fmt(bet.potentialWin)}</span>
-          </div>
-          <div className="bv-success-stat">
-            <span className="lbl">Booking Code</span>
-            <span className="val val-mono">{code}</span>
-          </div>
+        <div style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid #f0f0f0', background: '#fafafa' }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Potential Win</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>GHS {formatAmt(bet.potentialWin)}</div>
         </div>
-
-        <button type="button" className="bv-success-copy" onClick={copy} aria-live="polite">
-          {copied ? '✓ Copied' : 'Copy code'}
-        </button>
-
-        <div className="bv-success-actions">
-          <button type="button" className="btn btn-ghost bv-success-btn" onClick={() => { onRebet?.(); onClose?.(); }}>
-            Rebet
-          </button>
-          <button type="button" className="btn btn-primary bv-success-btn" onClick={onClose}>
-            OK
-          </button>
+        <div style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid #f0f0f0', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Booking Code</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>{code}</div>
+          </div>
+          <button type="button" onClick={copy} style={{ background: 'none', border: 'none', color: '#116f43', fontWeight: 800, fontSize: 12, cursor: 'pointer', padding: '6px 12px', borderRadius: 8 }}>COPY</button>
         </div>
       </div>
-      <style>{BET_SUCCESS_CSS}</style>
+
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button
+          type="button"
+          onClick={() => { dlg.current?.close(); onRebet?.(); }}
+          style={{ flex: 1, padding: '15px 0', borderRadius: 12, border: 'none', background: '#f0f9f3', color: '#116f43', fontWeight: 800, cursor: 'pointer', fontSize: 15 }}
+        >Rebet</button>
+        <button
+          type="button"
+          onClick={() => dlg.current?.close()}
+          style={{ flex: 1, padding: '15px 0', borderRadius: 12, border: 'none', background: '#116f43', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: 15 }}
+        >OK</button>
+      </div>
     </dialog>
   );
 }
-
-const BET_SUCCESS_CSS = `
-.bv-success {
-  border: none; padding: 0; background: transparent;
-  width: min(420px, 92vw);
-  border-radius: 22px;
-}
-.bv-success::backdrop {
-  background: radial-gradient(700px 500px at 50% 30%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .82));
-  backdrop-filter: blur(6px);
-}
-.bv-success-card {
-  background: var(--surface, #131a18);
-  color: var(--text, #e8edea);
-  border-radius: 22px;
-  padding: 28px 24px 22px;
-  text-align: center;
-  border: 1px solid var(--surface-2, #1a2421);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
-  animation: bvSuccessPop .35s cubic-bezier(.18, .8, .36, 1.18);
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-}
-@keyframes bvSuccessPop {
-  from { transform: scale(.92) translateY(8px); opacity: 0; }
-  to   { transform: scale(1)   translateY(0);   opacity: 1; }
-}
-.bv-success-emblem {
-  display: flex; justify-content: center;
-  filter: drop-shadow(0 8px 18px rgba(197, 255, 61, .35));
-  animation: bvSuccessBounce 2.4s ease-in-out infinite;
-}
-@keyframes bvSuccessBounce {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-4px); }
-}
-.bv-success-title {
-  margin: 12px 0 4px;
-  font-size: 22px; font-weight: 800; letter-spacing: -.01em;
-}
-.bv-success-sub {
-  margin: 0 0 16px;
-  font-size: 13px;
-  color: var(--text-soft, #a0a8a4);
-}
-.bv-success-grid {
-  display: flex; flex-direction: column; gap: 8px;
-  margin: 8px 0 12px;
-}
-.bv-success-stat {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 14px;
-  background: var(--surface-2, #1a2421);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, .04);
-}
-.bv-success-stat .lbl {
-  font-size: 12px; color: var(--text-dim, #5d6764);
-  text-transform: uppercase; letter-spacing: .08em;
-}
-.bv-success-stat .val {
-  font-size: 15px; font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.bv-success-stat .val-accent { color: var(--accent, #c5ff3d); }
-.bv-success-stat .val-mono {
-  font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
-  letter-spacing: .04em;
-  color: var(--accent-cool, #6ad0ff);
-}
-.bv-success-copy {
-  width: 100%;
-  margin: 4px 0 14px;
-  padding: 10px 12px;
-  background: transparent;
-  border: 1px dashed var(--text-dim, #5d6764);
-  border-radius: 10px;
-  color: var(--text-soft, #a0a8a4);
-  font-size: 13px; font-weight: 600;
-  cursor: pointer;
-  transition: border-color .15s ease, color .15s ease;
-}
-.bv-success-copy:hover { border-color: var(--accent, #c5ff3d); color: var(--accent, #c5ff3d); }
-.bv-success-actions {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-}
-.bv-success-btn { padding: 12px; font-weight: 700; }
-
-/* tighter spacing on small phones */
-@media (max-width: 380px) {
-  .bv-success-card { padding: 24px 18px 18px; }
-  .bv-success-title { font-size: 20px; }
-  .bv-success-stat { padding: 10px 12px; }
-}
-`;
