@@ -8,11 +8,12 @@
 import { io } from 'socket.io-client';
 import { getAccess } from './betApi.js';
 
-// In production, set VITE_API_BASE to the backend origin (no trailing slash).
-// In dev, leave it unset — Vite proxies /socket.io to the local server.
-const URL = import.meta.env.VITE_API_BASE
-  || (typeof window !== 'undefined' && window.location.origin)
-  || 'http://localhost:5173';
+const devUrl = 'http://127.0.0.1:4000';
+const URL = import.meta.env.VITE_API_BASE || (
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? devUrl
+    : (typeof window !== 'undefined' ? window.location.origin : devUrl)
+);
 
 let socket = null;
 let connectAttempted = false;

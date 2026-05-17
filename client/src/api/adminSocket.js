@@ -5,9 +5,12 @@
 import { io } from 'socket.io-client';
 import { getAdminAccess } from './adminApi.js';
 
-const URL = import.meta.env.VITE_API_BASE
-  || (typeof window !== 'undefined' && window.location.origin)
-  || 'http://localhost:5173';
+const devUrl = 'http://127.0.0.1:4000';
+const URL = import.meta.env.VITE_API_BASE || (
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? devUrl
+    : (typeof window !== 'undefined' ? window.location.origin : devUrl)
+);
 
 let socket = null;
 
