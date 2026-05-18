@@ -249,10 +249,9 @@ export default function WithdrawPage() {
           {/* Rules list */}
           <div className="w-rules-card fade-up" style={{ animationDelay: '0.25s' }}>
             <ol className="w-rules-list">
-              <li>Maximum withdrawal per request is <strong>₵ {MAX_WITHDRAW.toLocaleString('en-US')}</strong></li>
-              <li>Minimum withdrawal is <strong>₵ {MIN_WITHDRAW}</strong></li>
-              <li>Withdrawals are processed automatically. Processing time is up to <strong>3 minutes</strong>.</li>
-              <li>Withdrawals are sent to your selected Mobile Money number/network.</li>
+              <li>Minimum withdrawal <strong>₵ {MIN_WITHDRAW}</strong></li>
+              <li>Processing within <strong>24 hours</strong></li>
+              <li>Method: <strong>MoMo to phone on file</strong></li>
             </ol>
           </div>
 
