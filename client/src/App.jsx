@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppProviders from './providers/AccountProvider.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
+import ScrollRestoration from './components/ScrollRestoration.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 import AppShell from './layout/AppShell.jsx';
 import Home from './pages/Home.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -60,37 +63,40 @@ function AdminApp() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/admin/*" element={<AdminApp />} />
-      <Route path="/*" element={
-        <AppProviders>
-          <Routes>
-            <Route path="/login"            element={<LoginPage />} />
-            <Route path="/verify"           element={<Navigate to="/login" replace />} />
-            <Route path="/forgot-password"  element={<Navigate to="/login" replace />} />
-            <Route path="/reset-password"   element={<Navigate to="/login" replace />} />
-            <Route element={<AppShell />}>
-              <Route path="/"          element={<Home />} />
-              <Route path="/my-bets"   element={<BetHistoryPage />} />
-              <Route path="/casino"    element={<CasinoPage />} />
-              <Route path="/virtuals"  element={<VirtualsPage />} />
-              <Route path="/jackpot"   element={<JackpotPage />} />
-              <Route path="/promos"    element={<PromosPage />} />
-              <Route path="/profile"   element={<ProfilePage />} />
-              <Route path="/wallet"    element={<WalletPage />} />
-              <Route path="/withdraw"  element={<WithdrawPage />} />
-              <Route path="/info"      element={<InfoPage />} />
-              <Route path="/terms"     element={<Navigate to="/info#terms" replace />} />
-              <Route path="/privacy"   element={<Navigate to="/info#privacy" replace />} />
-              <Route path="/responsible-gaming" element={<Navigate to="/info#responsible-gaming" replace />} />
-              <Route path="/licence"   element={<Navigate to="/info#licence" replace />} />
-              <Route path="/help"      element={<HelpPage />} />
-              <Route path="/contact"   element={<Navigate to="/help" replace />} />
-              <Route path="*"          element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </AppProviders>
-      } />
-    </Routes>
+    <ErrorBoundary>
+      <ScrollRestoration />
+      <Routes>
+        <Route path="/admin/*" element={<AdminApp />} />
+        <Route path="/*" element={
+          <AppProviders>
+            <Routes>
+              <Route path="/login"            element={<LoginPage />} />
+              <Route path="/verify"           element={<Navigate to="/login" replace />} />
+              <Route path="/forgot-password"  element={<Navigate to="/login" replace />} />
+              <Route path="/reset-password"   element={<Navigate to="/login" replace />} />
+              <Route element={<AppShell />}>
+                <Route path="/"          element={<Home />} />
+                <Route path="/my-bets"   element={<BetHistoryPage />} />
+                <Route path="/casino"    element={<CasinoPage />} />
+                <Route path="/virtuals"  element={<VirtualsPage />} />
+                <Route path="/jackpot"   element={<JackpotPage />} />
+                <Route path="/promos"    element={<PromosPage />} />
+                <Route path="/profile"   element={<ProfilePage />} />
+                <Route path="/wallet"    element={<WalletPage />} />
+                <Route path="/withdraw"  element={<WithdrawPage />} />
+                <Route path="/info"      element={<InfoPage />} />
+                <Route path="/terms"     element={<Navigate to="/info#terms" replace />} />
+                <Route path="/privacy"   element={<Navigate to="/info#privacy" replace />} />
+                <Route path="/responsible-gaming" element={<Navigate to="/info#responsible-gaming" replace />} />
+                <Route path="/licence"   element={<Navigate to="/info#licence" replace />} />
+                <Route path="/help"      element={<HelpPage />} />
+                <Route path="/contact"   element={<Navigate to="/help" replace />} />
+                <Route path="*"          element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </AppProviders>
+        } />
+      </Routes>
+    </ErrorBoundary>
   );
 }
