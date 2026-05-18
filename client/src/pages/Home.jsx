@@ -190,7 +190,10 @@ export default function Home({ initialChip }) {
 
   const upsertSelection = useCallback((row) => {
     setSelections((prev) => {
-      const i = prev.findIndex((s) => s.matchId === row.matchId && s.market === row.market);
+      // Dedupe by (matchId, market, outcome) so the same odd can't appear
+      // twice on the slip, but different outcomes in the same market — and
+      // different markets on the same match — can coexist.
+      const i = prev.findIndex((s) => s.matchId === row.matchId && s.market === row.market && s.outcome === row.outcome);
       if (i === -1) return [...prev, row];
       const next = [...prev];
       next[i] = { ...row, id: prev[i].id };
@@ -198,8 +201,8 @@ export default function Home({ initialChip }) {
     });
   }, []);
 
-  const removeBy = useCallback((matchId, market) => {
-    setSelections((prev) => prev.filter((s) => !(s.matchId === matchId && s.market === market)));
+  const removeByOutcome = useCallback((matchId, market, outcome) => {
+    setSelections((prev) => prev.filter((s) => !(s.matchId === matchId && s.market === market && s.outcome === outcome)));
   }, []);
 
   const removeById = useCallback((id) => {
@@ -207,14 +210,19 @@ export default function Home({ initialChip }) {
   }, []);
 
   const toggleSelection = useCallback((league, match, market, key, odds) => {
-    const existing = selections.find((s) => s.matchId === match.id && s.market === market);
-    if (existing && existing.outcome === key) {
-      removeBy(match.id, market);
+    // Toggle by exact (matchId, market, outcome): same odd clicked twice =>
+    // deselect. Different outcome in same market => stack. Different market
+    // on same match => stack.
+    const existing = selections.find(
+      (s) => s.matchId === match.id && s.market === market && s.outcome === key,
+    );
+    if (existing) {
+      removeByOutcome(match.id, market, key);
       return;
     }
     if (odds == null) return;
 
-    if (betMode === 'single' && !existing) {
+    if (betMode === 'single') {
       setSelections([{
         id: `sel-${crypto.randomUUID?.() || Date.now()}`,
         matchId: match.id, market, outcome: key, odds,
@@ -226,13 +234,13 @@ export default function Home({ initialChip }) {
       return;
     }
 
-    if (!existing && selections.length >= 12) {
+    if (selections.length >= 12) {
       toast('Slip is full — 12 selections max.');
       return;
     }
 
     upsertSelection({
-      id: existing?.id || `sel-${crypto.randomUUID?.() || Date.now()}`,
+      id: `sel-${crypto.randomUUID?.() || Date.now()}`,
       matchId: match.id,
       market,
       outcome: key,
@@ -242,7 +250,7 @@ export default function Home({ initialChip }) {
       meta: matchMeta(match),
       trend: null,
     });
-  }, [selections, upsertSelection, removeBy, betMode, toast]);
+  }, [selections, upsertSelection, removeByOutcome, betMode, toast]);
 
   const clearSlip = useCallback(() => {
     setSelections([]);
@@ -897,7 +905,7 @@ export default function Home({ initialChip }) {
                     {lg.matches.map((match) => {
                       const cols = columnsFor(marketChip, match);
                       const market = cols?.market;
-                      const myMain = selections.find((s) => s.matchId === match.id && s.market === market);
+                      const myPicks = selections.filter((s) => s.matchId === match.id && s.market === market);
 
                       return (
                         <div key={match.id} className={`sb-match ${gridClass}`}>
@@ -933,7 +941,7 @@ export default function Home({ initialChip }) {
 
                           {cols ? (
                             cols.selections.map((s) => {
-                              const isSel = myMain?.outcome === s.key;
+                              const isSel = myPicks.some((p) => p.outcome === s.key);
                               return (
                                 <button
                                   key={s.key}

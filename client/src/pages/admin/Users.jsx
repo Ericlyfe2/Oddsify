@@ -13,7 +13,7 @@ import { useAdmin } from '../../providers/AdminProvider.jsx';
 import {
   adminListUsers, adminGetUser, adminUserBets, adminUserTx, adminUserLogins,
   adminUserStatus, adminUserKyc, adminUserWallet, adminUserTags, adminUserNotes,
-  adminUserReset,
+  adminUserReset, adminImpersonate,
 } from '../../api/adminApi.js';
 import { Card, Badge, Drawer, Modal, Empty, SkeletonRow, moneyFmt, numFmt, ago, dateShort } from '../../components/admin/primitives.jsx';
 import {
@@ -281,6 +281,14 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, hasRole, showT
       prompt('Temporary password (share securely with the user):', r.tempPassword);
     } catch (e) { showToast(e.message, 'error'); }
   }
+  async function impersonateUser() {
+    try {
+      const r = await adminImpersonate(user.id);
+      const loginUrl = `${window.location.origin}/login?token=${r.token}&redirect=/`;
+      window.open(loginUrl, '_blank');
+      showToast('User login link opened in new tab.');
+    } catch (e) { showToast(e.message, 'error'); }
+  }
 
   if (!open || !user) return null;
 
@@ -294,10 +302,16 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, hasRole, showT
           {user.suspended
             ? <button className="adm-btn success" onClick={() => doStatus('unsuspend')}><IconCheck size={14} /> Unsuspend</button>
             : <button className="adm-btn warn"    onClick={() => doStatus('suspend')}><IconBan size={14} /> Suspend</button>}
+          {(detail?.emailVerified ?? user.emailVerified)
+            ? <button className="adm-btn ghost" onClick={() => doStatus('unverify')}><IconBan size={14} /> Revoke verification</button>
+            : <button className="adm-btn success" onClick={() => doStatus('verify')}><IconCheck size={14} /> Verify user</button>}
           {hasRole('finance_admin') && (
             <button className="adm-btn" onClick={() => setWalletOpen(true)}><IconCash size={14} /> Adjust wallet</button>
           )}
           <button className="adm-btn ghost" onClick={resetPassword}><IconKey size={14} /> Reset password</button>
+          {hasRole() && (
+            <button className="adm-btn" onClick={impersonateUser}><IconUsers size={14} /> Login as user</button>
+          )}
         </>
       ) : null}
     >

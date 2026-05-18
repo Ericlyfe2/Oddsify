@@ -165,7 +165,13 @@ export function settleNow() {
       const view = adminLookupFixture(leg.matchId);
       const sport = view?.sport?.id || view?.sport || 'football';
       const res = view ? ensureResult(view.match, sport) : null;
-      if (!res) { allReady = false; break; }
+      // Only count a leg as ready when it has a real authoritative result
+      // (admin-set or feed). Auto-simulated results don't move a bet from
+      // Open to Bet History — admins or a live feed have to confirm first.
+      if (!res || (res.source !== 'manual' && res.source !== 'feed')) {
+        allReady = false;
+        break;
+      }
       const won = legWon(leg, res.scoreHome, res.scoreAway);
       legResults.push({ leg, res, won });
     }
