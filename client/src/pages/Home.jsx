@@ -8,6 +8,8 @@ import {
 import { useToast, useAccount } from '../layout/AppShell.jsx';
 import BetSuccessModal, { toBookingCode } from '../components/BetSuccessModal.jsx';
 import { useFavouriteLeagues } from '../hooks/useFavourites.js';
+import PageBack from '../components/PageBack.jsx';
+import { onLive, subscribeSports, unsubscribeSports } from '../api/socketClient.js';
 import {
   SYSTEM_TYPES,
   eligibleSystemTypes,
@@ -134,7 +136,7 @@ export default function Home({ initialChip }) {
   const [activeLeague, setActiveLeague] = useState(null);
 
   // new mobile-first UI state
-  const [subTab, setSubTab]           = useState(initialChip === 'live' ? 'today' : 'highlights');
+  const [subTab, setSubTab]           = useState(initialChip === 'live' ? 'live' : 'highlights');
   const [marketChip, setMarketChip]   = useState('1X2');
   const [collapsed, setCollapsed]     = useState({});
   const [slipOpen, setSlipOpen]       = useState(false);
@@ -173,14 +175,78 @@ export default function Home({ initialChip }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sportId]);
 
-  // 30-second odds refresh on football
+  // Odds refresh — 10s on Live tab, 30s otherwise. Always calls the API
+  // so prices stay in sync with the server snapshot.
   useEffect(() => {
     if (sportId !== 'football') return;
+    const intervalMs = subTab === 'live' ? 10000 : 30000;
     const t = setInterval(() => {
       fetchMatches(sportId).then((d) => setSnapshot(d)).catch(() => {});
-    }, 30000);
+    }, intervalMs);
     return () => clearInterval(t);
-  }, [sportId]);
+  }, [sportId, subTab]);
+
+  // Realtime socket overlay on Live tab — merges odds:tick and score:update
+  // into the snapshot so prices/scores move between API polls.
+  useEffect(() => {
+    if (subTab !== 'live') return;
+    subscribeSports([sportId]);
+
+    const offOdds = onLive('odds:tick', (payload) => {
+      if (!payload?.fixtureId || !payload?.market) return;
+      setSnapshot((cur) => {
+        if (!cur) return cur;
+        let touched = false;
+        const leagues = cur.leagues.map((lg) => ({
+          ...lg,
+          matches: lg.matches.map((m) => {
+            if (m.id !== payload.fixtureId) return m;
+            const prev = m.markets?.[payload.market];
+            if (!prev) return m;
+            const selections = Array.isArray(payload.selections)
+              ? payload.selections.map((s) => ({
+                  key: s.key,
+                  label: s.label,
+                  odds: typeof s.odds === 'number' ? s.odds : prev.selections?.find((x) => x.key === s.key)?.odds,
+                  suspended: !!s.suspended,
+                }))
+              : prev.selections;
+            touched = true;
+            return { ...m, markets: { ...m.markets, [payload.market]: { ...prev, selections } } };
+          }),
+        }));
+        return touched ? { ...cur, leagues } : cur;
+      });
+    });
+
+    const offScore = onLive('score:update', (payload) => {
+      if (!payload?.fixtureId) return;
+      setSnapshot((cur) => {
+        if (!cur) return cur;
+        let touched = false;
+        const leagues = cur.leagues.map((lg) => ({
+          ...lg,
+          matches: lg.matches.map((m) => {
+            if (m.id !== payload.fixtureId) return m;
+            touched = true;
+            return {
+              ...m,
+              scoreHome: payload.scoreHome ?? m.scoreHome,
+              scoreAway: payload.scoreAway ?? m.scoreAway,
+              minute: payload.minute ?? m.minute,
+            };
+          }),
+        }));
+        return touched ? { ...cur, leagues } : cur;
+      });
+    });
+
+    return () => {
+      try { offOdds?.(); } catch { /* ignore */ }
+      try { offScore?.(); } catch { /* ignore */ }
+      try { unsubscribeSports([sportId]); } catch { /* ignore */ }
+    };
+  }, [subTab, sportId]);
 
   // Bottom-sheet open/close wiring
   useEffect(() => {
@@ -213,50 +279,42 @@ export default function Home({ initialChip }) {
   }, []);
 
   const toggleSelection = useCallback((league, match, market, key, odds) => {
-    if (odds == null) return;
-
     setSelections((prev) => {
       // Toggle by exact (matchId, market, outcome): same odd clicked twice => deselect.
-      const existing = prev.find(
+      // Deselect path must work even when odds are null / market suspended, so the
+      // user can always remove a stale pick.
+      const existingIdx = prev.findIndex(
         (s) => s.matchId === match.id && s.market === market && s.outcome === key,
       );
-      if (existing) {
-        return prev.filter((s) => !(s.matchId === match.id && s.market === market && s.outcome === key));
+      if (existingIdx >= 0) {
+        const next = prev.slice();
+        next.splice(existingIdx, 1);
+        return next;
       }
 
-      if (betMode === 'single') {
-        return [{
-          id: `sel-${crypto.randomUUID?.() || Date.now()}`,
-          matchId: match.id,
-          market,
-          outcome: key,
-          odds,
-          pickLabel: pickLabel(market, key, match),
-          marketLabel: market === '1X2' || market === 'ML' ? `Match · ${key}` : `${market} · ${key}`,
-          meta: matchMeta(match),
-          trend: null,
-        }];
-      }
+      // Adding a new pick requires a valid price.
+      if (odds == null || !Number.isFinite(Number(odds))) return prev;
+
+      const newPick = {
+        id: `sel-${crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`}`,
+        matchId: match.id,
+        market,
+        outcome: key,
+        odds: Number(odds),
+        pickLabel: pickLabel(market, key, match),
+        marketLabel: market === '1X2' || market === 'ML' ? `Match · ${key}` : `${market} · ${key}`,
+        meta: matchMeta(match),
+        trend: null,
+      };
+
+      if (betMode === 'single') return [newPick];
 
       if (prev.length >= 12) {
         toast('Slip is full — 12 selections max.');
         return prev;
       }
 
-      return [
-        ...prev,
-        {
-          id: `sel-${crypto.randomUUID?.() || Date.now()}`,
-          matchId: match.id,
-          market,
-          outcome: key,
-          odds,
-          pickLabel: pickLabel(market, key, match),
-          marketLabel: market === '1X2' || market === 'ML' ? `Match · ${key}` : `${market} · ${key}`,
-          meta: matchMeta(match),
-          trend: null,
-        }
-      ];
+      return [...prev, newPick];
     });
   }, [betMode, toast]);
 
@@ -595,10 +653,14 @@ export default function Home({ initialChip }) {
     : snapshot.leagues;
 
   // Today = matches whose `day` doesn't read like a date string ("Sun", "Mon", a future date).
-  // Live always counts as today.
+  // Live always counts as today. Live tab = only isLive matches.
   const filteredLeaguesRaw = subTab === 'today'
     ? visibleLeagues
         .map((lg) => ({ ...lg, matches: lg.matches.filter((m) => m.isLive || /today/i.test(String(m.day || ''))) }))
+        .filter((lg) => lg.matches.length > 0)
+    : subTab === 'live'
+    ? visibleLeagues
+        .map((lg) => ({ ...lg, matches: lg.matches.filter((m) => m.isLive) }))
         .filter((lg) => lg.matches.length > 0)
     : visibleLeagues;
 
@@ -620,6 +682,10 @@ export default function Home({ initialChip }) {
 
   return (
     <>
+      <div style={{ padding: '8px 12px 0' }}>
+        <PageBack />
+      </div>
+
       {/* ─── Sport tabs (with Live) ─── */}
       <div className="sb-sport-tabs">
         <button
@@ -648,6 +714,23 @@ export default function Home({ initialChip }) {
 
       {/* ─── Category quick links (SportyBet-style) ─── */}
       <div className="sb-category-pills">
+        <button
+          type="button"
+          className={`sb-category-pill${subTab === 'live' ? ' active' : ''}`}
+          onClick={() => {
+            setSubTab(subTab === 'live' ? 'highlights' : 'live');
+            requestAnimationFrame(() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+          }}
+          style={{
+            background: subTab === 'live' ? 'linear-gradient(135deg,#ff3d3d,#c81e1e)' : undefined,
+            color: subTab === 'live' ? '#fff' : undefined,
+            fontWeight: 800,
+          }}
+        >
+          🔴 LIVE
+        </button>
         {categoryLinks.map((cat) => (
           <button
             key={cat.id}
@@ -660,7 +743,8 @@ export default function Home({ initialChip }) {
         ))}
       </div>
 
-      {/* ─── Featured section (SportyBet Codes style) ─── */}
+      {/* ─── Featured section (SportyBet Codes style) — hidden on Live tab so live matches sit above the fold ─── */}
+      {subTab !== 'live' && (
       <section className="sb-featured">
         <div className="sb-featured-tabs">
           {[
@@ -813,11 +897,13 @@ export default function Home({ initialChip }) {
           )}
         </div>
       </section>
+      )}
 
       {/* ─── Secondary tabs ─── */}
       <div className="sb-sub-tabs">
         {[
           ['highlights', 'Highlights'],
+          ['live',       'Live'],
           ['today',      'Today'],
           ['countries',  'Countries'],
         ].map(([key, label]) => (

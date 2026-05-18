@@ -53,6 +53,10 @@ export function subscribeSports(ids = []) {
   const s = getSocket();
   s.emit('subscribe', { sportIds: ids });
 }
+export function unsubscribeSports(ids = []) {
+  if (!socket) return;
+  socket.emit('unsubscribe', { sportIds: ids });
+}
 
 export function onLive(event, handler) {
   const s = getSocket();

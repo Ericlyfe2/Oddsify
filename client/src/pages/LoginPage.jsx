@@ -4,6 +4,17 @@ import { login, register, fetchAuthConfig, googleSignIn } from '../api/betApi.js
 import { setAdminTokens } from '../api/adminApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import CountrySelect from '../components/CountrySelect.jsx';
+import PageBack from '../components/PageBack.jsx';
+
+// Block open-redirects via ?next= / ?redirect= — only allow same-origin
+// paths that start with a single "/" (rejects "//evil.com", "http://...",
+// "javascript:", etc).
+function safePath(raw, fallback = '/') {
+  if (typeof raw !== 'string') return fallback;
+  if (!raw.startsWith('/')) return fallback;
+  if (raw.startsWith('//') || raw.startsWith('/\\')) return fallback;
+  return raw;
+}
 
 const PROMO_BENEFITS = [
   ['🎁',  '200% welcome bonus on your first deposit'],
@@ -18,7 +29,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [params] = useSearchParams();
 
-  const next = params.get('next') || '/';
+  const next = safePath(params.get('next'), '/');
   const [mode, setMode]             = useState(params.get('mode') === 'register' ? 'register' : 'signin');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword]     = useState('');
@@ -35,7 +46,7 @@ export default function LoginPage() {
     const token = params.get('token');
     if (token) {
       signIn({ accessToken: token });
-      navigate(params.get('redirect') || next, { replace: true });
+      navigate(safePath(params.get('redirect'), next), { replace: true });
       return;
     }
     if (account) navigate(next, { replace: true });
@@ -155,6 +166,9 @@ export default function LoginPage() {
 
   return (
     <div className="login-page-v2">
+      <div style={{ padding: '12px 16px 0' }}>
+        <PageBack fallback="/" />
+      </div>
       <Link className="back" to="/">← Back to sports</Link>
 
       <div className="auth-shell">
@@ -243,7 +257,7 @@ export default function LoginPage() {
             {mode === 'register' && (
               <label className="check check-block" style={{ marginTop: 14 }}>
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-                I am 18+ and accept the <a className="link">Terms</a> and <a className="link">Responsible Gaming Policy</a>.
+                I am 18+ and accept the <Link className="link" to="/info#terms" target="_blank" rel="noopener noreferrer">Terms</Link> and <Link className="link" to="/info#responsible-gaming" target="_blank" rel="noopener noreferrer">Responsible Gaming Policy</Link>.
               </label>
             )}
 

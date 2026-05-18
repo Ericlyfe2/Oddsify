@@ -133,6 +133,12 @@ export default function WithdrawPage() {
               <polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
+          <button type="button" className="w-header-icon" onClick={() => { try { navigate(1); } catch { /* ignore */ } try { window.history.forward(); } catch { /* ignore */ } }} aria-label="Go Forward">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
           <h1 className="w-header-title">Withdraw</h1>
           <div className="w-header-right-actions">
             <button type="button" className="w-header-icon" onClick={() => navigate('/help')} aria-label="Help">

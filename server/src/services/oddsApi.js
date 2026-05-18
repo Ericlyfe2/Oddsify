@@ -6,7 +6,7 @@
 
 import { buildMarkets } from '../matchesData.js';
 
-const API_KEY  = process.env.ODDS_API_KEY || 'f29329416dc60d4defee32c746c2f9e2';
+const API_KEY  = process.env.ODDS_API_KEY || '';
 const BASE     = 'https://api.the-odds-api.com/v4';
 const TTL_MS   = 4 * 60 * 60 * 1000;   // 4 hours
 const REQ_TIMEOUT_MS = 8000;

@@ -76,6 +76,7 @@ export default function App() {
               <Route path="/reset-password"   element={<Navigate to="/login" replace />} />
               <Route element={<AppShell />}>
                 <Route path="/"          element={<Home />} />
+                <Route path="/live"      element={<Home initialChip="live" />} />
                 <Route path="/my-bets"   element={<BetHistoryPage />} />
                 <Route path="/casino"    element={<CasinoPage />} />
                 <Route path="/virtuals"  element={<VirtualsPage />} />

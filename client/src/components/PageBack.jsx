@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
-// Browser-style history navigation for inner pages. Renders a ← back button
-// and a → forward button. Back falls back to a provided route (default /)
-// when there's nowhere in history to return to. Forward just calls
-// history.go(1); on Chromium the browser tracks whether we can go forward.
-export default function PageBack({ fallback = '/' }) {
+// History navigation: ← back / → forward. Back falls back to `fallback`
+// when there's no history; forward uses navigate(1) and also tries
+// window.history.forward() so Chromium / Firefox keep their native
+// forward-stack behaviour intact.
+export default function PageBack({ fallback = '/', style }) {
   const navigate = useNavigate();
 
   const goBack = () => {
@@ -16,8 +16,9 @@ export default function PageBack({ fallback = '/' }) {
   };
 
   const goForward = () => {
+    try { navigate(1); } catch { /* ignore */ }
     if (typeof window !== 'undefined') {
-      window.history.forward();
+      try { window.history.forward(); } catch { /* ignore */ }
     }
   };
 
@@ -43,7 +44,7 @@ export default function PageBack({ fallback = '/' }) {
     <nav
       className="page-nav"
       aria-label="History"
-      style={{ display: 'inline-flex', gap: 6, marginBottom: 12 }}
+      style={{ display: 'inline-flex', gap: 6, marginBottom: 12, ...(style || {}) }}
     >
       <button type="button" onClick={goBack} aria-label="Go back" style={baseBtn}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

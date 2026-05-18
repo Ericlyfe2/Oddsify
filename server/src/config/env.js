@@ -73,6 +73,14 @@ if (!LIVE_BETTING.apiFootballKey) {
   console.warn('[env] APIFOOTBALL_KEY not set — live betting track will no-op (pre-match unaffected).');
 }
 
+if (isProd && (!JWT.secret || JWT.secret === 'dev-only-secret-change-me' || JWT.secret.length < 32)) {
+  console.error('[env] FATAL: JWT_SECRET must be set to a 32+ char random string in production.');
+  process.exit(1);
+}
+if (isProd && CORS_ORIGINS.length === 0) {
+  console.error('[env] FATAL: CORS_ORIGIN must list at least one allowed frontend origin in production.');
+  process.exit(1);
+}
 if (!isProd && JWT.secret === 'dev-only-secret-change-me') {
   console.warn('[env] JWT_SECRET not set — using dev default. Override in .env for production.');
 }

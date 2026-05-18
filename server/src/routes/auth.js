@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import {
-  findByEmail, findByGoogleId, createUser, updateUser, publicUser, logActivity,
+  findByEmail, findByGoogleId, getUserById, createUser, updateUser, publicUser, logActivity,
 } from '../db/users.js';
 import { hashPassword, verifyPassword, passwordIssues } from '../services/password.js';
 import {
@@ -163,7 +163,7 @@ router.post('/refresh',
     const token = req.body?.refreshToken;
     const record = lookupRefresh(token);
     if (!record) throw unauthorized('Invalid or expired refresh token.');
-    const user = findByEmail(record.accountId);
+    const user = getUserById(record.accountId);
     if (!user || user.suspended) throw unauthorized('Account no longer available.');
     const next = rotateRefreshToken(token, { ip: req.ip, userAgent: req.get('user-agent') });
     const access = signAccessToken(user);
