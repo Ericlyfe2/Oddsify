@@ -267,13 +267,18 @@ export default function AppProviders({ children }) {
 
             return (
               <>
-                <header style={{
+                <div className="deposit-header" style={{
                   background: 'linear-gradient(135deg, #116f43 0%, #0a5a37 100%)',
                   color: '#fff',
                   padding: '14px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 12,
+                  flexShrink: 0,
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  borderBottom: 'none',
+                  backdropFilter: 'none',
                 }}>
                   <button
                     type="button"
@@ -296,7 +301,7 @@ export default function AppProviders({ children }) {
                   <button type="button" aria-label="Home" onClick={() => { depositDlg.current?.close(); navigate('/'); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                   </button>
-                </header>
+                </div>
 
                 <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
                   {[['momo', 'Mobile Money'], ['paybill', 'Paybill'], ['card', 'Card']].map(([k, lbl]) => (

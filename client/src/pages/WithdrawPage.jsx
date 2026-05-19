@@ -104,7 +104,7 @@ export default function WithdrawPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', background: 'var(--bg)' }}>
 
         {/* Header */}
-        <header style={{
+        <div className="withdraw-header" style={{
           background: 'linear-gradient(135deg, #116f43 0%, #0a5a37 100%)',
           color: '#fff',
           padding: '14px 16px',
@@ -114,6 +114,10 @@ export default function WithdrawPage() {
           position: 'sticky',
           top: 0,
           zIndex: 10,
+          width: '100%',
+          boxSizing: 'border-box',
+          borderBottom: 'none',
+          backdropFilter: 'none',
         }}>
           <button type="button" onClick={() => navigate(-1)} aria-label="Back"
                   style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}>
@@ -130,7 +134,7 @@ export default function WithdrawPage() {
                   style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </button>
-        </header>
+        </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--line)' }}>
