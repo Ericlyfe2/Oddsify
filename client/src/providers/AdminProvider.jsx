@@ -59,7 +59,7 @@ export function AdminProvider({ children }) {
     try { await adminLogout(); } catch { /* ignore */ }
     clearAdminTokens();
     setAdmin(null);
-    showToast('Signed out');
+    showToast('Logged out');
     navigate('/admin/login', { replace: true });
   }, [navigate, showToast]);
 

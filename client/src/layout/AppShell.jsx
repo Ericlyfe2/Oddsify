@@ -364,7 +364,7 @@ export default function AppShell() {
             </button>}
             {!authed
               ? <button type="button" className="btn btn-primary" onClick={() => navigate('/login')}>Sign in</button>
-              : <button type="button" className="btn btn-primary" onClick={signOut}>Sign out</button>}
+              : <button type="button" className="btn btn-primary" onClick={signOut}>Logout</button>}
           </div>
         </div>
       </header>

@@ -79,8 +79,8 @@ export default function ProfilePage() {
   };
 
   const handleSignOut = async () => {
-    if (typeof window !== 'undefined' && !window.confirm('Sign out of Xenbet?')) return;
-    try { await signOut(); } catch (e) { toast(e?.message || 'Sign out failed.'); }
+    if (typeof window !== 'undefined' && !window.confirm('Logout of Xenbet?')) return;
+    try { await signOut(); } catch (e) { toast(e?.message || 'Logout failed.'); }
   };
 
   return (
@@ -111,7 +111,7 @@ export default function ProfilePage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
           </svg>
-          Sign out
+          Logout
         </button>
       </div>
 

@@ -132,7 +132,7 @@ export default function AppProviders({ children }) {
     try { await apiLogout(); } catch { /* ignore network */ }
     clearTokens();
     setAccount(null);
-    toast('Signed out.');
+    toast('Logged out.');
     navigate('/', { replace: true });
   }, [toast, navigate]);
 
@@ -262,6 +262,14 @@ export default function AppProviders({ children }) {
                     style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { try { navigate(1); } catch { /* ignore */ } try { window.history.forward(); } catch { /* ignore */ } }}
+                    aria-label="Forward"
+                    style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </button>
                   <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, flex: 1, color: '#fff' }}>Deposit</h3>
                   <button type="button" aria-label="Help" onClick={() => { depositDlg.current?.close(); navigate('/help'); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '50%', width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>?</button>

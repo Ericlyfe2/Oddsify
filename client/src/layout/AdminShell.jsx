@@ -94,7 +94,7 @@ export default function AdminShell() {
             <div className="n">{admin?.displayName || admin?.email}</div>
             <div className="r">{ADMIN_ROLE_LABEL[admin?.adminRole] || admin?.adminRole}</div>
           </div>
-          <button title="Sign out" onClick={signOut} aria-label="Sign out"><IconLogout /></button>
+          <button title="Logout" onClick={signOut} aria-label="Logout"><IconLogout /></button>
         </div>
       </aside>
 
