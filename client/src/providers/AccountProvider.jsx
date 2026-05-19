@@ -282,9 +282,9 @@ export default function AppProviders({ children }) {
                 }}>
                   <button
                     type="button"
-                    onClick={() => depositDlg.current?.close()}
+                    onClick={() => { try { depositDlg.current?.close(); } catch { /* ignore */ } }}
                     aria-label="Back"
-                    style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}
+                    style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex', zIndex: 2 }}
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                   </button>
@@ -292,13 +292,13 @@ export default function AppProviders({ children }) {
                     type="button"
                     onClick={() => { try { navigate(1); } catch { /* ignore */ } try { window.history.forward(); } catch { /* ignore */ } }}
                     aria-label="Forward"
-                    style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}
+                    style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex', zIndex: 2 }}
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                   </button>
                   <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, flex: 1, color: '#fff' }}>Deposit</h3>
-                  <button type="button" aria-label="Help" onClick={() => { depositDlg.current?.close(); navigate('/help'); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '50%', width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>?</button>
-                  <button type="button" aria-label="Home" onClick={() => { depositDlg.current?.close(); navigate('/'); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}>
+                  <button type="button" aria-label="Help" onClick={() => { try { depositDlg.current?.close(); } catch { /* ignore */ } navigate('/help'); }} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '50%', width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, zIndex: 2 }}>?</button>
+                  <button type="button" aria-label="Home" onClick={() => { try { depositDlg.current?.close(); } catch { /* ignore */ } navigate('/', { replace: false }); }} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex', zIndex: 2 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                   </button>
                 </div>

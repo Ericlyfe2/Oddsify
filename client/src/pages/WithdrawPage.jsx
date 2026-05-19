@@ -119,7 +119,7 @@ export default function WithdrawPage() {
           borderBottom: 'none',
           backdropFilter: 'none',
         }}>
-          <button type="button" onClick={() => navigate(-1)} aria-label="Back"
+          <button type="button" onClick={() => { if (typeof window !== 'undefined' && window.history.length > 1) navigate(-1); else navigate('/'); }} aria-label="Back"
                   style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 6, display: 'inline-flex' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           </button>
