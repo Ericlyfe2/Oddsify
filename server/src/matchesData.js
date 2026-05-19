@@ -254,12 +254,6 @@ export const GHANA_FOOTBALL_LEAGUE = {
   crest: { style: 'background:linear-gradient(135deg,#ce1126,#fcd116,#006b3f);color:#fff', label: 'GH' },
   matches: [
     makeFootballMatch({
-      id: 'gh-kot-hea', home: 'Asante Kotoko', away: 'Hearts of Oak',
-      isLive: true, scoreHome: 1, scoreAway: 0, minute: "56'",
-      odds: { '1': 1.65, 'X': 3.4, '2': 5.8 },
-      extraMarketCount: 62, fh: 'wwwdw', fa: 'ldwld', starred: true,
-    }),
-    makeFootballMatch({
       id: 'gh-adu-med', home: 'Aduana Stars', away: 'Medeama SC',
       kickoff: '16:00', day: 'Today',
       odds: { '1': 2.85, 'X': 2.95, '2': 2.55 },
@@ -532,9 +526,9 @@ export const JACKPOT_GAME = {
     { id: 'j5',  fixture: 'Atletico Madrid vs Sevilla',        outcomes: ['1', 'X', '2'] },
     { id: 'j6',  fixture: 'Bayern München vs Inter Milan',     outcomes: ['1', 'X', '2'] },
     { id: 'j7',  fixture: 'PSG vs Borussia Dortmund',          outcomes: ['1', 'X', '2'] },
-    { id: 'j8',  fixture: 'Asante Kotoko vs Hearts of Oak',    outcomes: ['1', 'X', '2'] },
-    { id: 'j9',  fixture: 'Aduana Stars vs Medeama SC',        outcomes: ['1', 'X', '2'] },
-    { id: 'j10', fixture: 'Dreams FC vs Bechem United',        outcomes: ['1', 'X', '2'] },
+    { id: 'j8',  fixture: 'Aduana Stars vs Medeama SC',        outcomes: ['1', 'X', '2'] },
+    { id: 'j9',  fixture: 'Dreams FC vs Bechem United',        outcomes: ['1', 'X', '2'] },
+    { id: 'j10', fixture: 'Hearts of Lions vs Karela United',  outcomes: ['1', 'X', '2'] },
     { id: 'j11', fixture: 'Newcastle vs Brighton',             outcomes: ['1', 'X', '2'] },
     { id: 'j12', fixture: 'Aston Villa vs West Ham',           outcomes: ['1', 'X', '2'] },
     { id: 'j13', fixture: 'Real Sociedad vs Villarreal',       outcomes: ['1', 'X', '2'] },

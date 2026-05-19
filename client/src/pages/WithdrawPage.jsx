@@ -36,7 +36,7 @@ export default function WithdrawPage() {
   const [err, setErr] = useState('');
 
   const MIN_WITHDRAW = 550;
-  const MAX_WITHDRAW = 1_000_000;
+  const MAX_WITHDRAW = 95_000;
   const WITHDRAW_DEPOSIT_RATIO = 0.10;
 
   useEffect(() => {
@@ -253,15 +253,10 @@ export default function WithdrawPage() {
               </button>
 
               <ol style={{ paddingLeft: 18, margin: 0, fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.7 }}>
-                <li>Maximum per transaction is GHS {MAX_WITHDRAW.toLocaleString('en-US')}.00</li>
+                <li>Maximum transaction is GHS {MAX_WITHDRAW.toLocaleString('en-US')}.00</li>
                 <li>Minimum per transaction is GHS {MIN_WITHDRAW}.00</li>
-                <li>Processing within <strong>24 hours</strong>; payout to the registered mobile number.</li>
-                <li>You must have deposited at least 10% of the withdrawal amount in your lifetime.</li>
-                <li>Add a backup number to avoid network issues: Withdraw &gt; Mobile Money &gt; Switch.</li>
+                <li>Withdrawal is free, no fee transaction.</li>
               </ol>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 12, lineHeight: 1.6 }}>
-                Note: For MTN users, if a confirmation prompt isn't received, dial <strong>*170#</strong>, then select <strong>6</strong> and <strong>3</strong> to approve.
-              </p>
             </form>
           )}
 

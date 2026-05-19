@@ -1232,6 +1232,29 @@ footer {
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(4px);
 }
+
+/* Full-viewport deposit dialog with sticky header and scrollable form. */
+.deposit-dlg {
+  inset: 0 !important;
+  margin: 0 auto !important;
+  max-width: 480px !important;
+  width: 100% !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden !important;
+  background: var(--bg) !important;
+}
+.deposit-dlg::backdrop { background: rgba(0,0,0,.72); }
+.deposit-dlg > header,
+.deposit-dlg > div:first-of-type { flex-shrink: 0; }
+.deposit-dlg form { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .bv-dialog h3 {
   font-size: 18px;
   font-weight: 800;
@@ -1740,7 +1763,7 @@ nav a:active { transform: scale(.96); }
   }
   .toast { min-width: 0; width: 100%; }
   .bv-dialog { padding: 22px; }
-  .page-wrap { padding: 16px 14px 32px; }
+  .page-wrap { padding: 12px 0 32px; max-width: 100%; }
   .page-head h1 { font-size: 22px; line-height: 1.2; }
 }
 

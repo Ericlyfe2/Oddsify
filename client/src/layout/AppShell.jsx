@@ -315,11 +315,11 @@ export default function AppShell() {
         <div className="ticker-track">
           <span><b>LIVE</b> Arsenal 2-1 Chelsea · 73&apos;</span>
           <span><b>BOOSTED</b> Real Madrid to win &amp; BTTS · <em>3.45</em></span>
-          <span><b>LIVE</b> Kotoko 1-0 Hearts · 56&apos;</span>
+          <span><b>LIVE</b> Aduana 0-0 Medeama · 22&apos;</span>
           <span><b>Xenbet</b> sharper odds, instant payouts</span>
           <span><b>LIVE</b> Arsenal 2-1 Chelsea · 73&apos;</span>
           <span><b>BOOSTED</b> Real Madrid to win &amp; BTTS · <em>3.45</em></span>
-          <span><b>LIVE</b> Kotoko 1-0 Hearts · 56&apos;</span>
+          <span><b>LIVE</b> Aduana 0-0 Medeama · 22&apos;</span>
           <span><b>Xenbet</b> sharper odds, instant payouts</span>
         </div>
       </div>

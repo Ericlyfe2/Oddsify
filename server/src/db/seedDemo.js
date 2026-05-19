@@ -19,7 +19,6 @@ const STATUSES = ['open', 'open', 'won', 'lost', 'won', 'lost', 'void', 'cashed_
 const KYC = ['unverified', 'pending', 'verified', 'verified', 'verified', 'rejected'];
 
 const MATCHES = [
-  { id: 'gh-kot-hea', home: 'Asante Kotoko',     away: 'Hearts of Oak',  sport: 'football'  },
   { id: 'gh-adu-med', home: 'Aduana Stars',      away: 'Medeama SC',     sport: 'football'  },
   { id: 'gh-dre-bec', home: 'Dreams FC',         away: 'Bechem United',  sport: 'football'  },
   { id: 'epl-ars-che',home: 'Arsenal',           away: 'Chelsea',        sport: 'football'  },
