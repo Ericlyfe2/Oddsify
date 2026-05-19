@@ -10,7 +10,7 @@ function formatAmt(n) {
 }
 
 export default function ProfilePage() {
-  const { account, refresh } = useAccount();
+  const { account, refresh, signOut } = useAccount();
   const { toast } = useToast();
   const [displayName, setDisplayName] = useState(account?.displayName || '');
   const [phone, setPhone]             = useState(account?.phone || '');
@@ -78,6 +78,11 @@ export default function ProfilePage() {
     } finally { setBusy(false); }
   };
 
+  const handleSignOut = async () => {
+    if (typeof window !== 'undefined' && !window.confirm('Sign out of Xenbet?')) return;
+    try { await signOut(); } catch (e) { toast(e?.message || 'Sign out failed.'); }
+  };
+
   return (
     <main className="page-wrap">
       <PageBack />
@@ -85,6 +90,29 @@ export default function ProfilePage() {
         <p className="eyebrow">ACCOUNT</p>
         <h1>{account.displayName || account.email}</h1>
         <p className="lede">{account.email} · Balance <strong>GHS {formatAmt(account.balance)}</strong></p>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          style={{
+            marginTop: 12,
+            padding: '10px 18px',
+            borderRadius: 10,
+            border: '1px solid var(--danger, #ff5d5d)',
+            background: 'transparent',
+            color: 'var(--danger, #ff5d5d)',
+            fontWeight: 800,
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+          Sign out
+        </button>
       </div>
 
       <div className="page-toolbar">
