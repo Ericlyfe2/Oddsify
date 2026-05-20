@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { fetchTransactions } from '../api/betApi.js';
 import PageBack from '../components/PageBack.jsx';
+import { readTxCache, writeTxCache, mergeTxLists } from '../lib/txCache.js';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -41,11 +42,17 @@ export default function WalletPage() {
   useEffect(() => {
     if (!account) { navigate('/login?next=/wallet'); return; }
     let alive = true;
+    // Prime from local cache so the list is never blank between fetches.
+    setTxs(readTxCache(account.id));
     (async () => {
       try {
         setBusy(true);
         const data = await fetchTransactions();
-        if (alive) setTxs(data.transactions || []);
+        if (!alive) return;
+        const serverList = data.transactions || [];
+        const merged = mergeTxLists(serverList, readTxCache(account.id));
+        setTxs(merged);
+        writeTxCache(account.id, merged);
       } catch (e) {
         if (alive) toast(e.message || 'Could not load transactions.', 'error');
       } finally {
@@ -121,7 +128,6 @@ export default function WalletPage() {
               <p className="wallet-split-desc">Cash out your winnings directly to your mobile money.</p>
               <ul className="wallet-list">
                 <li><span>Minimum withdrawal</span><strong>GHS 10,000</strong></li>
-                <li><span>Deposit-to-withdraw ratio</span><strong>10% deposits</strong></li>
                 <li><span>Processing</span><strong>Within 24 hours</strong></li>
                 <li><span>Methods</span><strong>MoMo to phone on file</strong></li>
               </ul>

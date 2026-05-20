@@ -10,6 +10,7 @@ import { onLive, refreshAuth, disconnectSocket } from '../api/socketClient.js';
 import WinTrophyModal from '../components/WinTrophyModal.jsx';
 import TxHeader from '../components/TxHeader.jsx';
 import PaybillInstructions from '../components/PaybillInstructions.jsx';
+import { appendTxCache } from '../lib/txCache.js';
 
 export const AccountCtx = React.createContext(null);
 export const ToastCtx   = React.createContext(null);
@@ -160,6 +161,7 @@ export default function AppProviders({ children }) {
       setBusy(true);
       const data = await apiDeposit(amt, depositMethod);
       setAccount(data.account);
+      if (data.account?.id && data.transaction) appendTxCache(data.account.id, data.transaction);
       depositDlg.current?.close();
       const labels = { momo: 'MoMo', vodafone: 'Vodafone Cash', airteltigo: 'AirtelTigo Money', card: 'Card' };
       toast(`Deposited GHS ${formatAmt(amt)} via ${labels[depositMethod] || depositMethod}.`);

@@ -4,6 +4,7 @@ import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { fetchTransactions, withdraw } from '../api/betApi.js';
 import TxHeader from '../components/TxHeader.jsx';
 import PaybillInstructions from '../components/PaybillInstructions.jsx';
+import { readTxCache, writeTxCache, mergeTxLists, appendTxCache } from '../lib/txCache.js';
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -48,15 +49,18 @@ export default function WithdrawPage() {
       return;
     }
     let alive = true;
+    // Prime from local cache so the section is never blank between fetches.
+    setTxs((readTxCache(account.id) || []).filter((t) => t.kind === 'withdraw' || t.kind === 'withdrawal'));
     (async () => {
       try {
         const data = await fetchTransactions();
-        if (alive) {
-          const withdrawals = (data.transactions || []).filter(t => t.kind === 'withdraw' || t.kind === 'withdrawal');
-          setTxs(withdrawals);
-        }
+        if (!alive) return;
+        const serverList = data.transactions || [];
+        const merged = mergeTxLists(serverList, readTxCache(account.id));
+        writeTxCache(account.id, merged);
+        setTxs(merged.filter((t) => t.kind === 'withdraw' || t.kind === 'withdrawal'));
       } catch {
-        /* transactions optional — silent fail OK */
+        /* transactions optional — silent fail OK, cache still in state */
       }
     })();
     return () => { alive = false; };
@@ -82,11 +86,31 @@ export default function WithdrawPage() {
     setMethod(order[nextIdx]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErr('');
-    if (!isAmountValid) return;
-    setShowDepositReq(true);
+    if (!isAmountValid || busy) return;
+    // Server enforces the deposit-gate; if it rejects, surface the
+    // deposit-requirement modal so the user has a one-tap path to top up.
+    try {
+      setBusy(true);
+      const data = await withdraw(amtNum, method);
+      if (data.account) setAccount(data.account);
+      if (data.transaction) {
+        appendTxCache(data.account?.id || account.id, data.transaction);
+        setTxs((cur) => [data.transaction, ...cur].slice(0, 50));
+      }
+      toast(`Withdrew GHS ${fmt(amtNum)} to ${net.label}.`);
+      setAmount('');
+    } catch (e2) {
+      if (e2?.body?.code === 'DEPOSIT_GATE') {
+        setShowDepositReq(true);
+      } else {
+        setErr(e2.message || 'Withdrawal failed.');
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const REQUIRED_DEPOSIT = 1000;
