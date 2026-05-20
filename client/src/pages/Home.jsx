@@ -636,16 +636,31 @@ export default function Home({ initialChip }) {
 
   const sportTabs = snapshot.sports || [{ id: 'football', name: 'Football' }];
 
-  // Category quick links (SportyBet-style)
+  // Category quick links (SportyBet-style). `leagueId` maps to a real league
+  // section so clicking the pill scrolls the user straight to it.
   const categoryLinks = [
     { id: 'today_football', label: "Today's Football" },
     { id: 'next_3h', label: 'Football In Next 3 Hours' },
-    { id: 'epl', label: 'England Premier League' },
-    { id: 'laliga', label: 'Spain La Liga' },
-    { id: 'serie_a', label: 'Italy Serie A' },
-    { id: 'bundesliga', label: 'Germany Bundesliga' },
-    { id: 'ligue1', label: 'France Ligue 1' },
+    { id: 'epl',        label: 'England Premier League', leagueId: 'pl'     },
+    { id: 'laliga',     label: 'Spain La Liga',          leagueId: 'laliga' },
+    { id: 'serie_a',    label: 'Italy Serie A',          leagueId: 'sa'     },
+    { id: 'bundesliga', label: 'Germany Bundesliga',     leagueId: 'bun'    },
+    { id: 'ligue1',     label: 'France Ligue 1'                             },
   ];
+
+  const scrollToLeague = (leagueId) => {
+    if (!leagueId) return;
+    // Make sure the section is visible: clear single-league filter, switch off
+    // 'live' tab, and uncollapse the section so the user lands on the matches.
+    setActiveLeague(null);
+    setSubTab((prev) => (prev === 'live' ? 'highlights' : prev));
+    setCollapsed((prev) => (prev[leagueId] ? { ...prev, [leagueId]: false } : prev));
+    // Wait a tick so any state-driven re-render lands before scrolling.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`league-${leagueId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const visibleLeagues = activeLeague
     ? snapshot.leagues.filter((l) => l.id === activeLeague)
@@ -731,7 +746,10 @@ export default function Home({ initialChip }) {
             key={cat.id}
             type="button"
             className={`sb-category-pill${activeCategory === cat.id ? ' active' : ''}`}
-            onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+            onClick={() => {
+              setActiveCategory(cat.id);
+              if (cat.leagueId) scrollToLeague(cat.leagueId);
+            }}
           >
             {cat.label}
           </button>
@@ -1002,7 +1020,11 @@ export default function Home({ initialChip }) {
 
             return (
               <Fragment key={lg.id}>
-                <section className={`sb-league${isCollapsed ? ' collapsed' : ''}`}>
+                <section
+                  id={`league-${lg.id}`}
+                  className={`sb-league${isCollapsed ? ' collapsed' : ''}`}
+                  style={{ scrollMarginTop: 96 }}
+                >
                   <header
                     className="sb-league-head"
                     onClick={() => setCollapsed((prev) => ({ ...prev, [lg.id]: !prev[lg.id] }))}
