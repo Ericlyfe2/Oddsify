@@ -235,24 +235,71 @@ router.post('/',
   })
 );
 
-/* ─── Super admin: hard delete a user (cascades bets + tx) ─── */
+/* ─── Super admin: delete a user (and all their data) ─── */
 router.delete('/:id',
-  requireAdmin, requireRole(),
-  asyncHandler(async (req, res) => {
+  requireAdmin, requireRole(), // super only
+  validate(z.object({ reason: z.string().max(500).optional() }).optional()),
+  asyncHandler(async (req, res, next) => {
     const u = getUserById(req.params.id);
-    if (!u) throw notFound('User not found');
-    if (u.role === 'admin') throw badRequest('Cannot delete an admin account from this endpoint.');
-    const id = u.id;
-    // Cascade: revoke sessions, remove bets owned by user, drop transaction
-    // history. Audit entry captures the count of side-effects so the action
-    // is reconstructible after the fact.
-    revokeAllForAccount(id);
-    const bets = Object.values(betsStore.all() || {}).filter((b) => b.userId === id);
-    for (const b of bets) betsStore.delete(b.id);
-    txStore.delete(id);
-    const removed = deleteUser(id);
-    audit(req, { action: 'user.delete', target: id, targetType: 'user', severity: 'critical', meta: { email: u.email, betsRemoved: bets.length } });
-    res.json({ ok: !!removed, id, betsRemoved: bets.length });
+    if (!u) return next(notFound('User not found'));
+    if (u.role === 'admin') return next(badRequest('Cannot delete an admin from this endpoint. Demote the role first.'));
+
+    // Cascading cleanup — sessions, bets, transactions, then the user record.
+    revokeAllForAccount(u.id);
+    const allBets = betsStore.all() || {};
+    let removedBets = 0;
+    for (const [id, b] of Object.entries(allBets)) {
+      if (b.userId === u.id) { betsStore.delete(id); removedBets++; }
+    }
+    txStore.delete(u.id);
+    deleteUser(u.id);
+
+    audit(req, {
+      action: 'user.delete',
+      target: u.id,
+      targetType: 'user',
+      severity: 'critical',
+      meta: {
+        email: u.email,
+        displayName: u.displayName,
+        balanceAtDelete: u.balance,
+        removedBets,
+        reason: req.body?.reason,
+      },
+    });
+    res.json({ ok: true, deleted: u.id, removedBets });
+  })
+);
+
+/* ─── Super admin: bulk delete multiple users ─── */
+router.post('/bulk-delete',
+  requireAdmin, requireRole(), // super only
+  validate(z.object({
+    ids: z.array(z.string().min(1)).min(1).max(200),
+    reason: z.string().max(500).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const results = { deleted: [], skipped: [] };
+    for (const rawId of req.body.ids) {
+      const u = getUserById(rawId);
+      if (!u) { results.skipped.push({ id: rawId, reason: 'not_found' }); continue; }
+      if (u.role === 'admin') { results.skipped.push({ id: u.id, reason: 'is_admin' }); continue; }
+      revokeAllForAccount(u.id);
+      const allBets = betsStore.all() || {};
+      for (const [id, b] of Object.entries(allBets)) {
+        if (b.userId === u.id) betsStore.delete(id);
+      }
+      txStore.delete(u.id);
+      deleteUser(u.id);
+      results.deleted.push(u.id);
+    }
+    audit(req, {
+      action: 'user.bulk_delete',
+      targetType: 'user',
+      severity: 'critical',
+      meta: { count: results.deleted.length, ids: results.deleted, reason: req.body.reason },
+    });
+    res.json({ ok: true, ...results });
   })
 );
 

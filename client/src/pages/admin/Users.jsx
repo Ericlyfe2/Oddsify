@@ -13,13 +13,9 @@ import { useAdmin } from '../../providers/AdminProvider.jsx';
 import {
   adminListUsers, adminGetUser, adminUserBets, adminUserTx, adminUserLogins,
   adminUserStatus, adminUserKyc, adminUserWallet, adminUserTags, adminUserNotes,
-  adminUserReset, adminImpersonate, adminCreateUser, adminDeleteUser,
-  adminUserCredentials,
+  adminUserReset, adminImpersonate, adminDeleteUser, adminBulkDeleteUsers,
+  adminCreateUser, adminUserCredentials,
 } from '../../api/adminApi.js';
-import { Card, Badge, Drawer, Modal, Empty, SkeletonRow, moneyFmt, numFmt, ago, dateShort } from '../../components/admin/primitives.jsx';
-import {
-  IconSearch, IconDownload, IconRefresh, IconBan, IconCheck, IconKey, IconUsers, IconActivity, IconCash,
-} from '../../components/admin/Icons.jsx';
 
 function toBookingCode(id = '') {
   const s = String(id).replace(/[^a-z0-9]/gi, '').toUpperCase();
@@ -27,6 +23,21 @@ function toBookingCode(id = '') {
   const letters = (s.match(/[A-Z]/g) || ['X', 'X']).slice(0, 2).join('').padEnd(2, 'X');
   const digits  = (s.match(/[0-9]/g) || ['0']).slice(-5).join('').padStart(5, '0');
   return letters + digits;
+}
+import { Card, Badge, Drawer, Modal, Empty, SkeletonRow, moneyFmt, numFmt, ago, dateShort } from '../../components/admin/primitives.jsx';
+import {
+  IconSearch, IconDownload, IconRefresh, IconBan, IconCheck, IconKey, IconUsers, IconActivity, IconCash,
+} from '../../components/admin/Icons.jsx';
+
+function IconTrash({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
 }
 
 const KYC_TONES = { verified: 'success', pending: 'warn', rejected: 'danger', unverified: 'default' };
@@ -39,8 +50,11 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [drawerTab, setDrawerTab] = useState('profile');
+  const [picked, setPicked] = useState(new Set()); // user ids ticked for bulk action
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const debounceRef = useRef(0);
+  const isSuper = hasRole();
 
   async function load() {
     setLoading(true);
@@ -68,6 +82,44 @@ export default function UsersPage() {
     setDrawerTab('profile');
   }
 
+  function togglePick(id, e) {
+    e.stopPropagation();
+    setPicked((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function togglePickAll() {
+    if (!data?.users) return;
+    setPicked((cur) => {
+      if (cur.size === data.users.length) return new Set();
+      return new Set(data.users.map((u) => u.id));
+    });
+  }
+
+  async function deleteUser(u) {
+    const updated = data?.users?.filter((x) => x.id !== u.id) || [];
+    setData((d) => d ? { ...d, users: updated, total: Math.max(0, d.total - 1) } : d);
+    setSelected(null);
+    setPicked((cur) => { const n = new Set(cur); n.delete(u.id); return n; });
+    showToast(`Deleted ${u.email}.`);
+  }
+
+  async function bulkDelete(reason) {
+    const ids = Array.from(picked);
+    if (!ids.length) return;
+    try {
+      const r = await adminBulkDeleteUsers(ids, reason);
+      showToast(`Deleted ${r.deleted.length} account${r.deleted.length === 1 ? '' : 's'}${r.skipped.length ? ` · ${r.skipped.length} skipped` : ''}.`);
+      setPicked(new Set());
+      setBulkOpen(false);
+      load();
+    } catch (e) {
+      showToast(e.message || 'Bulk delete failed', 'error');
+    }
+  }
+
   function exportCsv() {
     if (!data?.users?.length) return;
     const headers = ['id', 'email', 'displayName', 'balance', 'kycStatus', 'suspended', 'createdAt'];
@@ -91,7 +143,7 @@ export default function UsersPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="adm-btn" onClick={load}><IconRefresh size={14} /> Refresh</button>
           <button className="adm-btn" onClick={exportCsv}><IconDownload size={14} /> Export CSV</button>
-          {hasRole() && (
+          {isSuper && (
             <button className="adm-btn primary" onClick={() => setCreateOpen(true)}><IconUsers size={14} /> Add user</button>
           )}
         </div>
@@ -139,10 +191,39 @@ export default function UsersPage() {
             {data ? `${data.users.length} of ${data.total}` : '—'}
           </div>
         </div>
+        {picked.size > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px',
+            background: 'linear-gradient(135deg, rgba(214,58,44,.10), rgba(214,58,44,.04))',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <strong style={{ fontSize: 13 }}>{picked.size} selected</strong>
+            <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>Choose a bulk action</span>
+            <div className="grow" />
+            <button className="adm-btn ghost" onClick={() => setPicked(new Set())}>Clear</button>
+            {isSuper && (
+              <button className="adm-btn danger" onClick={() => setBulkOpen(true)}>
+                <IconTrash size={14} /> Delete selected
+              </button>
+            )}
+          </div>
+        )}
         <div className="adm-table-scroll">
           <table className="adm-table">
             <thead>
               <tr>
+                {isSuper && (
+                  <th style={{ width: 36 }}>
+                    <input
+                      type="checkbox"
+                      aria-label="Select all"
+                      onClick={(e) => e.stopPropagation()}
+                      checked={!!data?.users?.length && picked.size === data.users.length}
+                      onChange={togglePickAll}
+                    />
+                  </th>
+                )}
                 <th>User</th>
                 <th>Status</th>
                 <th>KYC</th>
@@ -151,16 +232,25 @@ export default function UsersPage() {
                 <th className="num">Deposits</th>
                 <th>Tags</th>
                 <th>Joined</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
-              {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={9} />)}
+              {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={isSuper ? 9 : 8} />)}
               {!loading && data?.users?.length === 0 && (
-                <tr><td colSpan={9}><Empty title="No users match" subtitle="Try adjusting your filters." /></td></tr>
+                <tr><td colSpan={isSuper ? 9 : 8}><Empty title="No users match" subtitle="Try adjusting your filters." /></td></tr>
               )}
               {!loading && data?.users?.map((u) => (
                 <tr key={u.id} onClick={() => openUser(u)} className={selected?.id === u.id ? 'selected' : ''}>
+                  {isSuper && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${u.email}`}
+                        checked={picked.has(u.id)}
+                        onChange={(e) => togglePick(u.id, e)}
+                      />
+                    </td>
+                  )}
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
@@ -188,27 +278,6 @@ export default function UsersPage() {
                   <td className="num">{moneyFmt(u.stats?.depositTotal)}</td>
                   <td>{(u.tags || []).slice(0, 2).map((t) => <span key={t} style={{ marginRight: 4 }}><Badge tone="brand">{t}</Badge></span>)}</td>
                   <td title={dateShort(u.createdAt)}>{ago(u.createdAt)}</td>
-                  <td className="row-actions" onClick={(e) => e.stopPropagation()}>
-                    {hasRole() && (
-                      <button
-                        className="adm-btn sm danger"
-                        title="Delete user (super admin only)"
-                        onClick={async () => {
-                          if (!window.confirm(`Permanently delete ${u.email}? This wipes their bets and transactions and cannot be undone.`)) return;
-                          try {
-                            await adminDeleteUser(u.id);
-                            showToast(`Deleted ${u.email}.`);
-                            if (selected?.id === u.id) setSelected(null);
-                            load();
-                          } catch (e) {
-                            showToast(e.message || 'Delete failed.', 'error');
-                          }
-                        }}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -226,12 +295,16 @@ export default function UsersPage() {
           setSelected(updated);
           setData((d) => d ? { ...d, users: d.users.map((u) => u.id === updated.id ? updated : u) } : d);
         }}
-        onDeleted={(id) => {
-          setSelected(null);
-          setData((d) => d ? { ...d, users: d.users.filter((u) => u.id !== id), total: Math.max(0, (d.total || 1) - 1) } : d);
-        }}
+        onDeleted={deleteUser}
         hasRole={hasRole}
         showToast={showToast}
+      />
+
+      <BulkDeleteModal
+        open={bulkOpen}
+        count={picked.size}
+        onClose={() => setBulkOpen(false)}
+        onConfirm={bulkDelete}
       />
 
       <CreateUserModal
@@ -313,6 +386,55 @@ function CreateUserModal({ open, onClose, onCreated, showToast }) {
   );
 }
 
+function BulkDeleteModal({ open, count, onClose, onConfirm }) {
+  const [reason, setReason] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  useEffect(() => { if (open) { setReason(''); setConfirmText(''); } }, [open]);
+  const phrase = `delete ${count}`;
+  const ready = confirmText.trim().toLowerCase() === phrase;
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Permanently delete ${count} account${count === 1 ? '' : 's'}?`}
+      description="Removes the user records, their bet history, and transaction ledger. Sessions are revoked. This action is logged as critical in the audit log and cannot be undone."
+      footer={null}
+    >
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (ready) onConfirm(reason || 'bulk delete'); }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <div className="adm-field">
+          <label>Reason (recorded in audit log)</label>
+          <input
+            className="adm-input"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. duplicate signups, fraud sweep"
+            maxLength={500}
+            autoFocus
+          />
+        </div>
+        <div className="adm-field">
+          <label>Type <code style={{ fontFamily: 'var(--ff-mono)', background: 'var(--surface-soft, rgba(255,255,255,.05))', padding: '1px 6px', borderRadius: 4 }}>{phrase}</code> to confirm</label>
+          <input
+            className="adm-input"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={phrase}
+          />
+        </div>
+        <div className="adm-modal-actions">
+          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="adm-btn danger" disabled={!ready}>
+            <IconTrash size={14} /> Permanently delete
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function StatTile({ label, value }) {
   return (
     <div className="adm-stat" style={{ '--accentGrad': 'linear-gradient(135deg,#7c5cff,#22d3ee)' }}>
@@ -330,6 +452,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   const [tx, setTx]           = useState([]);
   const [logins, setLogins]   = useState([]);
   const [walletOpen, setWalletOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [credentials, setCredentials] = useState(null);
   const [openBet, setOpenBet] = useState(null);
 
@@ -397,20 +520,6 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       prompt('Temporary password (share securely with the user):', r.tempPassword);
     } catch (e) { showToast(e.message, 'error'); }
   }
-  async function viewCredentials() {
-    try {
-      const c = await adminUserCredentials(user.id);
-      setCredentials(c);
-    } catch (e) { showToast(e.message || 'Could not load credentials.', 'error'); }
-  }
-  async function deleteUserAccount() {
-    if (!window.confirm(`Permanently delete ${user.email}? This wipes their bets and transactions and cannot be undone.`)) return;
-    try {
-      const r = await adminDeleteUser(user.id);
-      showToast(`Deleted ${user.email}. Removed ${r.betsRemoved} bets.`);
-      onDeleted?.(user.id);
-    } catch (e) { showToast(e.message || 'Delete failed.', 'error'); }
-  }
   async function impersonateUser() {
     try {
       const r = await adminImpersonate(user.id);
@@ -418,6 +527,19 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       window.open(loginUrl, '_blank');
       showToast('User login link opened in new tab.');
     } catch (e) { showToast(e.message, 'error'); }
+  }
+  async function confirmDelete(reason) {
+    try {
+      await adminDeleteUser(user.id, reason);
+      onDeleted?.(user);
+      setDeleteOpen(false);
+    } catch (e) { showToast(e.message || 'Delete failed', 'error'); }
+  }
+  async function viewCredentials() {
+    try {
+      const c = await adminUserCredentials(user.id);
+      setCredentials(c);
+    } catch (e) { showToast(e.message || 'Could not load credentials.', 'error'); }
   }
 
   if (!open || !user) return null;
@@ -443,7 +565,9 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
             <>
               <button className="adm-btn" onClick={viewCredentials}><IconKey size={14} /> View credentials</button>
               <button className="adm-btn" onClick={impersonateUser}><IconUsers size={14} /> Login as user</button>
-              <button className="adm-btn danger" onClick={deleteUserAccount}><IconBan size={14} /> Delete user</button>
+              <button className="adm-btn danger" onClick={() => setDeleteOpen(true)}>
+                <IconTrash size={14} /> Delete account
+              </button>
             </>
           )}
         </>
@@ -543,6 +667,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       )}
 
       <WalletModal open={walletOpen} onClose={() => setWalletOpen(false)} user={detail || user} onSubmit={adjustWallet} />
+      <DeleteUserModal open={deleteOpen} onClose={() => setDeleteOpen(false)} user={detail || user} onConfirm={confirmDelete} />
       <CredentialsModal open={!!credentials} onClose={() => setCredentials(null)} data={credentials} />
     </Drawer>
   );
@@ -615,6 +740,69 @@ function CredentialsModal({ open, onClose, data }) {
       <div className="adm-modal-actions">
         <button type="button" className="adm-btn primary" onClick={onClose}>Close</button>
       </div>
+    </Modal>
+  );
+}
+
+function DeleteUserModal({ open, onClose, user, onConfirm }) {
+  const [reason, setReason] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  useEffect(() => { if (open) { setReason(''); setConfirmText(''); } }, [open]);
+  if (!user) return null;
+  const ready = confirmText.trim().toLowerCase() === user.email.toLowerCase();
+  const hasFunds = (user.balance || 0) > 0;
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Permanently delete account"
+      description={`This wipes ${user.email}, their bet history, transaction ledger, and revokes all active sessions. Audit-logged as critical. Cannot be undone.`}
+      footer={null}
+    >
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (ready) onConfirm(reason || 'admin delete'); }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        {hasFunds && (
+          <div style={{
+            padding: '10px 12px',
+            background: 'rgba(214,58,44,.08)',
+            border: '1px solid rgba(214,58,44,.25)',
+            borderRadius: 8,
+            fontSize: 13, lineHeight: 1.45,
+          }}>
+            ⚠️ Wallet still holds <strong>{moneyFmt(user.balance, user.currency)}</strong>. Settle or refund before deleting if those funds were ever real.
+          </div>
+        )}
+        <div className="adm-field">
+          <label>Reason (recorded in audit log)</label>
+          <input
+            className="adm-input"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. user requested account closure"
+            maxLength={500}
+            autoFocus
+          />
+        </div>
+        <div className="adm-field">
+          <label>
+            Type <code style={{ fontFamily: 'var(--ff-mono)', background: 'var(--surface-soft, rgba(255,255,255,.05))', padding: '1px 6px', borderRadius: 4 }}>{user.email}</code> to confirm
+          </label>
+          <input
+            className="adm-input"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={user.email}
+          />
+        </div>
+        <div className="adm-modal-actions">
+          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="adm-btn danger" disabled={!ready}>
+            <IconTrash size={14} /> Delete forever
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }
