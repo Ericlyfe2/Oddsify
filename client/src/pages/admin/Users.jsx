@@ -15,6 +15,7 @@ import {
   adminUserStatus, adminUserKyc, adminUserWallet, adminUserTags, adminUserNotes,
   adminUserReset, adminImpersonate, adminDeleteUser, adminBulkDeleteUsers,
   adminCreateUser, adminUserCredentials,
+  adminUserStage, adminUserBlocked,
 } from '../../api/adminApi.js';
 
 function toBookingCode(id = '') {
@@ -24,6 +25,15 @@ function toBookingCode(id = '') {
   const digits  = (s.match(/[0-9]/g) || ['0']).slice(-5).join('').padStart(5, '0');
   return letters + digits;
 }
+
+const STAGE_LABELS = { 1: 'Registered', 2: 'Verified', 3: 'Approved', 4: 'VIP' };
+const STAGE_GRADIENTS = {
+  1: 'linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%)',
+  2: 'linear-gradient(135deg, #f5a623 0%, #ff6b1a 100%)',
+  3: 'linear-gradient(135deg, #18f0a1 0%, #1aa46a 100%)',
+  4: 'linear-gradient(135deg, #ffd166 0%, #ff8a3d 100%)',
+};
+const stageOf = (u) => Math.min(4, Math.max(1, Number(u?.stage) || 1));
 import { Card, Badge, Drawer, Modal, Empty, SkeletonRow, moneyFmt, numFmt, ago, dateShort } from '../../components/admin/primitives.jsx';
 import {
   IconSearch, IconDownload, IconRefresh, IconBan, IconCheck, IconKey, IconUsers, IconActivity, IconCash,
@@ -492,6 +502,25 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       showToast(`KYC set to ${status}.`);
     } catch (e) { showToast(e.message, 'error'); }
   }
+  async function doStage(direction) {
+    const current = stageOf(detail || user);
+    const target = direction === 'up' ? Math.min(4, current + 1) : Math.max(1, current - 1);
+    if (target === current) return;
+    try {
+      const { user: updated } = await adminUserStage(user.id, target);
+      setDetail(updated); onUpdate(updated);
+      showToast(direction === 'up'
+        ? `Verified — promoted to Stage ${target} (${STAGE_LABELS[target]}).`
+        : `Moved back to Stage ${target} (${STAGE_LABELS[target]}).`);
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+  async function doBlocked(blocked) {
+    try {
+      const { user: updated } = await adminUserBlocked(user.id, blocked);
+      setDetail(updated); onUpdate(updated);
+      showToast(blocked ? 'Account blocked.' : 'Account unblocked.');
+    } catch (e) { showToast(e.message, 'error'); }
+  }
   async function saveTags(tags) {
     try {
       const { user: updated } = await adminUserTags(user.id, tags);
@@ -587,6 +616,8 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
           logins={logins}
           hasRole={hasRole}
           onKyc={doKyc}
+          onStage={doStage}
+          onBlocked={doBlocked}
           onTags={saveTags}
           onNotes={saveNotes}
         />
@@ -807,11 +838,14 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
   );
 }
 
-function ProfileTab({ user, logins = [], hasRole, onKyc, onTags, onNotes }) {
+function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onTags, onNotes }) {
   const [tagInput, setTagInput] = useState('');
   const [notes, setNotes] = useState(user.notes || '');
   const lastLogin  = logins.find((e) => e.kind === 'login_success' || e.kind === 'login_google');
   const lastLogout = logins.find((e) => e.kind === 'logout');
+  const current = stageOf(user);
+  const canMutateStage = hasRole('moderator', 'support');
+  const blocked = !!user.blocked;
   return (
     <>
       <Card flush>
@@ -838,6 +872,110 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onTags, onNotes }) {
           <Mini label="Lost"    v={numFmt(user.stats?.betsLost)} />
           <Mini label="Deposits" v={moneyFmt(user.stats?.depositTotal)} />
         </div>
+      </Card>
+
+      <Card
+        title="Verification stage"
+        subtitle="Move this player through the onboarding funnel. One step at a time."
+        pill={
+          <span
+            style={{
+              padding: '4px 10px', borderRadius: 999,
+              background: STAGE_GRADIENTS[current], color: '#0a0d14',
+              fontWeight: 800, fontSize: 11, letterSpacing: 0.02,
+            }}
+          >
+            Stage {current} · {STAGE_LABELS[current]}
+          </span>
+        }
+      >
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {current < 4 ? (
+            <button
+              type="button"
+              className="adm-btn primary"
+              disabled={!canMutateStage}
+              onClick={() => onStage('up')}
+              style={{ flex: '1 1 220px', justifyContent: 'center', minHeight: 42 }}
+            >
+              <IconCheck size={14} /> Verify · Promote to Stage {current + 1} ({STAGE_LABELS[current + 1]})
+            </button>
+          ) : (
+            <div
+              style={{
+                flex: '1 1 220px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '11px 16px', borderRadius: 10,
+                background: 'linear-gradient(135deg, rgba(255, 209, 102, 0.18), rgba(255, 138, 61, 0.08))',
+                border: '1px solid rgba(255, 209, 102, 0.40)',
+                color: '#ffd166', fontWeight: 700, fontSize: 13,
+              }}
+            >
+              <IconCheck size={14} /> VIP · Free withdrawals · No popups
+            </div>
+          )}
+          {current > 1 && (
+            <button
+              type="button"
+              className="adm-btn ghost"
+              disabled={!canMutateStage}
+              onClick={() => onStage('down')}
+              title={`Move back to Stage ${current - 1} (${STAGE_LABELS[current - 1]})`}
+              style={{ minHeight: 42 }}
+            >
+              ← Stage {current - 1}
+            </button>
+          )}
+        </div>
+        {user.stageUpdatedAt && (
+          <div style={{ marginTop: 10, color: 'var(--text-dim)', fontSize: 12 }}>
+            Last changed {ago(user.stageUpdatedAt)} by <strong>{user.stageUpdatedBy || 'admin'}</strong>.
+          </div>
+        )}
+        {!canMutateStage && (
+          <div style={{ marginTop: 10, color: 'var(--text-dim)', fontSize: 12 }}>
+            Read-only — your role can't promote/demote stages.
+          </div>
+        )}
+
+        {/* Account block state — only relevant at Stage 3 (Stage 4 is always unlocked) */}
+        {(current === 3) && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: 12,
+              borderRadius: 10,
+              background: blocked
+                ? 'linear-gradient(135deg, rgba(255,93,108,.12), rgba(255,93,108,.04))'
+                : 'linear-gradient(135deg, rgba(24,240,161,.10), rgba(24,240,161,.03))',
+              border: `1px solid ${blocked ? 'rgba(255,93,108,.35)' : 'rgba(24,240,161,.30)'}`,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: blocked ? 'var(--danger)' : 'var(--accent)' }}>
+                  {blocked ? '🔒 Account locked' : '🔓 Account unlocked'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
+                  {blocked
+                    ? <>Withdrawal popup shows “account blocked”. Promotion to Stage 3 locks automatically.{user.blockedAt ? <> · {ago(user.blockedAt)} by <strong>{user.blockedBy || 'admin'}</strong></> : null}</>
+                    : 'Player can withdraw normally at Stage 3.'}
+                </div>
+              </div>
+              {canMutateStage && (
+                blocked ? (
+                  <button type="button" className="adm-btn success" onClick={() => onBlocked(false)}>
+                    <IconCheck size={14} /> Unblock account
+                  </button>
+                ) : (
+                  <button type="button" className="adm-btn warn" onClick={() => onBlocked(true)}>
+                    <IconBan size={14} /> Block account
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card title="KYC" subtitle="Identity verification status">

@@ -23,6 +23,7 @@ const NAV = [
   ]},
   { section: 'Operations', items: [
     { to: '/admin/users',      label: 'Users',         icon: <IconUsers /> },
+    { to: '/admin/stages',     label: 'Player stages', icon: <IconActivity /> },
     { to: '/admin/bets',       label: 'Bets',          icon: <IconReceipt /> },
     { to: '/admin/sports',     label: 'Sports & odds', icon: <IconBook />,    roles: ['odds_manager'] },
     { to: '/admin/promotions', label: 'Promotions',    icon: <IconSparkles /> },

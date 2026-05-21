@@ -126,6 +126,8 @@ export const adminUserTx        = (id) => get(`/users/${encodeURIComponent(id)}/
 export const adminUserLogins    = (id) => get(`/users/${encodeURIComponent(id)}/login-history`);
 export const adminUserStatus    = (id, action, reason) => patch_(`/users/${encodeURIComponent(id)}/status`, { action, reason });
 export const adminUserKyc       = (id, status, note)   => patch_(`/users/${encodeURIComponent(id)}/kyc`,    { status, note });
+export const adminUserStage     = (id, stage, note)    => patch_(`/users/${encodeURIComponent(id)}/stage`,  { stage, note });
+export const adminUserBlocked   = (id, blocked, note)  => patch_(`/users/${encodeURIComponent(id)}/blocked`,{ blocked, note });
 export const adminUserWallet    = (id, delta, reason)  => patch_(`/users/${encodeURIComponent(id)}/wallet`, { delta, reason });
 export const adminUserTags      = (id, tags)           => patch_(`/users/${encodeURIComponent(id)}/tags`,   { tags });
 export const adminUserNotes     = (id, notes)          => patch_(`/users/${encodeURIComponent(id)}/notes`,  { notes });

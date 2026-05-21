@@ -32,6 +32,12 @@ function expandUser(u) {
   return {
     ...safe,
     kycStatus: u.kycStatus || 'unverified',
+    stage: u.stage || 1,
+    stageUpdatedAt: u.stageUpdatedAt || null,
+    stageUpdatedBy: u.stageUpdatedBy || null,
+    blocked: !!u.blocked,
+    blockedAt: u.blockedAt || null,
+    blockedBy: u.blockedBy || null,
     tags: u.tags || [],
     notes: u.notes || '',
     stats: {
@@ -120,6 +126,87 @@ router.patch('/:id/status',
     logActivity(u.id, { kind: `admin_${action}`, by: req.admin.email, reason });
     res.json({ user: expandUser(next) });
   })
+);
+
+router.patch('/:id/stage',
+  requireAdmin, requireRole('moderator', 'support'),
+  validate(z.object({
+    stage: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    note: z.string().max(500).optional(),
+  })),
+  (req, res, next) => {
+    const u = getUserById(req.params.id);
+    if (!u) return next(notFound('User not found'));
+    const prev = u.stage || 1;
+    const { stage, note } = req.body;
+    if (Math.abs(stage - prev) > 1) {
+      return next(badRequest(`Cannot jump from stage ${prev} to ${stage}. Move one stage at a time.`));
+    }
+    if (stage === prev) {
+      return res.json({ user: expandUser(u) });
+    }
+    // Block state by stage:
+    //   Stage 3 = locked by default (requires admin unblock).
+    //   Stage 4 = always unlocked (no popups, free withdrawal).
+    //   Stages 1 & 2 = no block (popups handle the gating).
+    const patch = {
+      stage,
+      stageUpdatedAt: new Date().toISOString(),
+      stageUpdatedBy: req.admin?.email || req.admin?.id || 'admin',
+    };
+    if (stage === 3 && prev !== 3) {
+      patch.blocked = true;
+      patch.blockedAt = new Date().toISOString();
+      patch.blockedBy = req.admin?.email || req.admin?.id || 'admin';
+    } else if (stage !== 3 && prev === 3) {
+      // Leaving Stage 3 (either direction) clears the block.
+      patch.blocked = false;
+      patch.blockedAt = null;
+      patch.blockedBy = null;
+    } else if (stage === 4) {
+      // Promoting INTO Stage 4 always clears any lingering block.
+      patch.blocked = false;
+      patch.blockedAt = null;
+      patch.blockedBy = null;
+    }
+    const next_ = updateUser(u.id, patch);
+    audit(req, {
+      action: stage > prev ? 'user.stage.promote' : 'user.stage.demote',
+      target: u.id,
+      targetType: 'user',
+      severity: 'info',
+      meta: { from: prev, to: stage, note },
+    });
+    logActivity(u.id, { kind: `stage_${stage > prev ? 'promoted' : 'demoted'}_to_${stage}`, by: req.admin?.email, note });
+    res.json({ user: expandUser(next_) });
+  }
+);
+
+router.patch('/:id/blocked',
+  requireAdmin, requireRole('moderator', 'support'),
+  validate(z.object({
+    blocked: z.boolean(),
+    note: z.string().max(500).optional(),
+  })),
+  (req, res, next) => {
+    const u = getUserById(req.params.id);
+    if (!u) return next(notFound('User not found'));
+    const { blocked, note } = req.body;
+    const next_ = updateUser(u.id, {
+      blocked,
+      blockedAt: blocked ? new Date().toISOString() : null,
+      blockedBy: blocked ? (req.admin?.email || req.admin?.id || 'admin') : null,
+    });
+    if (blocked) revokeAllForAccount(u.id);
+    audit(req, {
+      action: blocked ? 'user.blocked' : 'user.unblocked',
+      target: u.id, targetType: 'user',
+      severity: blocked ? 'warning' : 'info',
+      meta: { note },
+    });
+    logActivity(u.id, { kind: blocked ? 'admin_blocked' : 'admin_unblocked', by: req.admin?.email, note });
+    res.json({ user: expandUser(next_) });
+  }
 );
 
 router.patch('/:id/kyc',

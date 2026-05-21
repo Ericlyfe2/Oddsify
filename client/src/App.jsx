@@ -26,6 +26,7 @@ import AdminLogin from './pages/admin/AdminLogin.jsx';
 import AdminSignup from './pages/admin/AdminSignup.jsx';
 import AdminDashboard from './pages/admin/Dashboard.jsx';
 import AdminUsers from './pages/admin/Users.jsx';
+import AdminStages from './pages/admin/Stages.jsx';
 import AdminBets from './pages/admin/Bets.jsx';
 import AdminSports from './pages/admin/Sports.jsx';
 import AdminPromotions from './pages/admin/Promotions.jsx';
@@ -47,6 +48,7 @@ function AdminApp() {
         <Route element={<AdminGuard><AdminShell /></AdminGuard>}>
           <Route index               element={<AdminDashboard />} />
           <Route path="users"        element={<AdminUsers />} />
+          <Route path="stages"       element={<AdminStages />} />
           <Route path="bets"         element={<AdminBets />} />
           <Route path="live"         element={<LiveBettingPage />} />
           <Route path="sports"       element={<AdminSports />} />

