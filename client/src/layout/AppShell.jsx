@@ -98,68 +98,6 @@ function FeaturePromos() {
   );
 }
 
-/* ─── Quick Action Icons (SportyBet-style) ─── */
-function QuickActions() {
-  const actions = [
-    {
-      label: 'All Sports', to: '/',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Load Code', to: '/my-bets',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <path d="M7 8h4M7 12h10M7 16h6" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Aviator', to: '/casino',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Virtuals', to: '/virtuals',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-        </svg>
-      ),
-    },
-    {
-      label: 'More', to: '/info',
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-          <circle cx="19" cy="12" r="1.5" fill="currentColor" />
-          <circle cx="5" cy="12" r="1.5" fill="currentColor" />
-        </svg>
-      ),
-    },
-  ];
-
-  return (
-    <div className="sb-quick-actions">
-      {actions.map((a) => (
-        <NavLink key={a.label} to={a.to} className="sb-quick-action">
-          <div className="sb-qa-icon">{a.icon}</div>
-          <span>{a.label}</span>
-        </NavLink>
-      ))}
-    </div>
-  );
-}
-
 function BottomNav({ openCount }) {
   const loc = useLocation();
   const { account } = useAccount();
@@ -306,9 +244,8 @@ export default function AppShell() {
         onBalanceClick={() => walletMenuDlg.current?.showModal()}
       />
 
-      {/* === mobile-only feature promos + quick actions === */}
+      {/* === mobile-only feature promos === */}
       <FeaturePromos />
-      <QuickActions />
 
       {/* === desktop shell (kept for ≥961px) === */}
       <div className="ticker">

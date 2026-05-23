@@ -123,7 +123,6 @@ export default function WalletPage() {
             <div className="wallet-split-inner">
               <header className="wallet-split-head">
                 <h3>Withdraw Funds</h3>
-                <span className="wallet-pill wallet-pill-warn">Verified accounts</span>
               </header>
               <p className="wallet-split-desc">Cash out your winnings directly to your mobile money.</p>
               <ul className="wallet-list">
