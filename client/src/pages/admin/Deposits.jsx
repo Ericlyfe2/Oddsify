@@ -1,9 +1,35 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, Badge, Spinner, Empty, moneyFmt, ago, useToast } from '../../components/admin/primitives.jsx';
 import { adminListPendingDeposits, adminApproveDeposit, adminRejectDeposit } from '../../api/adminApi.js';
 import { IconCheck, IconClose } from '../../components/admin/Icons.jsx';
+import { onAdmin } from '../../api/adminSocket.js';
+import { requestNotificationPermission, notify as osNotify } from '../../lib/browserNotify.js';
 
 const REFRESH_MS = 8_000;
+
+/**
+ * Play a short attention chime when a new deposit arrives. Uses WebAudio so
+ * we don't ship an audio file; falls back to a no-op if the browser blocks
+ * autoplay (admin gets the toast + OS notification anyway).
+ */
+function playChime() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.18);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    o.start(); o.stop(ctx.currentTime + 0.42);
+    setTimeout(() => { try { ctx.close(); } catch {} }, 600);
+  } catch { /* autoplay blocked / no audio context */ }
+}
 
 export default function DepositsPage() {
   const { toast: toastState, show } = useToast();
@@ -11,10 +37,18 @@ export default function DepositsPage() {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  // Track which deposits we've already chimed for so a reload + socket replay
+  // doesn't double-notify the admin for the same transaction.
+  const seenIdsRef = useRef(new Set());
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
     try {
       const r = await adminListPendingDeposits();
+      // Initial load seeds the seen-set so existing pending deposits don't
+      // each fire a chime. Subsequent polls just keep the set in sync.
+      if (opts.seed && Array.isArray(r?.pending)) {
+        for (const tx of r.pending) seenIdsRef.current.add(tx.id);
+      }
       setData(r);
       setErr('');
     } catch (e) {
@@ -26,10 +60,45 @@ export default function DepositsPage() {
 
   useEffect(() => {
     let alive = true;
-    const tick = () => load().then(() => alive && setTimeout(tick, REFRESH_MS));
+    // First call seeds; subsequent polls don't.
+    let first = true;
+    const tick = () => load(first ? { seed: true } : {}).then(() => {
+      first = false;
+      if (alive) setTimeout(tick, REFRESH_MS);
+    });
     tick();
     return () => { alive = false; };
   }, [load]);
+
+  // Live admin notifications when a user submits a new deposit. The server
+  // emits `wallet:deposit` to the admin namespace from routes/wallet.js as
+  // soon as the pending row lands -- no need to wait for the 8s poll.
+  useEffect(() => {
+    // Best-effort OS notification permission. Loading the admin page is a
+    // user-initiated navigation, which usually carries enough activation
+    // for the prompt to show.
+    requestNotificationPermission().catch(() => {});
+
+    const off = onAdmin('wallet:deposit', (payload) => {
+      const txId = payload?.transactionId;
+      if (txId && seenIdsRef.current.has(txId)) return;
+      if (txId) seenIdsRef.current.add(txId);
+
+      const amount = payload?.amount;
+      const userId = payload?.userId;
+      const title = 'New deposit request';
+      const body  = `GHS ${moneyFmt(amount)} from user ${userId || ''}`.trim();
+
+      show(`New deposit request — GHS ${moneyFmt(amount)}`, 'info');
+      osNotify({ title, body, tag: `admin-deposit-${txId || Date.now()}` });
+      playChime();
+      // Pull the row in immediately so the admin sees it without waiting
+      // for the next 8-second poll.
+      load();
+    });
+
+    return () => { off?.(); };
+  }, [load, show]);
 
   const handleApprove = async (id) => {
     setBusyId(id);
