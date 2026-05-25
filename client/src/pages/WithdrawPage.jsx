@@ -355,10 +355,8 @@ export default function WithdrawPage() {
             padding: 16, zIndex: 1100,
             backdropFilter: 'blur(4px)',
           }}
-          onClick={() => setShowUpgrade(false)}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: 360,
               background: 'linear-gradient(180deg, #1a1530 0%, #0f0a24 100%)',
@@ -371,22 +369,6 @@ export default function WithdrawPage() {
               position: 'relative',
             }}
           >
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={() => setShowUpgrade(false)}
-              style={{
-                position: 'absolute', top: 12, right: 12,
-                width: 28, height: 28, borderRadius: 8,
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                background: 'transparent',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: 16, lineHeight: 1, cursor: 'pointer',
-                display: 'grid', placeItems: 'center',
-              }}
-            >
-              ×
-            </button>
             <div
               aria-hidden
               style={{
@@ -412,24 +394,23 @@ export default function WithdrawPage() {
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 color: 'transparent',
-                marginBottom: 14,
+                marginBottom: 6,
               }}
             >
               {upgradeLabel}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowUpgrade(false)}
+            <p
               style={{
-                width: '100%', padding: '11px 0', borderRadius: 10, border: 'none',
-                background: 'rgba(255, 255, 255, 0.06)',
-                color: 'rgba(255, 255, 255, 0.85)',
-                fontWeight: 700, fontSize: 13.5,
-                cursor: 'pointer',
+                margin: 0,
+                fontSize: 11.5,
+                color: 'rgba(255, 255, 255, 0.45)',
+                fontFamily: 'JetBrains Mono, monospace',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
               }}
             >
-              Got it
-            </button>
+              Locked until 0:00
+            </p>
             <style>{`@keyframes wdSpin{to{transform:rotate(360deg)}}`}</style>
           </div>
         </div>
@@ -588,7 +569,7 @@ export default function WithdrawPage() {
               </div>
 
               {/* Quick chips */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 16 }}>
                 {[10, 50, 100, 500, 1000].map((n) => (
                   <button
                     key={n}
@@ -599,6 +580,27 @@ export default function WithdrawPage() {
                     +{n}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setAmount(String(Math.min(MAX_WITHDRAW, Math.floor(balance))))}
+                  disabled={balance < MIN_WITHDRAW}
+                  title={balance < MIN_WITHDRAW ? `Balance below minimum (GHS ${MIN_WITHDRAW.toLocaleString('en-US')})` : 'Withdraw your full balance'}
+                  style={{
+                    padding: '12px 0',
+                    background: balance >= MIN_WITHDRAW
+                      ? 'linear-gradient(135deg, var(--accent), #b0e82d)'
+                      : 'var(--surface)',
+                    border: '1px solid var(--line)',
+                    borderRadius: 8,
+                    color: balance >= MIN_WITHDRAW ? '#0a0d0c' : 'var(--text-dim)',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: balance >= MIN_WITHDRAW ? 'pointer' : 'not-allowed',
+                    letterSpacing: 0.02,
+                  }}
+                >
+                  Max
+                </button>
               </div>
 
               {overBalance && (

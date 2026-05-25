@@ -55,40 +55,53 @@ const HISTORY_HEAD_LABEL = {
   open: { label: 'Open', cls: 'open', icon: '' },
 };
 
-function HistoryBetCard({ bet, onRemix, onOpen }) {
+function HistoryBetCard({ bet, onRemix, onOpen, expanded, onToggle }) {
   const { day, month } = dayMonth(bet.settledAt || bet.placedAt);
   const head = HISTORY_HEAD_LABEL[bet.status] || HISTORY_HEAD_LABEL.open;
   const modeLabel = bet.mode === 'single' ? 'Single' : bet.mode === 'multiple' ? 'Multiple' : bet.mode === 'system' ? 'System' : (bet.mode || 'Bet');
   const legs = bet.legs || [];
-  const previewLegs = legs.slice(0, 3);
-  const extraLegs = Math.max(0, legs.length - previewLegs.length);
+  // When expanded, render every leg with full detail; collapsed keeps the
+  // SportyBet-style preview of the first 3 + "(and N other matches)".
+  const visibleLegs = expanded ? legs : legs.slice(0, 3);
+  const extraLegs = expanded ? 0 : Math.max(0, legs.length - visibleLegs.length);
   const totalReturn = bet.status === 'won'
     ? Number(bet.potentialWin || 0)
     : bet.status === 'cashed_out'
       ? Number(bet.cashOut || 0)
       : 0;
+  const totalOdds = Number(bet.totalOdds || 0);
+
+  const handleToggle = () => onToggle?.();
 
   return (
-    <li className={`bh-hcard bh-hcard-${head.cls}`}>
+    <li
+      className={`bh-hcard bh-hcard-${head.cls}${expanded ? ' is-expanded' : ''}`}
+      onClick={handleToggle}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } }}
+      aria-expanded={expanded}
+    >
       <aside className="bh-hdate" aria-hidden>
         <span className="bh-hdate-day">{day}</span>
         <span className="bh-hdate-month">{month}</span>
       </aside>
 
       <div className="bh-hbody">
-        <header
-          className={`bh-hhead bh-hhead-${head.cls}`}
-          role="button"
-          tabIndex={0}
-          onClick={onOpen}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.(); } }}
-          style={{ cursor: 'pointer' }}
-        >
+        <header className={`bh-hhead bh-hhead-${head.cls}`}>
           <span className="bh-hmode">{modeLabel}</span>
           <span className="bh-hstatus">
             {head.icon && <span className="bh-hstatus-icon" aria-hidden>{head.icon}</span>}
             {head.label}
-            <span className="bh-hstatus-chevron" aria-hidden>›</span>
+            <span
+              className="bh-hstatus-chevron"
+              aria-hidden
+              style={{
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+                display: 'inline-block',
+              }}
+            >›</span>
           </span>
         </header>
 
@@ -101,11 +114,17 @@ function HistoryBetCard({ bet, onRemix, onOpen }) {
             <dt>Total Return</dt>
             <dd className={totalReturn > 0 ? 'is-positive' : ''}>{fmt(totalReturn)}</dd>
           </div>
+          {expanded && (
+            <div>
+              <dt>Total Odds</dt>
+              <dd className="bh-hodds">{totalOdds.toFixed(2)}</dd>
+            </div>
+          )}
         </dl>
 
-        {previewLegs.length > 0 && (
+        {visibleLegs.length > 0 && !expanded && (
           <ul className="bh-hlegs">
-            {previewLegs.map((l, i) => (
+            {visibleLegs.map((l, i) => (
               <li key={i}>{l.home} v {l.away}</li>
             ))}
             {extraLegs > 0 && (
@@ -114,8 +133,51 @@ function HistoryBetCard({ bet, onRemix, onOpen }) {
           </ul>
         )}
 
-        {bet.status === 'lost' && (
-          <button type="button" className="bh-hremix" onClick={onRemix}>
+        {expanded && visibleLegs.length > 0 && (
+          <ul className="bh-hlegs-full" onClick={(e) => e.stopPropagation()}>
+            {visibleLegs.map((l, i) => {
+              const pick   = (l.outcome === '1' ? 'Home' : l.outcome === '2' ? 'Away' : l.outcome === 'X' ? 'Draw' : l.outcome) || '—';
+              const market = l.marketName || (l.market === '1X2' ? '1X2' : l.market === 'OU25' ? 'O/U 2.5' : l.market === 'BTTS' ? 'BTTS' : l.market) || '—';
+              return (
+                <li key={i} className="bh-hleg-full">
+                  <div className="bh-hleg-index">{String(i + 1).padStart(2, '0')}</div>
+                  <div className="bh-hleg-content">
+                    <div className="bh-hleg-teams">{l.home} <span className="bh-hleg-vs">v</span> {l.away}</div>
+                    <div className="bh-hleg-row">
+                      <span className="bh-hleg-pick">{pick}</span>
+                      <span className="bh-hleg-odds">@{Number(l.odds).toFixed(2)}</span>
+                      <span className="bh-hleg-mkt">{market}</span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {expanded && (
+          <div className="bh-hactions" onClick={(e) => e.stopPropagation()}>
+            {bet.status === 'lost' && (
+              <button type="button" className="bh-hremix" onClick={onRemix}>
+                Remix Bet
+              </button>
+            )}
+            <button
+              type="button"
+              className="bh-hdetails"
+              onClick={() => onOpen?.()}
+            >
+              View ticket details →
+            </button>
+          </div>
+        )}
+
+        {!expanded && bet.status === 'lost' && (
+          <button
+            type="button"
+            className="bh-hremix"
+            onClick={(e) => { e.stopPropagation(); onRemix?.(); }}
+          >
             Remix Bet
           </button>
         )}
@@ -372,6 +434,16 @@ export default function BetHistoryPage() {
   const [historyResult, setHistoryResult] = useState('all');     // all | won | lost | cashed_out | void
   // Ticket detail overlay — holds the bet currently being inspected.
   const [activeTicket, setActiveTicket] = useState(null);
+  // Inline expansion — set of bet IDs whose cards are open.
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const toggleExpanded = useCallback((id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   // Live ticker: map of betId -> previous offer so we can show green/red trend.
   const prevOffersRef = useRef({});
@@ -643,6 +715,8 @@ export default function BetHistoryPage() {
               <HistoryBetCard
                 key={b.id}
                 bet={b}
+                expanded={expandedIds.has(b.id)}
+                onToggle={() => toggleExpanded(b.id)}
                 onOpen={() => setActiveTicket(b)}
                 onRemix={() => {
                   toast('Building a new slip from this ticket…');
@@ -969,6 +1043,114 @@ const BH_CSS = `
   display: flex;
   align-items: stretch;
   gap: 0;
+  cursor: pointer;
+  transition: transform .12s;
+}
+.bh-hcard:active { transform: scale(0.998); }
+.bh-hcard:focus-visible { outline: 2px solid rgba(20, 165, 80, 0.6); outline-offset: 2px; border-radius: 14px; }
+.bh-hcard.is-expanded .bh-hhead { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+/* Full-detail leg list (only rendered when card is expanded) */
+.bh-hlegs-full {
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.bh-hleg-full {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.bh-hleg-full:last-child { border-bottom: none; }
+html[data-theme="light"] .bh-hleg-full { border-bottom-color: rgba(0, 0, 0, 0.08); }
+.bh-hleg-index {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-mute, rgba(255, 255, 255, 0.4));
+  letter-spacing: 0.1em;
+  padding-top: 3px;
+}
+.bh-hleg-content { min-width: 0; }
+.bh-hleg-teams {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.bh-hleg-vs {
+  color: var(--text-dim, rgba(255, 255, 255, 0.4));
+  font-weight: 400;
+  margin: 0 4px;
+  font-size: 12px;
+}
+.bh-hleg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
+  font-size: 12px;
+}
+.bh-hleg-pick {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 12.5px;
+}
+.bh-hleg-odds {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent, #14a550);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bh-hleg-mkt {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-soft, rgba(255, 255, 255, 0.7));
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+html[data-theme="light"] .bh-hleg-mkt { background: rgba(0, 0, 0, 0.06); }
+
+/* Action bar shown only when expanded */
+.bh-hactions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  flex-wrap: wrap;
+}
+.bh-hactions .bh-hremix { align-self: auto; margin: 0; }
+.bh-hdetails {
+  background: transparent;
+  border: 1px solid rgba(20, 165, 80, 0.4);
+  color: var(--accent, #14a550);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  margin-left: auto;
+}
+.bh-hdetails:hover {
+  background: rgba(20, 165, 80, 0.1);
+  border-color: var(--accent, #14a550);
+}
+
+/* Total Odds row label uses brand colour */
+.bh-hodds {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent, #14a550) !important;
 }
 
 .bh-hdate {
