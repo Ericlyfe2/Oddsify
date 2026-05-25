@@ -194,11 +194,71 @@ function stableHash(key) {
   x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
   return Math.abs(x);
 }
-function fakeLegScore(bet, leg, idx) {
+// Build a deterministic FT score that *actually matches* the leg's
+// won/lost outcome — so the displayed score, pick, outcome label, and
+// status icon all agree (no more "0:1, picked Home, marked WON" bugs).
+function fakeLegScore(bet, leg, idx, wantedResult) {
   const seed = stableHash(`${bet.id}-${leg.matchId || idx}-${idx}`);
-  const home = seed % 4;             // 0–3
-  const away = Math.floor(seed / 7) % 4;
-  return `${home}:${away}`;
+  const a = (seed)            & 0xff;
+  const b = (seed >>> 8)      & 0xff;
+  const c = (seed >>> 16)     & 0xff;
+  // Helpers to pick small numbers from the seed.
+  const small = (x, max = 4) => x % max;                 // 0..max-1
+  const win   = (x) => 1 + (x % 3);                      // 1..3 (winning side)
+  const lose  = (x) => x % 2;                            // 0..1 (losing side)
+  let home = small(a), away = small(b);
+
+  const wants = wantedResult || 'won';
+  const market = leg.market;
+  const pick = leg.outcome;
+
+  if (market === '1X2') {
+    if (wants === 'won') {
+      if (pick === '1') { home = win(a); away = lose(b); }
+      else if (pick === '2') { home = lose(a); away = win(b); }
+      else if (pick === 'X') { const v = 1 + small(a, 3); home = v; away = v; }
+    } else {
+      // lost
+      if (pick === '1') { home = 0; away = win(b); }
+      else if (pick === '2') { home = win(a); away = 0; }
+      else if (pick === 'X') { home = win(a); away = home + 1 + small(b, 2); }
+    }
+  } else if (market === 'OU25') {
+    if (wants === 'won') {
+      if (pick === 'Over')  { home = 2 + small(a, 2); away = 1 + small(b, 2); } // total ≥ 3
+      else if (pick === 'Under') { home = 0; away = small(b, 2); }              // total ≤ 1
+    } else {
+      if (pick === 'Over')  { home = 0; away = small(b, 2); }
+      else if (pick === 'Under') { home = 2 + small(a, 2); away = 1 + small(b, 2); }
+    }
+  } else if (market === 'BTTS') {
+    if (wants === 'won') {
+      if (pick === 'Yes') { home = 1 + small(a, 3); away = 1 + small(b, 3); }
+      else if (pick === 'No')  { home = small(a, 3); away = 0; }
+    } else {
+      if (pick === 'Yes') { home = small(a, 3); away = 0; }
+      else if (pick === 'No')  { home = 1 + small(a, 3); away = 1 + small(b, 3); }
+    }
+  }
+  return { home, away, str: `${home}:${away}` };
+}
+
+// What actually happened on the pitch, derived from the score.
+function actualOutcomeOf(score, market) {
+  if (!score) return null;
+  if (market === '1X2') {
+    if (score.home > score.away) return 'Home';
+    if (score.home < score.away) return 'Away';
+    return 'Draw';
+  }
+  if (market === 'OU25') {
+    const total = score.home + score.away;
+    return total > 2.5 ? 'Over 2.5' : 'Under 2.5';
+  }
+  if (market === 'BTTS') {
+    return (score.home > 0 && score.away > 0) ? 'Yes' : 'No';
+  }
+  return null;
 }
 function ticketTime(iso) {
   if (!iso) return '';
@@ -258,12 +318,20 @@ function TicketDetails({ bet, onClose, onRemix }) {
   : 0;
   const totalOdds = Number(bet.totalOdds || 0);
 
-  // For lost multi-bet legs, randomly mark a few as actually losing — purely
-  // visual, so the ticket detail feels accurate without real per-leg data.
+  // Per-leg result. Crucially, a cashed-out bet may have legs that later
+  // settled as losses — they should NOT all show green ticks just because
+  // the user pocketed the cash-out.
   const legResult = (i) => {
-    if (bet.status === 'won' || bet.status === 'cashed_out') return 'won';
     if (bet.status === 'open' || bet.status === 'void') return 'pending';
-    // lost — at least one leg has to be the loser; pick deterministically.
+    if (bet.status === 'won') return 'won'; // a winning multi-bet has all legs won
+    if (bet.status === 'cashed_out') {
+      // Cash-out happened mid-bet; individual legs may have won or lost.
+      // Use a deterministic hash so each leg's outcome stays stable, with
+      // a slight bias toward losses so the inconsistency the user noticed
+      // surfaces (and matches reality where cash-outs often save a leg).
+      return (stableHash(`${bet.id}-${i}-co`) % 100) < 55 ? 'lost' : 'won';
+    }
+    // lost — at least one leg lost; pick deterministically which.
     const total = bet.legs?.length || 1;
     const loserIdx = stableHash(bet.id) % total;
     return i === loserIdx ? 'lost' : 'won';
@@ -352,13 +420,16 @@ function TicketDetails({ bet, onClose, onRemix }) {
           <section className="td-legs">
             {(bet.legs || []).map((leg, i) => {
               const res = legResult(i);
-              const score = fakeLegScore(bet, leg, i);
+              // Score is generated to MATCH the leg's actual won/lost result
+              // — pick "Home" + lost result => away team wins on the score.
+              const score = bet.status === 'open' || bet.status === 'void'
+                ? null
+                : fakeLegScore(bet, leg, i, res);
               const pick = PICK_LABEL[leg.outcome] || leg.outcome || '—';
               const market = leg.marketName || MARKET_LABEL[leg.market] || leg.market || '—';
-              // Actual outcome (what happened on the field) — for won/lost demo
-              // accuracy, hash-derive Home/Away/Draw deterministically.
-              const outcomes = ['Home', 'Draw', 'Away'];
-              const actualOutcome = res === 'won' ? pick : outcomes[stableHash(`${bet.id}-${i}-r`) % outcomes.length];
+              // Outcome label is derived from the score so it always agrees
+              // with the tick / cross icon.
+              const actualOutcome = score ? actualOutcomeOf(score, leg.market) : null;
 
               return (
                 <article key={i} className={`td-leg td-leg-${res}`}>
@@ -383,8 +454,8 @@ function TicketDetails({ bet, onClose, onRemix }) {
                       <p className="td-leg-teams">{leg.home} v {leg.away}</p>
                       <p className="td-leg-score">
                         <span className="td-leg-score-label">FT Score:</span>
-                        <strong>{bet.status === 'open' ? '—:—' : score}</strong>
-                        {bet.status !== 'open' && (
+                        <strong>{score ? score.str : '—:—'}</strong>
+                        {score && (
                           <span className="td-leg-badge">Match Closed</span>
                         )}
                       </p>
@@ -397,7 +468,7 @@ function TicketDetails({ bet, onClose, onRemix }) {
                           <dt>Market</dt>
                           <dd>{market}</dd>
                         </div>
-                        {bet.status !== 'open' && (
+                        {actualOutcome && (
                           <div>
                             <dt>Outcome</dt>
                             <dd>{actualOutcome}</dd>
