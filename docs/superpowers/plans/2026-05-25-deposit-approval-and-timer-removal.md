@@ -669,70 +669,159 @@ git commit -m "feat(deposit): client handles pending deposits + approval events"
 
 ---
 
-## Task 6: Client — Wallet page status badges
+## Task 6: Client — Wallet page status pills (matches reference design)
 
 **Files:**
 - Modify: `client/src/pages/WalletPage.jsx`
 
-The wallet page currently assumes every transaction is completed. Add badges so users see "Pending" and "Rejected" deposits clearly.
+The wallet page currently renders each transaction as a horizontal row: icon · title + meta · amount. The reference design moves the **amount into the left body column** (stacked under the date) and uses the **right column for a status pill only** — neutral gray "PENDING" and soft coral "REJECTED". Completed transactions show no pill.
 
-- [ ] **Step 1: Read the transaction row renderer to locate the insertion point**
+### Reference design — pill specs
 
-Open `client/src/pages/WalletPage.jsx`. The transaction list is rendered after the balance and CTA blocks. Search for the row map — likely a `.map((t) => …)` over `txs` that emits the transaction label and amount. Identify the cell where you'd add a status badge — typically alongside the type label.
+| Status | Pill background | Pill text colour |
+|---|---|---|
+| `pending`   | `#e9ecef` (neutral gray)        | `#4b5563` (dark gray) |
+| `rejected`  | `rgba(244, 102, 102, 0.18)`     | `#e23d3d` (red)        |
+| `completed` | (no pill)                       | —                      |
 
-- [ ] **Step 2: Add the badge helper near the top of the file**
+### Row layout target
+
+```
+┌────────────────────────────────────────────────┐
+│ ▢ Deposit                            [PENDING] │
+│   25 May 2026 · 09:47                          │
+│   + GHS 550.00                                 │
+└────────────────────────────────────────────────┘
+```
+
+The icon stays in its current spot (left of "Deposit"). The amount, date, and label all live in the left column. The right column holds only the pill.
+
+- [ ] **Step 1: Add the `StatusPill` helper near the top of the file**
 
 After the `txLabel` constant (around `client/src/pages/WalletPage.jsx:24-33`), add:
 
-```js
-function StatusBadge({ tx }) {
-  if (tx.status === 'pending') {
-    return (
-      <span style={{
-        marginLeft: 8, padding: '2px 8px', borderRadius: 999,
-        background: 'rgba(245, 166, 35, 0.18)', color: '#f5a623',
-        fontSize: 11, fontWeight: 800, letterSpacing: '.02em',
-      }}>Pending</span>
-    );
-  }
-  if (tx.status === 'rejected') {
-    return (
-      <span title={tx.rejectedReason || ''} style={{
-        marginLeft: 8, padding: '2px 8px', borderRadius: 999,
-        background: 'rgba(255, 93, 108, 0.18)', color: '#ff5d6c',
-        fontSize: 11, fontWeight: 800, letterSpacing: '.02em',
-      }}>Rejected</span>
-    );
-  }
-  return null;
+```jsx
+function StatusPill({ status, reason }) {
+  if (!status || status === 'completed') return null;
+  const styles = status === 'pending'
+    ? { bg: '#e9ecef', fg: '#4b5563', label: 'PENDING' }
+    : status === 'rejected'
+      ? { bg: 'rgba(244, 102, 102, 0.18)', fg: '#e23d3d', label: 'REJECTED' }
+      : { bg: 'var(--surface-2)', fg: 'var(--text-soft)', label: status.toUpperCase() };
+  return (
+    <span
+      title={reason || ''}
+      style={{
+        alignSelf: 'flex-start',          // sits at the top of the right column
+        padding: '4px 10px',
+        borderRadius: 999,
+        background: styles.bg,
+        color: styles.fg,
+        fontSize: 10.5,
+        fontWeight: 800,
+        letterSpacing: '.06em',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {styles.label}
+    </span>
+  );
 }
 ```
 
-- [ ] **Step 3: Render the badge in the transaction row**
+- [ ] **Step 2: Restructure the transaction row to stack amount under date**
 
-In the `txs.map(...)` block in `WalletPage.jsx` JSX, alongside where `txLabel[t.kind]` is rendered, append `<StatusBadge tx={t} />`. The exact line depends on the existing template — search for `{txLabel[t.kind]` in the file and add the badge right after the closing `}` of that label expression.
-
-If the row uses a structure like:
+In `client/src/pages/WalletPage.jsx`, find the row map (around `client/src/pages/WalletPage.jsx:194-210`):
 
 ```jsx
-<span>{txLabel[t.kind] || t.kind}</span>
+              {txs.slice(0, 20).map((t) => {
+                const isCredit = (t.amount ?? 0) > 0;
+                return (
+                  <li key={t.id} className="wallet-tx">
+                    <div className={`wallet-tx-icon ${isCredit ? 'credit' : 'debit'}`} aria-hidden>
+                      {isCredit ? '↓' : '↑'}
+                    </div>
+                    <div className="wallet-tx-body">
+                      <div className="wallet-tx-title">{txLabel[t.kind] || t.kind}</div>
+                      <div className="wallet-tx-meta">{relTime(t.at || t.createdAt)} · {t.status || 'completed'}</div>
+                    </div>
+                    <div className={`wallet-tx-amt ${isCredit ? 'credit' : 'debit'}`}>
+                      {isCredit ? '+' : ''}{fmt(t.amount)} <em>GHS</em>
+                    </div>
+                  </li>
+                );
+              })}
 ```
 
-Change it to:
+Replace with:
 
 ```jsx
-<span>{txLabel[t.kind] || t.kind}<StatusBadge tx={t} /></span>
+              {txs.slice(0, 20).map((t) => {
+                const isCredit = (t.amount ?? 0) > 0;
+                const status   = t.status || 'completed';
+                return (
+                  <li key={t.id} className={`wallet-tx wallet-tx-${status}`}>
+                    <div className={`wallet-tx-icon ${isCredit ? 'credit' : 'debit'}`} aria-hidden>
+                      {isCredit ? '↓' : '↑'}
+                    </div>
+                    <div className="wallet-tx-body">
+                      <div className="wallet-tx-title">{txLabel[t.kind] || t.kind}</div>
+                      <div className="wallet-tx-meta">{relTime(t.at || t.createdAt)}</div>
+                      <div className={`wallet-tx-amt-inline ${isCredit ? 'credit' : 'debit'}`}>
+                        {isCredit ? '+ ' : ''}GHS {fmt(t.amount)}
+                      </div>
+                    </div>
+                    <StatusPill status={status} reason={t.rejectedReason} />
+                  </li>
+                );
+              })}
 ```
 
-- [ ] **Step 4: Manual smoke test**
+The new `.wallet-tx-amt-inline` class lives inside the body column; the standalone `.wallet-tx-amt` div on the right is gone.
 
-`npm run dev`, sign in, submit a deposit. The wallet page should show the new row with a yellow "Pending" badge. From admin, reject the deposit with a reason. The badge flips to red "Rejected" (the row reappears with the new status after the next `fetchTransactions()` cycle on refresh — soft refresh the wallet page to see it).
+- [ ] **Step 3: Add the new CSS rules for the inline amount + dim the row when pending/rejected**
+
+Open the `WALLET_CSS` template literal at the bottom of `WalletPage.jsx` (around `client/src/pages/WalletPage.jsx:221`). Search for the existing `.wallet-tx` / `.wallet-tx-amt` rules and add — directly after the last existing `.wallet-tx-*` rule, but still inside the template literal — these blocks:
+
+```css
+.wallet-tx-amt-inline {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
+.wallet-tx-amt-inline.credit { color: #16a34a; }
+.wallet-tx-amt-inline.debit  { color: var(--danger, #ef4444); }
+
+/* Stack body content vertically so the inline amount sits under the meta. */
+.wallet-tx-body { display: flex; flex-direction: column; gap: 2px; }
+
+/* Pending rows look the same but slightly muted; rejected rows lean red. */
+.wallet-tx-rejected .wallet-tx-amt-inline { color: var(--text-soft); text-decoration: line-through; }
+```
+
+If the file already has a `.wallet-tx-body` rule that defines `display`, merge the `flex-direction: column; gap: 2px;` into it instead of duplicating. (Search `\.wallet-tx-body` first — if there's no match for `display`, just add the new rule.)
+
+- [ ] **Step 4: Build and visual-check**
+
+```
+npm run build
+```
+
+Expected: build succeeds. Then run `npm run dev`. Sign in. Submit a deposit. The wallet page row should:
+
+- Show the deposit icon on the left.
+- Stack "Deposit" title, the date, and the green "+ GHS 550.00" amount in the left column.
+- Show a small gray "PENDING" pill in the top-right corner of the row.
+
+From admin, reject the deposit with a reason. Soft-refresh the wallet page. The same row now shows a coral "REJECTED" pill on the right; the amount text dulls and has a strike-through; the tooltip on the pill shows the rejection reason.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add client/src/pages/WalletPage.jsx
-git commit -m "feat(deposit): wallet page shows Pending / Rejected status badges"
+git commit -m "feat(deposit): wallet transactions show PENDING / REJECTED pills (matches reference)"
 ```
 
 ---
