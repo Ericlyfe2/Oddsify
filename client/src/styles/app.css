@@ -1,19 +1,22 @@
 :root {
-  --bg: #000000;
-  --bg-soft: #0a0a0a;
-  --surface: #141414;
-  --surface-2: #1f1f1f;
-  --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --text: #f3eedf;
-  --text-soft: #b8b2a3;
-  --text-dim: #6a655a;
-  --header-bg: rgba(0, 0, 0, 0.78);
-  --accent: #ffb800;       /* rich gold — brand, tabs, success, primary CTA */
-  --accent-warm: #ffd54f;  /* brighter gold — highlights, count badges */
-  --accent-hot: #ff3554;   /* pink-red — LIVE, errors, alerts */
-  --accent-cool: #6ad0ff;  /* sky for picks */
-  --gold: #d4a857;
+  /* Snapped to the Claude Design "Oddsify.html" black + gold tokens. */
+  --bg: #0a0a0a;
+  --bg-soft: #0f0e0c;        /* header / hero "greenDeep" */
+  --surface: #161513;        /* card surfaces */
+  --surface-2: #211f1a;      /* alt panels, inputs */
+  --line: rgba(243, 233, 207, 0.08);
+  --line-strong: rgba(243, 233, 207, 0.16);
+  --text: #f3e9cf;           /* warm cream "ink" */
+  --text-soft: #9c9277;
+  --text-dim: #5f5848;
+  --header-bg: rgba(15, 14, 12, 0.86);
+  --accent: #e8b94a;         /* gold — primary CTA / brand */
+  --accent-warm: #f7c948;    /* brighter gold — cash-out, best odds */
+  --accent-hot: #ff5b78;     /* pink-red — LIVE, danger, alerts */
+  --accent-cool: #6ad0ff;    /* informational, kept for back-compat */
+  --gold: #f7c948;
+  --gold-ink: #1a1300;       /* dark text for use on gold */
+  --gold-soft: rgba(232, 185, 74, 0.16);
   --r-sm: 6px;
   --r: 10px;
   --r-lg: 18px;
@@ -36,6 +39,39 @@ html[data-theme="light"] {
   --accent-hot: #d6263f;
   --accent-cool: #1f8dd0;
   --gold: #b48a2d;
+  --gold-ink: #1a1300;
+  --gold-soft: rgba(184, 134, 11, 0.18);
+}
+
+/* ===== Design-system primitives shared across new pages (Oddsify.html port).
+   These are utility classes for the new mobile-first screens that live in
+   client/src/components/odd/. Page-level layouts use inline styles for
+   one-off composition; reusable bits (keyframes, scrollbar hiding, font
+   helpers) sit here so the Vite build can dead-code-eliminate unused JS. */
+.odd-noscroll { overflow: hidden; }
+.odd-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.odd-display { font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif; }
+.odd-body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+/* Hide native scrollbars inside the design's scroll panes — matches Oddsify.html. */
+.odd-pane::-webkit-scrollbar { width: 0; height: 0; }
+.odd-pane { scrollbar-width: none; }
+
+@keyframes odd-toast-in {
+  from { transform: translate(-50%, 12px); opacity: 0; }
+  to   { transform: translate(-50%, 0);    opacity: 1; }
+}
+@keyframes odd-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes odd-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50%      { box-shadow: 0 0 0 6px transparent; opacity: 0.5; }
+}
+@keyframes odd-slip-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
