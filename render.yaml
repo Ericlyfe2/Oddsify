@@ -12,7 +12,10 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGIN
-        value: https://stakepoint-client.vercel.app
+        value: https://oddsify-client.vercel.app,https://stakepoint-client.vercel.app
+      # Also trust this Vercel project's preview deploys (oddsify-client-*.vercel.app)
+      - key: CORS_ALLOW_VERCEL
+        value: oddsify-client
       - key: ODDS_API_KEY
         sync: false
       - key: SMTP_HOST
