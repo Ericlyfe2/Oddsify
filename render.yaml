@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: stakepoint-api
+    name: oddsify-api
     runtime: node
     plan: free
     buildCommand: npm install

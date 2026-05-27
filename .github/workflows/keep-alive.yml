@@ -23,7 +23,7 @@ jobs:
       - name: Ping /api/health
         run: |
           set -euo pipefail
-          URL="${API_URL:-https://stakepoint-api.onrender.com/api/health}"
+          URL="${API_URL:-https://oddsify-api.onrender.com/api/health}"
           # --max-time gives Render up to 90s to wake on a cold start.
           # --retry-connrefused covers the brief window when the
           # container is restarting between TCP listen and HTTP ready.
