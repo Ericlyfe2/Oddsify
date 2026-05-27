@@ -290,6 +290,22 @@ html[data-theme="light"] .cv-card { background: rgba(255, 255, 255, 0.9); }
   border-color: rgba(255, 209, 102, 0.45);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
 }
+/* zentrixbet casinoShine — diagonal light sweep across game cards */
+.cv-card::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -100%;
+  width: 60%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.18) 50%, transparent);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 2;
+  animation: casinoShine 3s infinite;
+}
+@keyframes casinoShine { 0% { left: -100%; } 50% { left: 120%; } 100% { left: 120%; } }
+@media (prefers-reduced-motion: reduce) {
+  .cv-card::before { animation: none; opacity: 0; }
+}
 .cv-card-art {
   aspect-ratio: 16 / 11;
   position: relative;

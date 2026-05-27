@@ -80,9 +80,8 @@ export default function Home() {
       />
 
       <SectionHeader
-        icon={<span style={{
+        icon={<span className="odd-live-dot" style={{
           width: 8, height: 8, borderRadius: 999, background: T.danger,
-          boxShadow: `0 0 0 4px ${T.danger}33`,
         }} />}
         title="Live now"
         count={liveCount}
@@ -138,7 +137,7 @@ function SectionHeader({ icon, title, count, action, onAction }) {
 function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
   if (loading) {
     return (
-      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="odd-cardgrid" style={{ padding: '0 16px', gap: 10 }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{
             height: 168, borderRadius: 16, background: T.greenDeep,
@@ -171,9 +170,11 @@ function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
     );
   }
   return (
-    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {matches.map(m => (
-        <OddMatchCard key={m.id} match={m} picks={picks} onPick={onPick} />
+    <div className="odd-cardgrid" style={{ padding: '0 16px', gap: 10 }}>
+      {matches.map((m, i) => (
+        <div key={m.id} className="odd-rise" style={{ animationDelay: `${i * 60}ms` }}>
+          <OddMatchCard match={m} picks={picks} onPick={onPick} />
+        </div>
       ))}
     </div>
   );

@@ -131,7 +131,7 @@ export default function BetHistoryPage() {
       </div>
 
       {loading ? (
-        <div style={{ padding: '4px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
           {[0, 1].map(i => (
             <div key={i} style={{
               height: 220, borderRadius: 16, background: T.surface,
@@ -143,7 +143,7 @@ export default function BetHistoryPage() {
         openBets.length === 0 ? (
           <EmptyState icon="ticket" title="No open bets" hint="Tap odds on a match to build a slip." />
         ) : (
-          <div style={{ padding: '4px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
             {openBets.map(bet => (
               <OpenBetCard key={bet.id} bet={bet}
                 open={expanded === bet.id}
@@ -159,7 +159,7 @@ export default function BetHistoryPage() {
         history.length === 0 ? (
           <EmptyState icon="ticket" title="No bet history yet" hint="Settled bets will appear here." />
         ) : (
-          <div style={{ padding: '4px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 10 }}>
             {history.map(h => <HistoryRow key={h.id} bet={h} />)}
           </div>
         )

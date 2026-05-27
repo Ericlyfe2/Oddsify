@@ -119,7 +119,7 @@ export default function SportsPage() {
         </button>
       </div>
 
-      <div style={{ padding: '6px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="odd-cardgrid" style={{ padding: '6px 16px', gap: 10 }}>
         {loading ? (
           [0, 1, 2].map(i => (
             <div key={i} style={{

@@ -38,6 +38,7 @@ export function OddsTile({ label, value, locked = false, selected = false, onCli
   const fg = selected ? T.goldDark : (locked ? 'rgba(255,255,255,0.35)' : '#fff');
   return (
     <button onClick={onClick} disabled={locked} type="button"
+      className={selected ? 'odd-odd-pop' : undefined}
       style={{
         flex: 1, minWidth: 0, height: 52,
         background: bg, borderRadius: 10, padding: '6px 8px',
@@ -94,6 +95,8 @@ export function OddStatusChip({ kind, label }) {
     pending:  { bg: 'rgba(240, 160, 64, 0.18)', fg: '#f0a040', dot: '#f0a040' },
     rejected: { bg: 'rgba(255, 91, 120, 0.16)', fg: '#ff8095', dot: '#ff5b78' },
     won:      { bg: 'rgba(232, 185, 74, 0.18)', fg: '#f7c948', dot: '#e8b94a' },
+    completed: { bg: 'rgba(46, 207, 111, 0.16)', fg: '#5fe39a', dot: '#2ecf6f' },
+    approved:  { bg: 'rgba(46, 207, 111, 0.16)', fg: '#5fe39a', dot: '#2ecf6f' },
     live:     { bg: 'rgba(255, 91, 120, 0.16)', fg: '#ff8095', dot: '#ff5b78' },
     open:     { bg: '#e8b94a', fg: '#1a1300', dot: null },
     soon:     { bg: 'rgba(247, 201, 72, 0.18)', fg: '#f7c948', dot: '#f7c948' },
@@ -111,12 +114,11 @@ export function OddStatusChip({ kind, label }) {
       textTransform: 'uppercase',
     }}>
       {c.dot && (
-        <span style={{
+        <span className={kind === 'live' ? 'odd-live-dot' : undefined} style={{
           width: 6, height: 6, borderRadius: 999, background: c.dot,
-          boxShadow: kind === 'live' ? `0 0 0 3px ${c.dot}33` : undefined,
         }} />
       )}
-      {label || kind}
+      <span className={kind === 'live' ? 'odd-live-blink' : undefined}>{label || kind}</span>
     </span>
   );
 }
@@ -276,17 +278,18 @@ const DEFAULT_BANNERS = [
     cta: 'Enter now', tint: '#0d0c08', accent: '#d4a857', glyph: 'trophy',
   },
 ];
+const PROMO_INTERVAL = 5500;
 export function OddPromoBanner({ items = DEFAULT_BANNERS, onAction }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 5500);
+    const t = setInterval(() => setIdx(i => (i + 1) % items.length), PROMO_INTERVAL);
     return () => clearInterval(t);
   }, [items.length]);
 
   const b = items[idx];
   return (
     <div style={{ padding: '14px 16px 6px' }}>
-      <div style={{
+      <div key={b.id} className="odd-banner-slide" style={{
         position: 'relative', overflow: 'hidden',
         background: `linear-gradient(135deg, ${b.tint} 0%, ${b.tint} 60%, ${b.accent}22 100%)`,
         borderRadius: 18, padding: '18px 20px',
@@ -310,7 +313,7 @@ export function OddPromoBanner({ items = DEFAULT_BANNERS, onAction }) {
           background: `${b.accent}22`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <div style={{
+          <div className="odd-float" style={{
             width: 76, height: 76, borderRadius: 999, background: b.accent,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transform: 'rotate(-8deg)',
@@ -338,6 +341,17 @@ export function OddPromoBanner({ items = DEFAULT_BANNERS, onAction }) {
             background: b.accent, color: b.tint,
             fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer',
           }}>{b.cta} →</button>
+        </div>
+
+        {/* fill bar — sweeps left→right over the rotation interval */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, height: 3,
+          background: 'rgba(255,255,255,0.10)',
+        }}>
+          <div key={b.id} className="odd-banner-progress-fill" style={{
+            height: '100%', background: b.accent,
+            animationDuration: `${PROMO_INTERVAL}ms`,
+          }} />
         </div>
       </div>
 
@@ -425,25 +439,30 @@ export function OddLeagueRow({ leagues = DEFAULT_LEAGUES, onPick, onSeeAll }) {
         }}>See all →</button>
       </div>
       <div className="odd-pane" style={{
-        display: 'flex', gap: 10, overflowX: 'auto',
-        paddingBottom: 4, marginLeft: -2, paddingLeft: 2,
+        overflowX: 'hidden', marginLeft: -2, paddingLeft: 2,
       }}>
-        {leagues.map(l => (
-          <button key={l.id} type="button" onClick={() => onPick?.(l)} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 12px 8px 8px', borderRadius: 999,
-            background: T.surface, border: `1px solid ${T.line}`,
-            whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer',
-          }}>
-            <FlagBadge code={l.code} color={l.color} />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: T.ink, letterSpacing: -0.1 }}>
-                {l.short}
-              </span>
-              <span style={{ fontSize: 10, color: T.inkSoft }}>{l.live} live</span>
-            </div>
-          </button>
-        ))}
+        <div className="odd-league-track" style={{
+          display: 'flex', gap: 10, width: 'max-content', paddingBottom: 4,
+        }}>
+          {[...leagues, ...leagues].map((l, i) => (
+            <button key={`${l.id}-${i}`} type="button" onClick={() => onPick?.(l)}
+              aria-hidden={i >= leagues.length} tabIndex={i >= leagues.length ? -1 : 0}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px 8px 8px', borderRadius: 999,
+                background: T.surface, border: `1px solid ${T.line}`,
+                whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer',
+              }}>
+              <FlagBadge code={l.code} color={l.color} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: T.ink, letterSpacing: -0.1 }}>
+                  {l.short}
+                </span>
+                <span style={{ fontSize: 10, color: T.inkSoft }}>{l.live} live</span>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

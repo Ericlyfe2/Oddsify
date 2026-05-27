@@ -12,32 +12,51 @@ import {
   OddPageHeader, OddStatusChip, OddIcon,
 } from '../components/odd/primitives.jsx';
 
+/**
+ * Per-kind metadata. `dir` (+1 in / −1 out) drives the displayed sign because
+ * the server stores some outflows as positive amounts (notably `withdraw`),
+ * so we can't trust `amount > 0`. `cat` powers the filter pills.
+ */
+const KIND_META = {
+  deposit:           { label: 'Deposit',       cat: 'dep', dir: +1, icon: 'deposit' },
+  withdraw:          { label: 'Withdrawal',     cat: 'wdl', dir: -1, icon: 'upload'  },
+  withdrawal:        { label: 'Withdrawal',     cat: 'wdl', dir: -1, icon: 'upload'  },
+  bet_placed:        { label: 'Stake',          cat: 'stk', dir: -1, icon: 'ticket'  },
+  jackpot_entry:     { label: 'Jackpot entry',  cat: 'stk', dir: -1, icon: 'ticket'  },
+  bet_won:           { label: 'Payout',         cat: 'pay', dir: +1, icon: 'trophy'  },
+  cash_out:          { label: 'Cash-out',       cat: 'pay', dir: +1, icon: 'refresh' },
+  cash_out_partial:  { label: 'Cash-out',       cat: 'pay', dir: +1, icon: 'refresh' },
+  bet_void_refund:   { label: 'Refund',         cat: 'pay', dir: +1, icon: 'refresh' },
+  bet_cancel_refund: { label: 'Refund',         cat: 'pay', dir: +1, icon: 'refresh' },
+};
+
+/** Map a raw server/cache tx onto the shape the row + filters need. */
+function normalizeTx(t) {
+  const rawKind = t.kind || t.type || '';
+  const meta = KIND_META[rawKind];
+  const magnitude = Math.abs(Number(t.amount || 0));
+  // Known kinds use their metadata direction; unknown kinds fall back to the
+  // stored sign so future tx types still render with a sensible +/−.
+  const dir = meta ? meta.dir : (Number(t.amount || 0) < 0 ? -1 : +1);
+  return {
+    id: t.id || `${rawKind}-${t.at || t.createdAt || ''}`,
+    label: meta?.label || rawKind || 'Transaction',
+    cat: meta?.cat || 'other',
+    icon: meta?.icon || (dir > 0 ? 'deposit' : 'upload'),
+    isIn: dir > 0,
+    magnitude,
+    status: t.status || 'completed',
+    date: t.at || t.completedAt || t.createdAt || t.date || '',
+  };
+}
+
 const FILTERS = [
-  { id: 'all', label: 'All', match: () => true },
-  { id: 'dep', label: 'Deposits',    match: (t) => t.type === 'deposit' || t.kind === 'Deposit' },
-  { id: 'wdl', label: 'Withdrawals', match: (t) => t.type === 'withdraw' || t.type === 'withdrawal' || t.kind === 'Withdraw' || t.kind === 'Withdrawal' },
-  { id: 'stk', label: 'Stakes',      match: (t) => t.type === 'bet_placed' || t.kind === 'Stake' },
-  { id: 'pay', label: 'Payouts',     match: (t) => t.type === 'bet_won' || t.type === 'cash_out' || t.kind === 'Payout' },
+  { id: 'all', label: 'All',         cats: null },
+  { id: 'dep', label: 'Deposits',    cats: ['dep'] },
+  { id: 'wdl', label: 'Withdrawals', cats: ['wdl'] },
+  { id: 'stk', label: 'Stakes',      cats: ['stk'] },
+  { id: 'pay', label: 'Payouts',     cats: ['pay'] },
 ];
-
-const TX_LABEL = {
-  deposit:       'Deposit',
-  withdraw:      'Withdrawal',
-  withdrawal:    'Withdrawal',
-  bet_placed:    'Stake',
-  bet_won:       'Payout',
-  bet_lost:      'Bet lost',
-  cash_out:      'Cash-out',
-  jackpot_entry: 'Jackpot entry',
-};
-
-const ICON_MAP = {
-  Deposit: 'deposit',
-  Withdrawal: 'upload',
-  Stake: 'ticket',
-  Payout: 'trophy',
-  Cashout: 'refresh',
-};
 
 function fmtDateTime(iso) {
   if (!iso) return '';
@@ -65,10 +84,11 @@ export default function WalletPage() {
     return () => { alive = false; };
   }, [account]);
 
+  const normalized = useMemo(() => txs.map(normalizeTx), [txs]);
   const filtered = useMemo(() => {
     const f = FILTERS.find(x => x.id === filterId) || FILTERS[0];
-    return txs.filter(f.match);
-  }, [txs, filterId]);
+    return f.cats ? normalized.filter(t => f.cats.includes(t.cat)) : normalized;
+  }, [normalized, filterId]);
 
   if (!account) {
     return (
@@ -120,10 +140,7 @@ export default function WalletPage() {
         })}
       </div>
 
-      <div style={{
-        padding: '14px 16px',
-        display: 'flex', flexDirection: 'column', gap: 8,
-      }}>
+      <div className="odd-cardgrid" style={{ padding: '14px 16px', gap: 8 }}>
         {loading ? (
           [0, 1, 2, 3].map(i => (
             <div key={i} style={{
@@ -140,7 +157,7 @@ export default function WalletPage() {
             No transactions to show.
           </div>
         ) : (
-          filtered.map(t => <TxRow key={t.id || `${t.type}-${t.createdAt}`} tx={t} />)
+          filtered.map(t => <TxRow key={t.id} tx={t} />)
         )}
       </div>
     </div>
@@ -148,12 +165,7 @@ export default function WalletPage() {
 }
 
 function TxRow({ tx }) {
-  const amount = Number(tx.amount || 0);
-  const isIn = amount > 0;
-  const labelRaw = TX_LABEL[tx.type] || tx.kind || tx.type || 'Transaction';
-  const iconName = ICON_MAP[labelRaw] || (isIn ? 'deposit' : 'upload');
-  const status = tx.status || (tx.completedAt ? 'won' : 'pending');
-  const date = tx.completedAt || tx.createdAt || tx.date;
+  const { isIn, label: labelRaw, icon: iconName, status, date, magnitude } = tx;
 
   return (
     <div style={{
@@ -182,7 +194,7 @@ function TxRow({ tx }) {
       <div style={{
         fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
         color: isIn ? T.greenBright : T.danger,
-      }}>{isIn ? '+' : '−'} GHS {fmtCedi(amount)}</div>
+      }}>{isIn ? '+' : '−'} GHS {fmtCedi(magnitude)}</div>
     </div>
   );
 }

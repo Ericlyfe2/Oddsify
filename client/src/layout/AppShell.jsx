@@ -18,24 +18,23 @@ import { Outlet } from 'react-router-dom';
 import SlipProvider from '../providers/SlipProvider.jsx';
 import OddBottomNav from '../components/odd/BottomNav.jsx';
 import { OddBetSlipFAB, OddBetSlip } from '../components/odd/BetSlip.jsx';
+import { OddSupportBubble, OddWithdrawNotices } from '../components/odd/Ambient.jsx';
 export { useAccount, useToast } from '../providers/AccountProvider.jsx';
 
 export default function AppShell() {
   return (
     <SlipProvider>
-      <div style={{
+      <div className="odd-shell" style={{
         background: 'var(--bg)',
         minHeight: '100vh',
-        // Center on wide viewports so the mobile-first layout doesn't sprawl
-        // to 2000px on a desktop monitor.
-        maxWidth: 560, marginLeft: 'auto', marginRight: 'auto',
-        position: 'relative',
       }}>
         <Outlet />
       </div>
       <OddBetSlipFAB />
       <OddBetSlip />
       <OddBottomNav />
+      <OddSupportBubble />
+      <OddWithdrawNotices />
     </SlipProvider>
   );
 }
