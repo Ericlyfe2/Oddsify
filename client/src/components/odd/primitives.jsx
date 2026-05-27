@@ -423,6 +423,15 @@ const DEFAULT_LEAGUES = [
   { id: 'por', name: 'Portugal · Primeira', short: 'Portugal', code: 'POR', color: '#006a44', live: 6 },
 ];
 export function OddLeagueRow({ leagues = DEFAULT_LEAGUES, onPick, onSeeAll }) {
+  // Seamless marquee: repeat the base list until one "set" comfortably exceeds
+  // the widest container (~1040px laptop shell), then render the set twice so
+  // the 0 → -50% loop wraps with no empty gap. Uniform per-chip marginRight
+  // (not flex gap) keeps the pattern perfectly periodic across the seam.
+  const base = leagues && leagues.length ? leagues : DEFAULT_LEAGUES;
+  const reps = Math.max(2, Math.ceil(12 / base.length));
+  const oneSet = Array.from({ length: reps }, () => base).flat();
+  const loop = [...oneSet, ...oneSet];
+
   return (
     <div style={{ padding: '0 16px 12px' }}>
       <div style={{
@@ -442,16 +451,17 @@ export function OddLeagueRow({ leagues = DEFAULT_LEAGUES, onPick, onSeeAll }) {
         overflowX: 'hidden', marginLeft: -2, paddingLeft: 2,
       }}>
         <div className="odd-league-track" style={{
-          display: 'flex', gap: 10, width: 'max-content', paddingBottom: 4,
+          display: 'flex', width: 'max-content', paddingBottom: 4,
         }}>
-          {[...leagues, ...leagues].map((l, i) => (
+          {loop.map((l, i) => (
             <button key={`${l.id}-${i}`} type="button" onClick={() => onPick?.(l)}
-              aria-hidden={i >= leagues.length} tabIndex={i >= leagues.length ? -1 : 0}
+              aria-hidden={i >= base.length} tabIndex={i >= base.length ? -1 : 0}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '8px 12px 8px 8px', borderRadius: 999,
                 background: T.surface, border: `1px solid ${T.line}`,
                 whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer',
+                marginRight: 10,
               }}>
               <FlagBadge code={l.code} color={l.color} />
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
