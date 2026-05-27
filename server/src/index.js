@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 
 import { isProd, PORT, GOOGLE, SMTP, CORS_ORIGINS, CORS_ALLOW_VERCEL } from './config/env.js';
 import { buildOriginAllowlist } from './utils/corsOrigin.js';
-import { generalLimiter } from './middleware/rateLimit.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { log } from './utils/logger.js';
 import { metricsMiddleware } from './services/metrics.js';
@@ -68,7 +67,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '256kb' }));
 app.use(metricsMiddleware);
-app.use(generalLimiter);
 
 app.get('/api/health', (_req, res) => {
   res.json({
