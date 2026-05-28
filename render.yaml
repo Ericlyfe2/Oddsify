@@ -32,3 +32,7 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: RAPIDAPI_FOOTBALL_KEY
+        sync: false
+      - key: RAPIDAPI_FOOTBALL_HOST
+        value: free-api-live-football-data.p.rapidapi.com
