@@ -346,3 +346,11 @@ export async function startLiveTrack() {
 export function stopLiveTrack() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
 }
+
+/**
+ * Number of fixtures currently tracked as live by the aggregator.
+ * Backed by the existing `liveLastByKey` Map; read by /api/stats/public.
+ */
+export function getLiveCount() {
+  return liveLastByKey.size;
+}
