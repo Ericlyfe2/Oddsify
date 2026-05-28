@@ -28,7 +28,8 @@ function relativeKickoff(timeStr, day) {
     if (ms < 60_000)          return 'in <1m';
     if (ms < 60 * 60_000)     return `in ${Math.floor(ms / 60_000)}m`;
     const h = Math.floor(ms / (60 * 60_000));
-    return `Today ${timeStr}`;
+    const rem = Math.floor((ms % (60 * 60_000)) / 60_000);
+    return `in ${h}h ${rem}m`;
   }
   return `${day || ''} ${timeStr}`.trim();
 }
