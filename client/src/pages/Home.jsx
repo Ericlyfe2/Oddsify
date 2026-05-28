@@ -15,9 +15,10 @@ import { useAccount } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import {
   T,
-  OddTopHeader, OddPayoutTicker, OddPromoBanner, OddCategoryGrid,
+  OddTopHeader, OddPromoBanner, OddCategoryGrid,
   OddLeagueRow, OddMatchCard, OddsifyWordmark, OddIcon,
 } from '../components/odd/primitives.jsx';
+import WinnerTicker from '../components/odd/WinnerTicker.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';
 
 export default function Home() {
@@ -67,7 +68,7 @@ export default function Home() {
         onSearch={() => navigate('/sports')}
         onBalanceClick={() => openDeposit()}
       />
-      <OddPayoutTicker />
+      <WinnerTicker />
       <OddPromoBanner onAction={() => navigate('/promos')} />
       <OddCategoryGrid
         liveCount={liveCount}

@@ -224,38 +224,9 @@ export function OddTopHeader({ user, onAuth, onSearch, onBalanceClick }) {
   );
 }
 
-/* ─── Payout marquee — auto-scrolling ticker of recent payouts ─ */
-const TICKER_ITEMS = [
-  'Kwame J. withdrew GHS 4,820',
-  'Ama O. won GHS 12,500 on a 6-fold',
-  'Yaw M. cashed out GHS 920',
-  'Esi A. withdrew GHS 8,400',
-  'Kojo D. won GHS 32,090',
-];
-export function OddPayoutTicker({ items = TICKER_ITEMS }) {
-  return (
-    <div style={{
-      background: T.greenMid, color: '#dff3e3',
-      padding: '8px 0', overflow: 'hidden',
-      fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-      fontSize: 11, letterSpacing: 0.3,
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-    }}>
-      <div style={{
-        display: 'flex', gap: 48, whiteSpace: 'nowrap',
-        animation: 'odd-marquee 40s linear infinite', paddingLeft: '100%',
-      }}>
-        {[...items, ...items].map((s, i) => (
-          <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: T.greenBright }} />
-            <span style={{ opacity: 0.7 }}>FAST PAYOUTS</span>
-            <span style={{ color: '#fff' }}>{s}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
+/* ─── Payout marquee — deprecated alias, prefer WinnerTicker.
+   Kept for one release so any external import path keeps working. ─ */
+export { default as OddPayoutTicker } from './WinnerTicker.jsx';
 
 /* ─── Promo banner carousel ───────────────────────────────── */
 const DEFAULT_BANNERS = [
