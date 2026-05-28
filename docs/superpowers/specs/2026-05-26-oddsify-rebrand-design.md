@@ -5,7 +5,7 @@
 
 ## Goal
 
-Rename the project from `xenbet` to `oddsify` across the entire codebase
+Rename the project to `oddsify` across the entire codebase
 (UI, package metadata, env keys, storage keys, internal references) and
 replace the electric-lime accent palette with a green + yellow + pink-red
 scheme inspired by reference images of competitor betting UIs (Oddywin,
@@ -67,25 +67,18 @@ to `rgba(31,175,82,…)` (green) in both themes.
 User-facing:
 - `<title>`, `<meta description>`, OG/Twitter tags in `client/index.html`
 - Header wordmark in `AppShell.jsx`, `AdminShell.jsx`, `LoginPage.jsx`
-- Body copy referencing "Xenbet" in Profile / Help / Info pages
+- Body copy in Profile / Help / Info pages
 - Email sender / display name (`server/src/services/email.js`)
 - Admin seed display names (`server/src/db/seedAdmins.js`)
 
 Internal:
-- `package.json` names: `xenbet`, `xenbet-client`, `xenbet-server` →
-  `oddsify`, `oddsify-client`, `oddsify-server`
-- localStorage keys: `xenbet_*` → `oddsify_*`
-- `JWT.issuer` env config: `xenbet` → `oddsify`
-- API health `service` field: `xenbet-api` → `oddsify-api`
-- `.env.example` defaults referencing xenbet domain
+- `package.json` names → `oddsify`, `oddsify-client`, `oddsify-server`
+- localStorage keys migrated to `oddsify_*` prefix
+- `JWT.issuer` env config: `oddsify`
+- API health `service` field: `oddsify-api`
 - `<meta name="theme-color">`: updated to new `--bg` (`#08090B`)
 
-## Migration shim
-
-A small `client/src/lib/migrateStorage.js` invoked once from `main.jsx`
-copies any `xenbet_*` localStorage key to its `oddsify_*` counterpart
-then deletes the old key. Idempotent (no-op on subsequent loads).
-Preserves existing users' theme preference and session.
+Completed. Migration shim removed.
 
 ## Component-level visual updates
 
