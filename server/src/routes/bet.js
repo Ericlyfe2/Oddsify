@@ -20,6 +20,7 @@ import {
 } from '../db/sportsAdmin.js';
 import { listActivePromotions } from '../db/promotions.js';
 import { oddsApiStatus } from '../services/oddsApi.js';
+import { getRecentWins } from '../services/recentWins.js';
 import { createStore } from '../db/store.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -205,6 +206,14 @@ router.get('/code/:code', (req, res, next) => {
   if (!bet) return next(notFound('Booking code not found'));
   const { userId, ...publicBet } = bet;
   res.json({ bet: publicBet });
+});
+
+/**
+ * Public ticker feed — up to 15 recent winning bets, real-first with
+ * synthetic backfill so the homepage band always feels active.
+ */
+router.get('/recent-wins', (_req, res) => {
+  res.json(getRecentWins());
 });
 
 router.post('/place',
