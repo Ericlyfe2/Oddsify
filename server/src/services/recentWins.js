@@ -82,7 +82,7 @@ function getRealWins(now) {
     wins.push({
       id: `wt-real-${bet.id}`,
       phoneMasked: maskPhone(user.phone),
-      amountGhs: Math.floor(Number(bet.payout) || 0),
+      amountGhs: Math.floor(Number(bet.settledPayout ?? bet.potentialWin) || 0),
       betType: (bet.picks?.length || 1) > 1 ? 'multi' : 'single',
       legs: bet.picks?.length || 1,
       oddsTotal: Math.round((Number(bet.totalOdds) || 0) * 100) / 100,
