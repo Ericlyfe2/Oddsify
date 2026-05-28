@@ -16,6 +16,7 @@ import betRouter     from './routes/bet.js';
 import walletRouter  from './routes/wallet.js';
 import profileRouter from './routes/profile.js';
 import supportRouter from './routes/support.js';
+import statsRouter   from './routes/stats.js';
 import adminAuthRouter      from './routes/admin/auth.js';
 import adminDashboardRouter from './routes/admin/dashboard.js';
 import adminUsersRouter     from './routes/admin/users.js';
@@ -89,6 +90,7 @@ app.use('/api/bet',      betRouter);
 app.use('/api/wallet',   walletRouter);
 app.use('/api/profile',  profileRouter);
 app.use('/api/support',  supportRouter);
+app.use('/api/stats',    statsRouter);
 
 app.use('/api/admin/auth',          adminAuthRouter);
 app.use('/api/admin/dashboard',     adminDashboardRouter);
