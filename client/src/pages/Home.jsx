@@ -19,6 +19,7 @@ import {
   OddLeagueRow, OddMatchCard, OddsifyWordmark, OddIcon,
 } from '../components/odd/primitives.jsx';
 import WinnerTicker from '../components/odd/WinnerTicker.jsx';
+import StatsStrip   from '../components/odd/StatsStrip.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';
 
 export default function Home() {
@@ -99,6 +100,8 @@ export default function Home() {
       <MatchList loading={loading} err={err} matches={upcoming}
         picks={picks} onPick={togglePick}
         emptyLabel="Nothing scheduled yet." />
+
+      <StatsStrip />
 
       <div style={{ padding: '24px 16px 60px', textAlign: 'center' }}>
         <OddsifyWordmark size={18} color={T.ink} accent={T.greenBright} />
