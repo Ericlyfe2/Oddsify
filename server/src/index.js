@@ -62,7 +62,8 @@ const isAllowedOrigin = buildOriginAllowlist({
 app.use(cors({
   origin: (origin, cb) => {
     if (isAllowedOrigin(origin)) return cb(null, true);
-    return cb(new Error(`CORS: origin ${origin} not allowed`));
+    log.warn(`CORS: rejecting origin ${origin}. Add it to CORS_ORIGIN if it's a legitimate frontend.`);
+    return cb(null, false);
   },
   credentials: true,
 }));
