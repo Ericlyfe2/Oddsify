@@ -11,6 +11,7 @@ import { SportMonksProvider }      from '../providers/sportMonks.js';
 import { SharpApiProvider }        from '../providers/sharpApi.js';
 import { SportsGameOddsProvider }  from '../providers/sportsGameOdds.js';
 import { FootballDataOrgProvider } from '../providers/footballDataOrg.js';
+import { RapidApiFootballProvider } from '../providers/rapidApiFootball.js';
 
 const env = process.env;
 
@@ -24,6 +25,7 @@ const _providers = [
   new SharpApiProvider(env.SHARPAPI_KEY || ''),
   new SportsGameOddsProvider(env.SPORTSGAMEODDS_KEY || ''),
   new FootballDataOrgProvider(env.FOOTBALL_DATA_TOKEN || ''),
+  new RapidApiFootballProvider(env.RAPIDAPI_FOOTBALL_KEY || '', env.RAPIDAPI_FOOTBALL_HOST || 'free-api-live-football-data.p.rapidapi.com'),
 ];
 
 export function listProviders() { return _providers; }
