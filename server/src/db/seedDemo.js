@@ -12,8 +12,8 @@ import { log } from '../utils/logger.js';
 const betsStore = createStore('bets', {});
 const txStore   = createStore('transactions', {});
 
-const FIRST = ['Akua', 'Kwame', 'Yaw', 'Esi', 'Kojo', 'Ama', 'Kofi', 'Adwoa', 'Fiifi', 'Abena', 'Selasi', 'Mawuli', 'Dela', 'Naa', 'Nana', 'Kwabena', 'Kweku', 'Sefa', 'Efua', 'Kobby'];
-const LAST  = ['Mensah', 'Owusu', 'Asare', 'Boateng', 'Appiah', 'Adjei', 'Annan', 'Tetteh', 'Quartey', 'Ofori', 'Sarpong', 'Yeboah', 'Frimpong', 'Otoo', 'Mireku', 'Dadzie', 'Acheampong', 'Nkrumah'];
+export const FIRST = ['Akua', 'Kwame', 'Yaw', 'Esi', 'Kojo', 'Ama', 'Kofi', 'Adwoa', 'Fiifi', 'Abena', 'Selasi', 'Mawuli', 'Dela', 'Naa', 'Nana', 'Kwabena', 'Kweku', 'Sefa', 'Efua', 'Kobby'];
+export const LAST  = ['Mensah', 'Owusu', 'Asare', 'Boateng', 'Appiah', 'Adjei', 'Annan', 'Tetteh', 'Quartey', 'Ofori', 'Sarpong', 'Yeboah', 'Frimpong', 'Otoo', 'Mireku', 'Dadzie', 'Acheampong', 'Nkrumah'];
 const TAGS  = ['VIP', 'HighRoller', 'NewSignup', 'BonusAbuse?', 'Retention', 'Promo'];
 const STATUSES = ['open', 'open', 'won', 'lost', 'won', 'lost', 'void', 'cashed_out'];
 const KYC = ['unverified', 'pending', 'verified', 'verified', 'verified', 'rejected'];
