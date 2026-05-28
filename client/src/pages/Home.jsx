@@ -56,7 +56,8 @@ export default function Home() {
   const upcoming    = useMemo(() => matches.filter(m => !m.isLive).slice(0, 6), [matches]);
   const liveCount   = liveMatches.length;
 
-  const onAuth = (mode) => navigate(mode === 'signup' ? '/login?next=/wallet' : '/login');
+  // Both land on Home after auth (no forced ?next). Open the matching tab.
+  const onAuth = (mode) => navigate(mode === 'signup' ? '/login?mode=register' : '/login');
 
   return (
     <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
