@@ -33,13 +33,22 @@ function formatAmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Mask a Ghana-style number for display: "+233551234567" → "+233 55****567".
-// For non-phone fallbacks (email, short strings) the input is returned as-is.
+// Display-format a Ghana phone with the middle digits masked. Examples:
+//   "+233551234567" → "+233 55****567"
+//   "0551234567"    → "055****567"
+// Anything that doesn't match a known phone shape (emails, blanks, unknown
+// formats) is returned unchanged — callers should fall back to a separate
+// placeholder rather than letting this helper invent masking.
 function maskPhone(s) {
   const str = String(s || '').replace(/\s/g, '');
-  if (!str) return 'Account phone';
-  if (str.length < 10) return str;
-  return `${str.slice(0, 4)} ${str.slice(4, 6)}****${str.slice(-3)}`;
+  if (!str) return '';
+  if (/^\+233\d{9}$/.test(str)) {
+    return `+233 ${str.slice(4, 6)}****${str.slice(-3)}`;
+  }
+  if (/^0\d{9}$/.test(str)) {
+    return `${str.slice(0, 3)}****${str.slice(-3)}`;
+  }
+  return str;
 }
 
 export default function AppProviders({ children }) {
