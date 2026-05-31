@@ -390,8 +390,9 @@ export default function AppProviders({ children }) {
           {(() => {
             const amtNum = parseFloat(String(depositAmt).replace(/,/g, '')) || 0;
             const canSubmit = amtNum >= MIN_DEPOSIT && amtNum <= MAX_DEPOSIT && !busy;
-            const accountPhone = account?.phone || account?.email || '';
-            const maskedPhone = maskPhone(accountPhone);
+            const accountIdentifier = account?.phone || account?.email || '';
+            const maskedIdentifier = maskPhone(accountIdentifier);
+            const identifierLabel = account?.phone ? 'Account phone' : 'Account';
             const closeDlg = () => { try { depositDlg.current?.close(); } catch { /* ignore */ } };
             const selectMethod = (m) => { setErr(''); setDepositMethod(m); };
 
@@ -414,7 +415,6 @@ export default function AppProviders({ children }) {
                       type="button"
                       role="radio"
                       aria-checked={depositMethod === 'paystack'}
-                      aria-selected={depositMethod === 'paystack'}
                       className="dep-tile"
                       onClick={() => selectMethod('paystack')}
                     >
@@ -432,7 +432,6 @@ export default function AppProviders({ children }) {
                       type="button"
                       role="radio"
                       aria-checked={depositMethod === 'paybill'}
-                      aria-selected={depositMethod === 'paybill'}
                       className="dep-tile"
                       onClick={() => selectMethod('paybill')}
                     >
@@ -455,8 +454,8 @@ export default function AppProviders({ children }) {
                         <line x1="12" y1="18" x2="12.01" y2="18" />
                       </svg>
                     </div>
-                    <div className="dep-account-text">{maskedPhone}</div>
-                    <div className="dep-account-label">Account phone</div>
+                    <div className="dep-account-text">{maskedIdentifier}</div>
+                    <div className="dep-account-label">{identifierLabel}</div>
                   </div>
 
                   <div className="dep-balance-row">
@@ -506,7 +505,7 @@ export default function AppProviders({ children }) {
 
                       <ol className="dep-rules">
                         <li>Maximum per transaction is GHS {MAX_DEPOSIT.toLocaleString('en-US')}.00</li>
-                        <li>Minimum per transaction is {MIN_DEPOSIT}.00</li>
+                        <li>Minimum per transaction is GHS {MIN_DEPOSIT}.00</li>
                         <li>Deposit is free, no transaction fees.</li>
                         <li>Your balance can only be withdrawn to the mobile number that&rsquo;s registered with.</li>
                       </ol>

@@ -3315,7 +3315,7 @@ nav a:active { transform: scale(.96); }
   transition: background 120ms ease, border-color 120ms ease;
 }
 .dep-tile:hover { border-color: var(--line-strong); }
-.dep-tile[aria-selected="true"] {
+.dep-tile[aria-checked="true"] {
   border-color: var(--accent);
   background: var(--surface-2);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
