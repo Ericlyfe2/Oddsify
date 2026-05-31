@@ -591,6 +591,9 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
           {(detail?.emailVerified ?? user.emailVerified)
             ? <button className="adm-btn ghost" onClick={() => doStatus('unverify')}><IconBan size={14} /> Revoke verification</button>
             : <button className="adm-btn success" onClick={() => doStatus('verify')}><IconCheck size={14} /> Verify user</button>}
+          {(detail?.verified ?? user.verified)
+            ? <button className="adm-btn ghost" onClick={() => doStatus('verified_unverify')}><IconBan size={14} /> Revoke deposit verification</button>
+            : <button className="adm-btn success" onClick={() => doStatus('verified_user')}><IconCheck size={14} /> Verify deposits</button>}
           {hasRole('finance_admin') && (
             <button className="adm-btn" onClick={() => setWalletOpen(true)}><IconCash size={14} /> Adjust wallet</button>
           )}
@@ -863,6 +866,12 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
             <dt>Last login</dt><dd>{lastLogin ? `${dateShort(lastLogin.at)} · ${ago(lastLogin.at)}${lastLogin.ip ? ` · ${lastLogin.ip}` : ''}` : '—'}</dd>
             <dt>Last logout</dt><dd>{lastLogout ? `${dateShort(lastLogout.at)} · ${ago(lastLogout.at)}${lastLogout.ip ? ` · ${lastLogout.ip}` : ''}` : '—'}</dd>
             <dt>Last update</dt><dd>{dateShort(user.updatedAt)}</dd>
+            <dt>Deposit verification</dt>
+            <dd>
+              {user.verified
+                ? <><Badge tone="success">Verified</Badge>{user.verifiedAt ? ` · ${dateShort(user.verifiedAt)}` : ''}{user.verifiedBy ? ` · by ${user.verifiedBy}` : ''}</>
+                : <Badge tone="warn">Unverified</Badge>}
+            </dd>
             <dt>2FA</dt><dd>{user.twoFactorEnabled ? <Badge tone="success">Enabled</Badge> : <Badge>Off</Badge>}</dd>
           </dl>
         </div>

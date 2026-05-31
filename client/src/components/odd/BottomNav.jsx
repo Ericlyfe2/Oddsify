@@ -7,6 +7,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { T } from './tokens.js';
 import OddIcon from './Icon.jsx';
+import { useTheme } from '../../providers/ThemeProvider.jsx';
 import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
 
@@ -28,12 +29,13 @@ export default function OddBottomNav() {
   const navigate = useNavigate();
   const { open: slipOpen } = useSlip();
   const { account } = useAccount();
+  const { theme, toggleTheme } = useTheme();
   if (slipOpen) return null;
 
   return (
     <div style={{
       position: 'fixed', left: 0, right: 0, bottom: 0,
-      paddingBottom: 28,
+      paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
       background: 'linear-gradient(to top, rgba(10, 10, 10, 0.96) 70%, rgba(10, 10, 10, 0))',
       pointerEvents: 'none', zIndex: 70,
     }}>
@@ -45,7 +47,24 @@ export default function OddBottomNav() {
         boxShadow: '0 18px 40px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4)',
         pointerEvents: 'auto',
         maxWidth: 560, marginLeft: 'auto', marginRight: 'auto',
+        position: 'relative',
       }}>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          style={{
+            position: 'absolute', top: -32, right: 4,
+            width: 28, height: 28, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            cursor: 'pointer', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <span style={{ fontSize: 14, lineHeight: 1 }}>{theme === 'dark' ? '☀' : '☾'}</span>
+        </button>
         {ITEMS.map(item => {
           const active = isActive(loc.pathname, item.to);
           const isAccount = item.id === 'me';

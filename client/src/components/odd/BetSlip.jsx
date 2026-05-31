@@ -13,6 +13,7 @@
 import { useMemo, useState } from 'react';
 import { T, fmtCedi } from './tokens.js';
 import OddIcon from './Icon.jsx';
+import { TeamLogo } from './teamBranding.jsx';
 import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
 
@@ -200,8 +201,12 @@ export function OddBetSlip() {
                           : e.key === '2' ? `${e.match.away} to win`
                           : 'Draw'}
                       </div>
-                      <div style={{ fontSize: 11, color: T.inkDim, letterSpacing: -0.1 }}>
-                        {e.match.home} vs {e.match.away}
+                      <div style={{ fontSize: 11, color: T.inkDim, letterSpacing: -0.1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <TeamLogo name={e.match.home} size={14} />
+                        {e.match.home}
+                        <span style={{ opacity: 0.4 }}>vs</span>
+                        <TeamLogo name={e.match.away} size={14} />
+                        {e.match.away}
                       </div>
                     </div>
                   </div>

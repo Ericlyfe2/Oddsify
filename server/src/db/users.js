@@ -36,6 +36,10 @@ export function createUser(record) {
     googleId: record.googleId || null,
     picture: record.picture || null,
     twoFactorEnabled: false,
+    verified: false,
+    verifiedAt: null,
+    verifiedBy: null,
+    verificationHistory: [],
     activity: [],
   };
   users.set(id, user);

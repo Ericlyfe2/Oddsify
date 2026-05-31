@@ -87,6 +87,19 @@ router.post('/:id/approve',
       autoUnblocked = true;
     }
 
+    // Auto-verify: a single deposit of GHS 1,000+ in one transaction.
+    let autoVerified = false;
+    if (!user.verified && amount >= 1000) {
+      patch.verified = true;
+      patch.verifiedAt = new Date().toISOString();
+      patch.verifiedBy = 'system:deposit-approval';
+      patch.verificationHistory = [
+        ...(user.verificationHistory || []),
+        { at: patch.verifiedAt, by: patch.verifiedBy, reason: `Single deposit of GHS ${amount}`, method: 'auto' },
+      ];
+      autoVerified = true;
+    }
+
     const updated = updateUser(foundUserId, patch);
 
     const userTxs = txStore.get(foundUserId) || [];
@@ -104,18 +117,18 @@ router.post('/:id/approve',
     });
     emitAdmin('deposit:approved', { userId: foundUserId, amount, transactionId: txId, approvedBy: req.admin?.email });
 
-    if (autoPromoted) {
-      logActivity(foundUserId, {
-        kind: 'stage_auto_promoted', from: promotedFrom, to: promotedTo,
-        trigger: 'deposit_approval', singleDeposit: amount, totalDeposited: newTotal,
-      });
+    if (autoVerified) {
+      logActivity(foundUserId, { kind: 'auto_verified', trigger: 'deposit_approval', singleDeposit: amount });
       recordAudit({
-        actorId: null, action: 'user.stage.auto_promote', target: foundUserId, targetType: 'user',
-        severity: promotedTo === 3 ? 'warning' : 'info',
-        meta: { from: promotedFrom, to: promotedTo, singleDeposit: amount, totalDeposited: newTotal, threshold: STAGE_PROMOTE_THRESHOLD, trigger: 'deposit_approval', ...(promotedTo === 3 ? { autoBlocked: true } : {}) },
+        actorId: null, action: 'user.auto_verified', target: foundUserId, targetType: 'user',
+        severity: 'info',
+        meta: { singleDeposit: amount, threshold: 1000, trigger: 'deposit_approval' },
       });
-      emitToUser(foundUserId, 'stage:promoted', { stage: promotedTo });
+      emitToUser(foundUserId, 'account:verified', { verified: true, method: 'auto' });
+      emitAdmin('user:verified', { userId: foundUserId, verified: true, method: 'auto', amount });
     }
+
+    if (autoPromoted) {
     if (autoUnblocked) {
       logActivity(foundUserId, { kind: 'stage3_auto_unblocked', trigger: 'deposit_approval', singleDeposit: amount, threshold: STAGE3_UNBLOCK_THRESHOLD });
       recordAudit({

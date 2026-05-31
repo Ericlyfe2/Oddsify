@@ -24,6 +24,8 @@ export function ThemeProvider({ children }) {
     if (typeof document === 'undefined') return;
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === 'dark' ? '#000000' : '#f4f1e8';
   }, [theme]);
 
   const setTheme = useCallback((t) => {

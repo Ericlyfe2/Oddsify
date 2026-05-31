@@ -137,6 +137,21 @@ export default function ProfilePage() {
                   fontSize: 11, color: T.greenBright, fontWeight: 600, marginTop: 2,
                 }}>Bonus GHS {fmtCedi(bonus)} · expires in 6 days</div>
               )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 8px', borderRadius: 999,
+                  fontSize: 10, fontWeight: 700, letterSpacing: 0.3,
+                  background: account.verified ? 'rgba(24,240,161,0.15)' : 'rgba(255,181,71,0.15)',
+                  color: account.verified ? '#18f0a1' : '#ffb547',
+                }}>
+                  <span style={{
+                    width: 5, height: 5, borderRadius: '50%',
+                    background: account.verified ? '#18f0a1' : '#ffb547',
+                  }} />
+                  {account.verified ? 'Verified' : 'Unverified'}
+                </span>
+              </div>
             </div>
             <button type="button" aria-label="Toggle balance visibility" style={{
               width: 38, height: 38, borderRadius: 12,

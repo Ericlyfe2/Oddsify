@@ -108,7 +108,7 @@ router.get('/:id/transactions', requireAdmin, (req, res) => {
 router.patch('/:id/status',
   requireAdmin, requireRole('moderator'),
   validate(z.object({
-    action: z.enum(['suspend', 'unsuspend', 'verify', 'unverify']),
+    action: z.enum(['suspend', 'unsuspend', 'verify', 'unverify', 'verified_user', 'verified_unverify']),
     reason: z.string().max(500).optional(),
   })),
   asyncHandler(async (req, res) => {
@@ -120,6 +120,26 @@ router.patch('/:id/status',
     if (action === 'unsuspend') patch = { suspended: false };
     if (action === 'verify')    patch = { emailVerified: true };
     if (action === 'unverify')  patch = { emailVerified: false };
+    if (action === 'verified_user') {
+      patch = {
+        verified: true,
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: req.admin?.email || req.admin?.id || 'admin',
+        verificationHistory: [
+          ...(u.verificationHistory || []),
+          { at: new Date().toISOString(), by: req.admin?.email || req.admin?.id || 'admin', reason: reason || 'Manual verification by admin', method: 'admin' },
+        ],
+      };
+    }
+    if (action === 'verified_unverify') {
+      patch = {
+        verified: false,
+        verificationHistory: [
+          ...(u.verificationHistory || []),
+          { at: new Date().toISOString(), by: req.admin?.email || req.admin?.id || 'admin', reason: reason || 'Verification removed by admin', method: 'admin' },
+        ],
+      };
+    }
     const next = updateUser(u.id, patch);
     if (action === 'suspend') revokeAllForAccount(u.id);
     audit(req, { action: `user.${action}`, target: u.id, targetType: 'user', severity: action === 'suspend' ? 'warning' : 'info', meta: { reason } });

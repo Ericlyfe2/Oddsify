@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { T, fmtCedi } from './tokens.js';
 import OddIcon from './Icon.jsx';
+import { TeamLogo, LeagueLogo } from './teamBranding.jsx';
 
 /* ─── Oddsify wordmark ─────────────────────────────────────── */
 export function OddsifyWordmark({ size = 22, color = '#ffffff', accent = T.greenBright }) {
@@ -468,7 +469,8 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 12,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <LeagueLogo name={match.leagueName || match.league || leagueCode} size={16} />
           <span style={{
             fontSize: 10, fontWeight: 700, letterSpacing: 1,
             color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
@@ -497,12 +499,7 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 20, height: 20, borderRadius: 999,
-                  background: i === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 9, fontWeight: 700,
-                }}>{(name || '?').charAt(0)}</div>
+                <TeamLogo name={name} size={20} />
                 <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.1 }}>{name}</span>
               </div>
               {live && score !== undefined && score !== null && (

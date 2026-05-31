@@ -15,6 +15,7 @@
  *   - onPick (= togglePick) signature: (match, outcomeKey, oddsValue) => void.
  */
 import { T } from './tokens.js';
+import { TeamLogo } from './teamBranding.jsx';
 
 function relativeKickoff(timeStr, day) {
   // timeStr is "HH:MM", day is "Today" | "Tomorrow" | undefined
@@ -92,8 +93,13 @@ function MatchCard({ match, picks, onPick }) {
         <div style={{
           fontSize: 13, fontWeight: 600, color: T.ink, whiteSpace: 'nowrap',
           overflow: 'hidden', textOverflow: 'ellipsis',
+          display: 'flex', alignItems: 'center', gap: 4,
         }}>
-          {match.home} <span style={{ opacity: 0.5 }}>vs</span> {match.away}
+          <TeamLogo name={match.home} size={16} />
+          {match.home}
+          <span style={{ opacity: 0.4, fontSize: 10 }}>vs</span>
+          <TeamLogo name={match.away} size={16} />
+          {match.away}
         </div>
         <div style={{ fontSize: 11, color: T.inkSoft }}>
           {relativeKickoff(match.time, match.day)}
