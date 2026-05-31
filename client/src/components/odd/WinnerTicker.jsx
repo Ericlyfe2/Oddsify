@@ -14,8 +14,14 @@ import { fetchRecentWins } from '../../api/betApi.js';
 import { useVisibilityPolling } from '../../hooks/useVisibilityPolling.js';
 import { T, fmtCedi } from './tokens.js';
 
-const ROTATE_MS = 4000;
-const POLL_MS   = 60_000;
+const ROTATE_MIN_MS = 2500;
+const ROTATE_MAX_MS = 5500;
+const POLL_MS       = 60_000;
+
+// Random integer in [lo, hi] inclusive.
+function randInt(lo, hi) {
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
 
 function relTime(iso) {
   const ms = Date.now() - new Date(iso).getTime();
@@ -36,15 +42,16 @@ function WinRow({ item, expanded, onToggle }) {
       type="button"
       onClick={onToggle}
       style={{
-        display: 'flex', flexDirection: 'column', width: '100%',
-        textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%',
+        textAlign: 'center', background: 'transparent', border: 0, cursor: 'pointer',
         padding: '4px 0', color: '#fff',
       }}
     >
       <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        maxWidth: '100%',
         fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-        fontSize: 12, letterSpacing: 0.2, whiteSpace: 'nowrap',
+        fontSize: 11, letterSpacing: 0.1, whiteSpace: 'nowrap',
         overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         <span style={{
@@ -78,12 +85,23 @@ export default function WinnerTicker() {
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    if (reduce || items.length === 0) return;
-    const id = setInterval(
-      () => setPage((p) => (p + 1) % Math.max(1, items.length)),
-      ROTATE_MS,
-    );
-    return () => clearInterval(id);
+    if (reduce || items.length === 0) return undefined;
+    let cancelled = false;
+    let timeoutId;
+    const tick = () => {
+      if (cancelled) return;
+      setPage((p) => {
+        if (items.length <= 1) return 0;
+        // Jump to a random different start so the visible 3-item window
+        // shuffles instead of scrolling predictably by one.
+        let next = randInt(0, items.length - 1);
+        if (next === p) next = (next + 1) % items.length;
+        return next;
+      });
+      timeoutId = setTimeout(tick, randInt(ROTATE_MIN_MS, ROTATE_MAX_MS));
+    };
+    timeoutId = setTimeout(tick, randInt(ROTATE_MIN_MS, ROTATE_MAX_MS));
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, [reduce, items.length]);
 
   const visibleMobile = useMemo(() => {
