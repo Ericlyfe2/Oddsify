@@ -135,13 +135,12 @@ Concretely, the JSX structure becomes:
 
 ## Backend change
 
-In [server/src/routes/wallet.js](../../../server/src/routes/wallet.js), the Zod `depositSchema` must accept `'paystack'`. After the change, the accepted method enum is:
+**None required.** The current Zod schema in [server/src/routes/wallet.js:31-34](../../../server/src/routes/wallet.js) already accepts any method string up to 40 chars (`method: z.string().trim().max(40).optional()`), so `'paystack'` and `'paybill'` flow through without modification. Tightening to a `z.enum(['paystack', 'paybill'])` was considered but rejected:
 
-```js
-method: z.enum(['paystack', 'paybill'])
-```
+- No other clients emit deposit methods, so a strict enum gains nothing now.
+- Existing in-flight or historical deposits in the tx store carry `'momo'`, `'vodafone'`, `'airteltigo'`, or `'card'`. The admin Deposits queue renders the stored method string verbatim — a stricter request schema doesn't affect those. But if a stale client were ever to retry an old momo deposit, an enum would 400. Permissive is safer.
 
-`'momo'`, `'vodafone'`, `'airteltigo'`, `'card'` are removed from the enum because the new UI does not emit them and there are no other clients. The admin Deposits queue ([server/src/routes/admin/deposits.js](../../../server/src/routes/admin/deposits.js)) and the `Deposits.jsx` admin page already display whatever method string is stored, so they don't care about the enum.
+The admin Deposits queue and the `Deposits.jsx` admin page already display whatever method string is stored, so the new `'paystack'` value renders correctly with no admin-side change.
 
 ## CSS additions
 
@@ -208,11 +207,13 @@ Removes nothing — the existing `.tx-tabs` rules can stay (or be cleaned up sep
 
 ## Implementation order
 
-1. **Backend enum widen** (server/wallet.js) — single-line, can ship first behind the UI.
-2. **CSS additions** (app.css).
-3. **Dialog body rewrite** (AccountProvider.jsx).
-4. **Manual test pass** against the checklist above.
+1. **CSS additions** (app.css).
+2. **State + helper refactor** (AccountProvider.jsx — `maskPhone`, drop tab state, swap method state).
+3. **Dialog body rewrite** (AccountProvider.jsx — tiles, account row, balance row, amount, presets, conditional tail).
+4. **Manual test pass** against the checklist above (browser preview).
 5. **Commit + push.**
+
+Each step gets its own commit so the diff stays reviewable.
 
 ## Risk register
 
