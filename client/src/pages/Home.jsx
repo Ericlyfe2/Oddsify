@@ -18,7 +18,6 @@ import {
   OddTopHeader, OddPromoBanner, OddCategoryGrid,
   OddLeagueRow, OddMatchCard, OddsifyWordmark, OddIcon,
 } from '../components/odd/primitives.jsx';
-import WinnerTicker   from '../components/odd/WinnerTicker.jsx';
 import StatsStrip     from '../components/odd/StatsStrip.jsx';
 import QuickBetStrip  from '../components/odd/QuickBetStrip.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';
@@ -70,7 +69,6 @@ export default function Home() {
         onSearch={() => navigate('/sports')}
         onBalanceClick={() => openDeposit()}
       />
-      <WinnerTicker />
       <OddPromoBanner onAction={() => navigate('/promos')} />
       <QuickBetStrip matches={matches} loading={loading} picks={picks} onPick={togglePick} />
       <OddCategoryGrid

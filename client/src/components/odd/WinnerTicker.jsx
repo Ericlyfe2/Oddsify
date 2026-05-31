@@ -1,27 +1,9 @@
-/**
- * WinnerTicker — replaces OddPayoutTicker.
- *
- * Mobile (<768px): vertical stack of 3 items, auto-rotates every 4s.
- * Desktop (>=768px): horizontal marquee using existing `odd-marquee` keyframe.
- * Tap to expand (mobile): reveals stake/odds row.
- *
- * Data: GET /api/bet/recent-wins (15 items, real + synthetic).
- * Polling: 60s, paused when tab hidden, immediate re-fetch on regain.
- * Respects prefers-reduced-motion: no auto-rotate, no marquee, static list.
- */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { fetchRecentWins } from '../../api/betApi.js';
 import { useVisibilityPolling } from '../../hooks/useVisibilityPolling.js';
 import { T, fmtCedi } from './tokens.js';
 
-const ROTATE_MIN_MS = 2500;
-const ROTATE_MAX_MS = 5500;
-const POLL_MS       = 60_000;
-
-// Random integer in [lo, hi] inclusive.
-function randInt(lo, hi) {
-  return lo + Math.floor(Math.random() * (hi - lo + 1));
-}
+const POLL_MS = 60_000;
 
 function relTime(iso) {
   const ms = Date.now() - new Date(iso).getTime();
@@ -35,82 +17,10 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function WinRow({ item, expanded, onToggle }) {
-  const typeLabel = item.betType === 'multi' ? `Multi (${item.legs} legs)` : 'Single';
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%',
-        textAlign: 'center', background: 'transparent', border: 0, cursor: 'pointer',
-        padding: '4px 0', color: '#fff',
-      }}
-    >
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        maxWidth: '100%',
-        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-        fontSize: 11, letterSpacing: 0.1, whiteSpace: 'nowrap',
-        overflow: 'hidden', textOverflow: 'ellipsis',
-      }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: 999, background: T.greenBright, flexShrink: 0,
-        }} />
-        <span style={{ color: '#fff' }}>📞 {item.phoneMasked}</span>
-        <span style={{ opacity: 0.5 }}>·</span>
-        <span style={{ color: T.greenBright, fontWeight: 700 }}>GHS {fmtCedi(item.amountGhs)}</span>
-        <span style={{ opacity: 0.5 }}>·</span>
-        <span style={{ opacity: 0.85 }}>{typeLabel}</span>
-        <span style={{ opacity: 0.4 }}>·</span>
-        <span style={{ opacity: 0.5 }}>{relTime(item.settledAt)}</span>
-      </span>
-      {expanded && (
-        <span style={{
-          fontSize: 11, color: T.inkSoft, marginTop: 4, marginLeft: 14,
-          fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-        }}>
-          Stake — · Odds @{item.oddsTotal.toFixed(2)}
-        </span>
-      )}
-    </button>
-  );
-}
-
 export default function WinnerTicker() {
   const { data } = useVisibilityPolling(fetchRecentWins, POLL_MS, []);
   const items = data?.wins || [];
   const reduce = useMemo(prefersReducedMotion, []);
-  const [page, setPage] = useState(0);
-  const [expandedId, setExpandedId] = useState(null);
-
-  useEffect(() => {
-    if (reduce || items.length === 0) return undefined;
-    let cancelled = false;
-    let timeoutId;
-    const tick = () => {
-      if (cancelled) return;
-      setPage((p) => {
-        if (items.length <= 1) return 0;
-        // Jump to a random different start so the visible 3-item window
-        // shuffles instead of scrolling predictably by one.
-        let next = randInt(0, items.length - 1);
-        if (next === p) next = (next + 1) % items.length;
-        return next;
-      });
-      timeoutId = setTimeout(tick, randInt(ROTATE_MIN_MS, ROTATE_MAX_MS));
-    };
-    timeoutId = setTimeout(tick, randInt(ROTATE_MIN_MS, ROTATE_MAX_MS));
-    return () => { cancelled = true; clearTimeout(timeoutId); };
-  }, [reduce, items.length]);
-
-  const visibleMobile = useMemo(() => {
-    if (items.length === 0) return [];
-    if (items.length <= 3)  return items;
-    const out = [];
-    for (let i = 0; i < 3; i++) out.push(items[(page + i) % items.length]);
-    return out;
-  }, [items, page]);
 
   if (items.length === 0) return null;
 
@@ -119,29 +29,26 @@ export default function WinnerTicker() {
       role="region"
       aria-label="Recent winners"
       style={{
-        background: T.greenMid, color: '#dff3e3',
-        padding: '8px 16px', overflow: 'hidden',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        pointerEvents: 'none',
       }}
     >
-      {/* Mobile: vertical 3-item stack */}
-      <div className="winner-ticker-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {visibleMobile.map((it) => (
-          <WinRow
-            key={it.id}
-            item={it}
-            expanded={expandedId === it.id}
-            onToggle={() => setExpandedId(expandedId === it.id ? null : it.id)}
-          />
-        ))}
-      </div>
-
-      {/* Desktop: horizontal marquee */}
       <div
-        className="winner-ticker-desktop"
+        className="winner-ticker-track"
         style={{
-          display: 'none', whiteSpace: 'nowrap',
-          animation: reduce ? 'none' : 'odd-marquee 60s linear infinite',
+          background: T.greenMid,
+          padding: '12px 16px',
+          overflow: 'hidden',
+          borderRadius: 12,
+          whiteSpace: 'nowrap',
+          maxWidth: '90vw',
+          color: '#dff3e3',
+          animation: reduce ? 'none' : 'odd-marquee 33.33s linear infinite',
         }}
       >
         {[...items, ...items].map((it, i) => (
@@ -157,14 +64,6 @@ export default function WinnerTicker() {
           </span>
         ))}
       </div>
-
-      {/* Layout switch handled by CSS so it works without JS re-render on resize. */}
-      <style>{`
-        @media (min-width: 768px) {
-          .winner-ticker-mobile  { display: none !important; }
-          .winner-ticker-desktop { display: block !important; }
-        }
-      `}</style>
     </div>
   );
 }
