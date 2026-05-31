@@ -14,12 +14,19 @@
 import { Provider, fixtureKey } from './base.js';
 
 export class ApiFootballProvider extends Provider {
-  constructor(apiKey, host = 'v3.football.api-sports.io') {
+  constructor(apiKey, host = 'v3.football.api-sports.io', dailyBudget = null) {
+    // Free plan is 100 requests/day. We leave a small safety margin so the
+    // /status probe and ad-hoc admin "Test" actions always work even after
+    // the scheduler has spent its share. Override via APIFOOTBALL_DAILY_BUDGET
+    // when on a paid plan (Pro ~75k/day, Mega ~150k/day, etc.).
+    const budget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : 90;
     super({
       id: 'apiFootball',
       label: 'API Football',
       enabled: !!apiKey,
       sports: ['football'],
+      dailyBudget: budget,
+      cooldownOn429Ms: 60 * 60_000, // back off for an hour after a 429
     });
     this.apiKey = apiKey;
     this.host = host;

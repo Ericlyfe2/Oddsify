@@ -20,6 +20,7 @@ const _providers = [
   new ApiFootballProvider(
     env.APIFOOTBALL_KEY || env.APIFOOTBALL_TOKEN || '',
     env.APIFOOTBALL_HOST || 'v3.football.api-sports.io',
+    Number(env.APIFOOTBALL_DAILY_BUDGET) || null,
   ),
   new SportMonksProvider(env.SPORTMONKS_TOKEN || env.SPORTMONKS_KEY || ''),
   new SharpApiProvider(env.SHARPAPI_KEY || ''),

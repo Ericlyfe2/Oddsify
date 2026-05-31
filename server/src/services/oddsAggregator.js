@@ -247,10 +247,16 @@ async function liveLoop() {
   liveRunning = true;
   try {
     const { fetchLiveOddsAll, fetchLiveScoresAll } = await import('./providerRegistry.js');
-    const [oddsRows, scoreRows] = await Promise.all([
-      fetchLiveOddsAll('football').catch(() => []),
-      fetchLiveScoresAll('football').catch(() => []),
-    ]);
+    // Fetch scores first. Live odds are only useful when there actually IS a
+    // live game, so we use the score response as a cheap "is anything live?"
+    // gate. On Free-plan providers (e.g. api-football 100 req/day) this
+    // skips the heavier /odds/live call ~80% of the day when no matches are
+    // running, which is the difference between burning quota and surviving.
+    const scoreRows = await fetchLiveScoresAll('football').catch(() => []);
+    const hasLive = scoreRows.some((r) => r?.status === 'live');
+    const oddsRows = hasLive
+      ? await fetchLiveOddsAll('football').catch(() => [])
+      : [];
 
     // 1) Score & match-event emits.
     const { emitScoreUpdate } = await import('./realtime.js');

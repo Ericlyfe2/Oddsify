@@ -72,8 +72,10 @@ export const LIVE_BETTING = {
   // track no-ops; pre-match polling continues normally.
   apiFootballKey: env.APIFOOTBALL_KEY || env.APIFOOTBALL_TOKEN || '',
   // Cadence of the live track, in ms. Lower bound 3000 to respect provider
-  // rate limits. Default 6000.
-  pollMs: Math.max(3000, Number(env.LIVE_POLL_MS) || 6000),
+  // rate limits. Default 20000 (20s) — odds at real books rarely move faster
+  // than 10–15s, so 20s feels live without burning Free-plan quota. Drop to
+  // 6000 only if every provider you use is on a paid tier.
+  pollMs: Math.max(3000, Number(env.LIVE_POLL_MS) || 20_000),
   // House margin applied to live cash-out offers (0–1).
   houseMargin: Math.min(0.5, Math.max(0, Number(env.CASHOUT_HOUSE_MARGIN) || 0.05)),
   // Maximum acceptable drift between the client's acceptedAmount and the
