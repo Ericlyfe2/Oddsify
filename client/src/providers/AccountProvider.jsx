@@ -33,6 +33,15 @@ function formatAmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Mask a Ghana-style number for display: "+233551234567" → "+233 55****567".
+// For non-phone fallbacks (email, short strings) the input is returned as-is.
+function maskPhone(s) {
+  const str = String(s || '').replace(/\s/g, '');
+  if (!str) return 'Account phone';
+  if (str.length < 10) return str;
+  return `${str.slice(0, 4)} ${str.slice(4, 6)}****${str.slice(-3)}`;
+}
+
 export default function AppProviders({ children }) {
   const navigate = useNavigate();
   const [account, setAccount] = useState(null);
@@ -44,8 +53,7 @@ export default function AppProviders({ children }) {
   const MIN_DEPOSIT  = 300;
   const MAX_DEPOSIT  = 50000;
   const [depositAmt,  setDepositAmt]   = useState(String(MIN_DEPOSIT));
-  const [depositMethod, setDepositMethod] = useState('momo');
-  const [depositTab, setDepositTab]   = useState('momo'); // 'momo' | 'paybill' | 'card'
+  const [depositMethod, setDepositMethod] = useState('paystack'); // 'paystack' | 'paybill'
   const [busy, setBusy] = useState(false);
   const [err,  setErr]  = useState('');
   const [wins, setWins] = useState([]);
@@ -280,7 +288,7 @@ export default function AppProviders({ children }) {
 
   const openDeposit = useCallback(() => {
     if (!account) { toast('Sign in to deposit.'); navigate('/login'); return; }
-    setErr(''); setDepositAmt(String(MIN_DEPOSIT)); setDepositMethod('momo');
+    setErr(''); setDepositAmt(String(MIN_DEPOSIT)); setDepositMethod('paystack');
     depositDlg.current?.showModal();
   }, [account, toast, navigate]);
 
@@ -306,7 +314,7 @@ export default function AppProviders({ children }) {
         if (account?.id) appendTxCache(account.id, data.transaction);
       }
       depositDlg.current?.close();
-      const labels = { momo: 'MoMo', vodafone: 'Vodafone Cash', airteltigo: 'AirtelTigo Money', card: 'Card' };
+      const labels = { paystack: 'Paystack', paybill: 'Paybill' };
       toast(`Deposit of GHS ${formatAmt(amt)} via ${labels[depositMethod] || depositMethod} submitted for admin approval.`, 'info');
     } catch (e) {
       setErr(e.message || 'Deposit failed.');
