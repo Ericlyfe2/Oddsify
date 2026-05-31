@@ -3281,7 +3281,9 @@ nav a:active { transform: scale(.96); }
    Scroll container is .deposit-body, not the inner <form>. */
 .deposit-dlg .deposit-body {
   flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   background: var(--bg);
 }
@@ -3315,6 +3317,7 @@ nav a:active { transform: scale(.96); }
 .dep-tile:hover { border-color: var(--line-strong); }
 .dep-tile[aria-selected="true"] {
   border-color: var(--accent);
+  background: var(--surface-2);
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 .dep-tile-icon {
