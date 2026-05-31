@@ -388,18 +388,13 @@ export default function AppProviders({ children }) {
 
         <dialog ref={depositDlg} className="deposit-dlg">
           {(() => {
-            const networks = {
-              momo:       { label: 'MTN Mobile Money', short: 'MTN', tag: 'MTN' },
-              vodafone:   { label: 'Telecel Cash',     short: 'Telecel', tag: 'TLC' },
-              airteltigo: { label: 'AT Money',         short: 'AT',  tag: 'AT'  },
-            };
-            const net = networks[depositMethod] || networks.momo;
             const amtNum = parseFloat(String(depositAmt).replace(/,/g, '')) || 0;
             const canSubmit = amtNum >= MIN_DEPOSIT && amtNum <= MAX_DEPOSIT && !busy;
-            const accountPhone = account?.phone || account?.email || '+233 59****943';
-            const bump = (n) => setDepositAmt(String(Math.min(MAX_DEPOSIT, Math.round(amtNum + n))));
-
+            const accountPhone = account?.phone || account?.email || '';
+            const maskedPhone = maskPhone(accountPhone);
             const closeDlg = () => { try { depositDlg.current?.close(); } catch { /* ignore */ } };
+            const selectMethod = (m) => { setErr(''); setDepositMethod(m); };
+
             return (
               <>
                 <TxHeader
@@ -411,54 +406,69 @@ export default function AppProviders({ children }) {
                   onHome={() => { closeDlg(); navigate('/'); }}
                 />
 
-                <div className="tx-tabs">
-                  {[['momo', 'Mobile Money'], ['paybill', 'Paybill'], ['card', 'Card']].map(([k, lbl]) => (
+                <div className="deposit-body">
+                  <div className="dep-section-label">Choose payment method</div>
+
+                  <div className="dep-method-grid" role="radiogroup" aria-label="Payment method">
                     <button
-                      key={k}
                       type="button"
-                      className="tx-tab"
-                      aria-selected={depositTab === k}
-                      onClick={() => setDepositTab(k)}
+                      role="radio"
+                      aria-checked={depositMethod === 'paystack'}
+                      aria-selected={depositMethod === 'paystack'}
+                      className="dep-tile"
+                      onClick={() => selectMethod('paystack')}
                     >
-                      {lbl}
+                      <div className="dep-tile-icon" style={{ background: 'var(--surface-2)', color: 'var(--accent)' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="2" y="6" width="20" height="14" rx="2" />
+                          <line x1="2" y1="10" x2="22" y2="10" />
+                        </svg>
+                      </div>
+                      <div className="dep-tile-title">Paystack</div>
+                      <div className="dep-tile-sub">Card, bank &amp; mobile money</div>
                     </button>
-                  ))}
-                </div>
 
-                <form onSubmit={submitDeposit} style={{ padding: 16, background: 'var(--bg)' }}>
-                  {depositTab === 'momo' && (
-                    <>
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-soft)' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{accountPhone}</div>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={depositMethod === 'paybill'}
+                      aria-selected={depositMethod === 'paybill'}
+                      className="dep-tile"
+                      onClick={() => selectMethod('paybill')}
+                    >
+                      <div className="dep-tile-icon" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3 21h18" />
+                          <path d="M5 21V10l7-4 7 4v11" />
+                          <path d="M9 21v-6h6v6" />
+                        </svg>
                       </div>
+                      <div className="dep-tile-title">Paybill</div>
+                      <div className="dep-tile-sub">Mobile money</div>
+                    </button>
+                  </div>
 
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 6, background: '#ffcc00', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 10, lineHeight: 1 }}>{net.tag}</div>
-                        <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{net.label}</div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const order = ['momo', 'vodafone', 'airteltigo'];
-                            const nextIdx = (order.indexOf(depositMethod) + 1) % order.length;
-                            setDepositMethod(order[nextIdx]);
-                          }}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 14, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}
-                        >
-                          Switch <span style={{ fontSize: 13 }}>›</span>
-                        </button>
-                      </div>
+                  <div className="dep-account-row">
+                    <div className="dep-account-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="5" y="2" width="14" height="20" rx="2" />
+                        <line x1="12" y1="18" x2="12.01" y2="18" />
+                      </svg>
+                    </div>
+                    <div className="dep-account-text">{maskedPhone}</div>
+                    <div className="dep-account-label">Account phone</div>
+                  </div>
 
-                      <div style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-soft)', marginBottom: 6 }}>
-                        Balance (GHS) {formatAmt(balance)}
-                      </div>
+                  <div className="dep-balance-row">
+                    Balance (GHS) <span className="dep-balance-amt">¢ {formatAmt(balance)}</span>
+                  </div>
 
-                      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 14px', marginBottom: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <label htmlFor="dep-amt" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Amount (GHS)</label>
-                          <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>min. {MIN_DEPOSIT}.00</span>
+                  {depositMethod === 'paystack' ? (
+                    <form onSubmit={submitDeposit}>
+                      <div className="dep-amount-card">
+                        <div className="dep-amount-head">
+                          <label htmlFor="dep-amt">Amount (GHS)</label>
+                          <span className="dep-amount-hint">min. {MIN_DEPOSIT}.00</span>
                         </div>
                         <input
                           id="dep-amt"
@@ -471,49 +481,70 @@ export default function AppProviders({ children }) {
                           onChange={(e) => setDepositAmt(e.target.value)}
                           placeholder={`min. ${MIN_DEPOSIT}`}
                           autoFocus
-                          style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 24, fontWeight: 800, outline: 'none', padding: 0 }}
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 16 }}>
-                        {[2, 5, 10, 50, 100].map((n) => (
+                      <div className="dep-preset-grid">
+                        {[300, 500, 2000, 5000, 10000].map((n) => (
                           <button
                             key={n}
                             type="button"
-                            onClick={() => bump(n)}
-                            style={{ padding: '12px 0', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                            className="dep-preset"
+                            onClick={() => setDepositAmt(String(n))}
+                            aria-label={`Set amount to GHS ${n}`}
                           >
-                            +{n}
+                            {n.toLocaleString('en-US')}
                           </button>
                         ))}
                       </div>
 
-                      {err && <div className="err" style={{ marginBottom: 12, color: 'var(--danger, #ff5d5d)', fontSize: 13, fontWeight: 600 }}>{err}</div>}
+                      {err && <div className="dep-err">{err}</div>}
 
-                      <button
-                        type="submit"
-                        disabled={!canSubmit}
-                        style={{
-                          width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-                          background: canSubmit ? 'linear-gradient(135deg, var(--accent), #ffcc33)' : 'var(--surface-2)',
-                          color: canSubmit ? '#000000' : 'var(--text-dim)',
-                          fontWeight: 800, fontSize: 16, cursor: canSubmit ? 'pointer' : 'not-allowed', marginBottom: 18,
-                        }}
-                      >
+                      <button type="submit" disabled={!canSubmit} className="dep-submit">
                         {busy ? 'Processing…' : 'Top Up Now'}
                       </button>
 
-                      <ol style={{ paddingLeft: 18, margin: 0, fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.7 }}>
+                      <ol className="dep-rules">
                         <li>Maximum per transaction is GHS {MAX_DEPOSIT.toLocaleString('en-US')}.00</li>
                         <li>Minimum per transaction is {MIN_DEPOSIT}.00</li>
                         <li>Deposit is free, no transaction fees.</li>
                         <li>Your balance can only be withdrawn to the mobile number that&rsquo;s registered with.</li>
                       </ol>
-                    </>
-                  )}
+                    </form>
+                  ) : (
+                    <div className="dep-paybill-body">
+                      <div className="dep-amount-card">
+                        <div className="dep-amount-head">
+                          <label htmlFor="dep-amt-pb">Amount (GHS)</label>
+                          <span className="dep-amount-hint">min. {MIN_DEPOSIT}.00</span>
+                        </div>
+                        <input
+                          id="dep-amt-pb"
+                          type="number"
+                          min={MIN_DEPOSIT}
+                          max={MAX_DEPOSIT}
+                          step="1"
+                          inputMode="decimal"
+                          value={depositAmt}
+                          onChange={(e) => setDepositAmt(e.target.value)}
+                          placeholder={`min. ${MIN_DEPOSIT}`}
+                        />
+                      </div>
 
-                  {depositTab === 'paybill' && (
-                    <div style={{ padding: '8px 0 4px' }}>
+                      <div className="dep-preset-grid">
+                        {[300, 500, 2000, 5000, 10000].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            className="dep-preset"
+                            onClick={() => setDepositAmt(String(n))}
+                            aria-label={`Set amount to GHS ${n}`}
+                          >
+                            {n.toLocaleString('en-US')}
+                          </button>
+                        ))}
+                      </div>
+
                       <PaybillInstructions
                         paybillId="222000"
                         accountRef={account?.phone || account?.email || ''}
@@ -521,14 +552,7 @@ export default function AppProviders({ children }) {
                       />
                     </div>
                   )}
-
-                  {depositTab === 'card' && (
-                    <div style={{ padding: '32px 8px', textAlign: 'center', color: 'var(--text-soft)' }}>
-                      <p style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Card deposits coming soon</p>
-                      <p style={{ fontSize: 13 }}>Use Mobile Money for instant top-ups.</p>
-                    </div>
-                  )}
-                </form>
+                </div>
               </>
             );
           })()}
