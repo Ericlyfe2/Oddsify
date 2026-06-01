@@ -6,7 +6,7 @@ export const getUserById = (id) => (id ? users.get(id.toLowerCase()) : null);
 
 export function findByEmail(email) {
   if (!email) return null;
-  return users.get(String(email).toLowerCase());
+  return users.get(String(email).toLowerCase().replace(/\s+/g, ''));
 }
 
 export function findByGoogleId(googleId) {
@@ -15,7 +15,7 @@ export function findByGoogleId(googleId) {
 }
 
 export function createUser(record) {
-  const id = String(record.email || record.id || '').toLowerCase();
+  const id = String(record.email || record.id || '').toLowerCase().replace(/\s+/g, '');
   if (!id) throw new Error('user requires email');
   if (users.get(id)) throw new Error('user already exists');
   const now = new Date().toISOString();

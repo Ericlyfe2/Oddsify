@@ -24,10 +24,20 @@ import { log } from '../utils/logger.js';
 const router = Router();
 
 /* ------------ Schemas ------------ */
-const emailLike = z.string().trim().toLowerCase()
-  .min(3, 'Enter a valid email or phone.')
-  .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')),
-          { message: 'Enter a valid email or phone.' });
+const emailLike = z
+  .string()
+  .transform((v) => v.replace(/\s+/g, '').toLowerCase())
+  .pipe(
+    z
+      .string()
+      .min(3, 'Enter a valid email or phone.')
+      .refine(
+        (v) =>
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ||
+          /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')),
+        { message: 'Enter a valid email or phone.' },
+      ),
+  );
 
 const country = z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'Select your country.');
 
