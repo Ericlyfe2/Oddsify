@@ -88,8 +88,17 @@ function normaliseFixture(r, providerId) {
     provider: providerId,
     sourceId: String(r.fixture?.id || ''),
     sport: 'football',
-    league: { id: String(r.league?.id || ''), name: r.league?.name, country: r.league?.country },
+    league: {
+      id: String(r.league?.id || ''),
+      name: r.league?.name,
+      country: r.league?.country,
+      logo: r.league?.logo || null,
+    },
     home, away, kickoff,
+    // API-Football ships logo URLs on every team/league inline. Surface them
+    // so the client can render real crests without a second round-trip.
+    homeLogo: r.teams?.home?.logo || null,
+    awayLogo: r.teams?.away?.logo || null,
     status: finished ? 'finished' : isLive ? 'live' : 'upcoming',
     minute: r.fixture?.status?.elapsed ? `${r.fixture.status.elapsed}'` : null,
     scoreHome: r.goals?.home ?? null,

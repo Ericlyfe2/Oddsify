@@ -22,6 +22,10 @@ export function normalizeMatch(m, leagueName = '') {
     id: m.id,
     home: m.home,
     away: m.away,
+    // Provider-supplied crest URLs flow through unchanged; the rendering
+    // components fall back to the curated/static map when these are null.
+    homeLogo: m.homeLogo || m.home_logo || null,
+    awayLogo: m.awayLogo || m.away_logo || null,
     isLive: !!m.isLive,
     minute: m.minute,
     scoreH: m.scoreHome ?? m.scoreH,
@@ -34,6 +38,7 @@ export function normalizeMatch(m, leagueName = '') {
     sport: m.sport,
     featured: m.featured,
     leagueName,
+    leagueLogo: m.leagueLogo || m.league?.logo || null,
     league: leagueName?.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase() || '—',
   };
 }

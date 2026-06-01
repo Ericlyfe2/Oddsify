@@ -537,12 +537,13 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
         {[['home', match.scoreH], ['away', match.scoreA]].map(([side, score], i) => {
           const name = side === 'home' ? match.home : match.away;
+          const logoUrl = side === 'home' ? match.homeLogo : match.awayLogo;
           return (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TeamLogo name={name} size={20} />
+                <TeamLogo name={name} logoUrl={logoUrl} size={20} />
                 <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.1 }}>{name}</span>
               </div>
               {live && score !== undefined && score !== null && (
