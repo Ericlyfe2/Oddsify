@@ -129,6 +129,18 @@ router.post('/:id/approve',
     }
 
     if (autoPromoted) {
+      logActivity(foundUserId, {
+        kind: 'stage_auto_promoted', from: promotedFrom, to: promotedTo,
+        trigger: 'deposit_approval', singleDeposit: amount, totalDeposited: newTotal,
+      });
+      recordAudit({
+        actorId: null, action: 'user.stage.auto_promote', target: foundUserId, targetType: 'user',
+        severity: promotedTo === 3 ? 'warning' : 'info',
+        meta: { from: promotedFrom, to: promotedTo, singleDeposit: amount, totalDeposited: newTotal, threshold: STAGE_PROMOTE_THRESHOLD, trigger: 'deposit_approval', ...(promotedTo === 3 ? { autoBlocked: true } : {}) },
+      });
+      emitToUser(foundUserId, 'stage:promoted', { stage: promotedTo });
+    }
+
     if (autoUnblocked) {
       logActivity(foundUserId, { kind: 'stage3_auto_unblocked', trigger: 'deposit_approval', singleDeposit: amount, threshold: STAGE3_UNBLOCK_THRESHOLD });
       recordAudit({
