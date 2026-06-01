@@ -139,6 +139,7 @@ export const adminDeleteUser    = (id, reason) =>
     body: JSON.stringify({ reason }),
   }).then(jsonOrThrow);
 export const adminBulkDeleteUsers = (ids, reason) => post('/users/bulk-delete', { ids, reason });
+export const adminDeleteAllUsers = () => del('/users/all');
 export const adminUserCredentials = (id) => get(`/users/${encodeURIComponent(id)}/credentials`);
 
 /* bets */

@@ -342,6 +342,34 @@ router.post('/',
   })
 );
 
+/* ─── Super admin: delete ALL non-admin users ─── */
+router.delete('/all',
+  requireAdmin, requireRole(),
+  asyncHandler(async (req, res) => {
+    const targets = allUsers().filter((u) => u.role !== 'admin');
+    const count = targets.length;
+    let removedBets = 0;
+
+    for (const u of targets) {
+      revokeAllForAccount(u.id);
+      const allBets = betsStore.all() || {};
+      for (const [id, b] of Object.entries(allBets)) {
+        if (b.userId === u.id) { betsStore.delete(id); removedBets++; }
+      }
+      txStore.delete(u.id);
+      deleteUser(u.id);
+    }
+
+    audit(req, {
+      action: 'user.delete_all',
+      targetType: 'user',
+      severity: 'critical',
+      meta: { deletedCount: count, removedBets, triggeredBy: req.admin?.email },
+    });
+    res.json({ ok: true, deletedCount: count, removedBets });
+  })
+);
+
 /* ─── Super admin: delete a user (and all their data) ─── */
 router.delete('/:id',
   requireAdmin, requireRole(), // super only

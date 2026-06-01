@@ -14,6 +14,7 @@ import {
   adminListUsers, adminGetUser, adminUserBets, adminUserTx, adminUserLogins,
   adminUserStatus, adminUserKyc, adminUserWallet, adminUserTags, adminUserNotes,
   adminUserReset, adminImpersonate, adminDeleteUser, adminBulkDeleteUsers,
+  adminDeleteAllUsers,
   adminCreateUser, adminUserCredentials,
   adminUserStage, adminUserBlocked,
 } from '../../api/adminApi.js';
@@ -67,6 +68,8 @@ export default function UsersPage() {
   const [drawerTab, setDrawerTab] = useState('profile');
   const [picked, setPicked] = useState(new Set()); // user ids ticked for bulk action
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [deleteAllBusy, setDeleteAllBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const debounceRef = useRef(0);
   const isSuper = hasRole();
@@ -135,6 +138,21 @@ export default function UsersPage() {
     }
   }
 
+  async function handleDeleteAll() {
+    setDeleteAllBusy(true);
+    try {
+      const r = await adminDeleteAllUsers();
+      showToast(`Deleted all ${r.deletedCount} user account${r.deletedCount === 1 ? '' : 's'} (${r.removedBets} bets).`);
+      setDeleteAllOpen(false);
+      setPicked(new Set());
+      load();
+    } catch (e) {
+      showToast(e.message || 'Delete all users failed', 'error');
+    } finally {
+      setDeleteAllBusy(false);
+    }
+  }
+
   function exportCsv() {
     if (!data?.users?.length) return;
     const headers = ['id', 'email', 'displayName', 'balance', 'kycStatus', 'suspended', 'createdAt'];
@@ -155,11 +173,20 @@ export default function UsersPage() {
           <h1>Users</h1>
           <p>Search, audit, and manage every player on the platform. Actions are recorded in the audit log.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="adm-btn" onClick={load}><IconRefresh size={14} /> Refresh</button>
           <button className="adm-btn" onClick={exportCsv}><IconDownload size={14} /> Export CSV</button>
           {isSuper && (
             <button className="adm-btn primary" onClick={() => setCreateOpen(true)}><IconUsers size={14} /> Add user</button>
+          )}
+          {isSuper && (
+            <>
+              <span style={{ width: 1, height: 28, background: 'var(--border)', display: 'inline-block' }} />
+              <button className="adm-btn danger" onClick={() => setDeleteAllOpen(true)} disabled={deleteAllBusy}>
+                {deleteAllBusy ? <span className="adm-spinner" /> : <IconTrash size={14} />}
+                {' '}{deleteAllBusy ? 'Deleting…' : 'Delete All Users'}
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -322,6 +349,14 @@ export default function UsersPage() {
         onConfirm={bulkDelete}
       />
 
+      <DeleteAllModal
+        open={deleteAllOpen}
+        busy={deleteAllBusy}
+        count={data?.total ?? 0}
+        onClose={() => setDeleteAllOpen(false)}
+        onConfirm={handleDeleteAll}
+      />
+
       <CreateUserModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -333,6 +368,61 @@ export default function UsersPage() {
         showToast={showToast}
       />
     </>
+  );
+}
+
+function DeleteAllModal({ open, busy, count, onClose, onConfirm }) {
+  const [confirmText, setConfirmText] = useState('');
+  useEffect(() => { if (open) setConfirmText(''); }, [open]);
+  const phrase = `delete all ${count}`;
+  const ready = confirmText.trim().toLowerCase() === phrase;
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Delete all ${count} user account${count === 1 ? '' : 's'}?`}
+      description="This permanently removes every non-admin user, their bet history, transaction ledger, authentication records, wallet balances, verification data, notifications, and settings. All sessions are revoked. This action is logged as critical in the audit log and CANNOT BE UNDONE."
+      footer={null}
+    >
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (ready && !busy) onConfirm(); }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <div
+          style={{
+            padding: '12px 14px',
+            borderRadius: 10,
+            background: 'rgba(214,58,44,.10)',
+            border: '1px solid rgba(214,58,44,.30)',
+            fontSize: 13, lineHeight: 1.5,
+          }}
+        >
+          <strong style={{ color: 'var(--danger)' }}>⚠️ Irreversible operation</strong>
+          <br />
+          All {count} player account{count === 1 ? '' : 's'} will be permanently wiped from the database — profiles, passwords, balances, bets, transactions, verification records, notifications, tags, notes, and settings. Admins are preserved. This action is recorded in the audit trail.
+        </div>
+        <div className="adm-field">
+          <label>
+            Type <code style={{ fontFamily: 'var(--ff-mono)', background: 'var(--surface-soft, rgba(255,255,255,.05))', padding: '1px 6px', borderRadius: 4 }}>{phrase}</code> to confirm
+          </label>
+          <input
+            className="adm-input"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={phrase}
+            autoFocus
+            disabled={busy}
+          />
+        </div>
+        <div className="adm-modal-actions">
+          <button type="button" className="adm-btn ghost" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="submit" className="adm-btn danger" disabled={!ready || busy}>
+            {busy ? <span className="adm-spinner" /> : <IconTrash size={14} />}
+            {' '}{busy ? `Deleting ${count} account${count === 1 ? '' : 's'}…` : `Permanently delete all ${count}`}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
