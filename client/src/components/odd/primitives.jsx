@@ -124,8 +124,51 @@ export function OddStatusChip({ kind, label }) {
   );
 }
 
-/* ─── Flag badge — round chip with league code initials ────── */
+/* ─── Flag badge — round chip with league logo (falls back to code) ─
+ * Logo URLs come from api-sports.io's public CDN, keyed by the
+ * upstream league id. Codes that don't have a mapped logo render the
+ * legacy colored-circle monogram so unknown competitions still look
+ * intentional. New leagues: add the api-football league id below. */
+const LEAGUE_LOGO_BY_CODE = {
+  EPL: 39,  PL:  39,
+  LIG: 140, ESP: 140, LAL: 140,
+  ITA: 135, SEA: 135,
+  BUN: 78,  GER: 78,
+  FRA: 61,  L1:  61,
+  POR: 94,
+  UCL: 2,   CL:  2,
+  UEL: 3,   EL:  3,
+  GHA: 297, GH:  297,
+};
+function leagueLogoUrl(code) {
+  const id = LEAGUE_LOGO_BY_CODE[String(code || '').toUpperCase()];
+  return id ? `https://media.api-sports.io/football/leagues/${id}.png` : null;
+}
 export function FlagBadge({ code, color, size = 40 }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const url = imgFailed ? null : leagueLogoUrl(code);
+  if (url) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: 999,
+        background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        border: '1.5px solid rgba(232, 185, 74, 0.25)',
+        boxShadow: '0 0 0 1px rgba(0,0,0,0.4) inset',
+        flexShrink: 0, overflow: 'hidden',
+      }}>
+        <img
+          src={url}
+          alt={`${code} logo`}
+          width={Math.round(size * 0.72)}
+          height={Math.round(size * 0.72)}
+          style={{ objectFit: 'contain' }}
+          onError={() => setImgFailed(true)}
+          loading="lazy"
+        />
+      </div>
+    );
+  }
   return (
     <div style={{
       width: size, height: size, borderRadius: 999,
