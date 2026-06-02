@@ -15,12 +15,19 @@ const SPORT_KEY = {
 };
 
 export class TheOddsApiProvider extends Provider {
-  constructor(apiKey) {
+  constructor(apiKey, dailyBudget = null) {
+    // Free tier is 500 calls/month (~16/day). Each fetchOdds() consumes 3
+    // slots (one per sport_key: EPL + UCL + La Liga), so 15/day = ~5 cycles
+    // per day fits the quota with margin. Override via ODDS_API_DAILY_BUDGET
+    // when on a paid plan (Starter 20k/month, Pro 50k/month, etc.).
+    const budget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : 15;
     super({
       id: 'theOddsApi',
       label: 'The Odds API',
       enabled: !!apiKey,
       sports: ['football', 'basketball', 'tennis'],
+      dailyBudget: budget,
+      cooldownOn429Ms: 60 * 60_000,
     });
     this.apiKey = apiKey;
   }

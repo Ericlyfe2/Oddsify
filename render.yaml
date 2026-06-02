@@ -18,6 +18,10 @@ services:
         value: oddsify-client
       - key: ODDS_API_KEY
         sync: false
+      # Free tier is 500 calls/month (~16/day). Each fetch hits 3 sport keys,
+      # so 15/day = ~5 cycles/day fits the quota. Raise on paid plans.
+      - key: ODDS_API_DAILY_BUDGET
+        value: "15"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

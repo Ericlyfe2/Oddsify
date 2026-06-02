@@ -16,7 +16,10 @@ import { RapidApiFootballProvider } from '../providers/rapidApiFootball.js';
 const env = process.env;
 
 const _providers = [
-  new TheOddsApiProvider(env.ODDS_API_KEY || ''),
+  new TheOddsApiProvider(
+    env.ODDS_API_KEY || '',
+    Number(env.ODDS_API_DAILY_BUDGET) || null,
+  ),
   new ApiFootballProvider(
     env.APIFOOTBALL_KEY || env.APIFOOTBALL_TOKEN || '',
     env.APIFOOTBALL_HOST || 'v3.football.api-sports.io',
