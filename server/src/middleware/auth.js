@@ -10,8 +10,8 @@ export function requireAuth(req, _res, next) {
   try {
     const claims = verifyAccessToken(token);
     const user = getUserById(claims.sub);
-    if (!user)            return next(unauthorized('Account no longer exists.'));
-    if (user.suspended)   return next(forbidden('Account suspended. Contact support.'));
+    if (!user) return next(unauthorized('Account no longer exists.'));
+    if (user.suspended) return next(forbidden('Account suspended. Contact support.'));
     if (!user.emailVerified) return next(forbidden('Email not verified.'));
     req.user = user;
     next();
@@ -28,7 +28,9 @@ export function optionalAuth(req, _res, next) {
       const claims = verifyAccessToken(header.slice(7).trim());
       const user = getUserById(claims.sub);
       if (user && !user.suspended) req.user = user;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   next();
 }

@@ -68,9 +68,7 @@ export class ApiFootballProvider extends Provider {
 
   async fetchOdds(sport = 'football', opts = {}) {
     if (!this.enabled || sport !== 'football') return [];
-    const path = opts.live
-      ? '/odds/live'
-      : `/odds?date=${new Date().toISOString().slice(0, 10)}`;
+    const path = opts.live ? '/odds/live' : `/odds?date=${new Date().toISOString().slice(0, 10)}`;
     const json = await this.http(this.url(path), { headers: this.headers() });
     return (json?.response || []).map((r) => normaliseOdds(r, this.id));
   }
@@ -81,7 +79,7 @@ function normaliseFixture(r, providerId) {
   const away = r.teams?.away?.name;
   const kickoff = r.fixture?.date;
   const status = r.fixture?.status?.short || '';
-  const isLive   = ['1H', 'HT', '2H', 'ET', 'P', 'LIVE'].includes(status);
+  const isLive = ['1H', 'HT', '2H', 'ET', 'P', 'LIVE'].includes(status);
   const finished = ['FT', 'AET', 'PEN'].includes(status);
   return {
     key: fixtureKey('football', home, away, kickoff),
@@ -94,7 +92,9 @@ function normaliseFixture(r, providerId) {
       country: r.league?.country,
       logo: r.league?.logo || null,
     },
-    home, away, kickoff,
+    home,
+    away,
+    kickoff,
     // API-Football ships logo URLs on every team/league inline. Surface them
     // so the client can render real crests without a second round-trip.
     homeLogo: r.teams?.home?.logo || null,
@@ -113,7 +113,7 @@ function normaliseOdds(r, providerId) {
   const home = r?.teams?.home?.name || r?.fixture?.home || '';
   const away = r?.teams?.away?.name || r?.fixture?.away || '';
   const date = r?.fixture?.date || '';
-  const key  = fixtureKey('football', home, away, date);
+  const key = fixtureKey('football', home, away, date);
 
   const markets = {};
 
@@ -127,15 +127,23 @@ function normaliseOdds(r, providerId) {
 
       // Match Winner -> 1X2
       if (name === 'match winner' || name === '1x2' || name === 'fulltime result') {
-        const m = markets['1X2'] = markets['1X2'] || { name: 'Match Winner', selections: [] };
+        const m = (markets['1X2'] = markets['1X2'] || { name: 'Match Winner', selections: [] });
         for (const v of bet?.values || []) {
           const value = String(v?.value || '').toLowerCase();
-          const odds  = Number(v?.odd);
+          const odds = Number(v?.odd);
           if (!Number.isFinite(odds)) continue;
-          let selKey = null, label = null;
-          if (value === 'home' || value === '1') { selKey = '1'; label = 'Home'; }
-          else if (value === 'draw' || value === 'x') { selKey = 'X'; label = 'Draw'; }
-          else if (value === 'away' || value === '2') { selKey = '2'; label = 'Away'; }
+          let selKey = null,
+            label = null;
+          if (value === 'home' || value === '1') {
+            selKey = '1';
+            label = 'Home';
+          } else if (value === 'draw' || value === 'x') {
+            selKey = 'X';
+            label = 'Draw';
+          } else if (value === 'away' || value === '2') {
+            selKey = '2';
+            label = 'Away';
+          }
           if (!selKey) continue;
           upsertSelection(m.selections, selKey, label, odds, bookmakerName);
         }
@@ -144,12 +152,12 @@ function normaliseOdds(r, providerId) {
 
       // Goals Over/Under (only the 2.5 line goes into OU25)
       if (name === 'goals over/under' || name === 'over/under') {
-        const m = markets['OU25'] = markets['OU25'] || { name: 'Over/Under 2.5', selections: [] };
+        const m = (markets['OU25'] = markets['OU25'] || { name: 'Over/Under 2.5', selections: [] });
         for (const v of bet?.values || []) {
           const value = String(v?.value || '').toLowerCase();
-          const odds  = Number(v?.odd);
+          const odds = Number(v?.odd);
           if (!Number.isFinite(odds)) continue;
-          if (value === 'over 2.5')  upsertSelection(m.selections, 'Over',  'Over 2.5',  odds, bookmakerName);
+          if (value === 'over 2.5') upsertSelection(m.selections, 'Over', 'Over 2.5', odds, bookmakerName);
           if (value === 'under 2.5') upsertSelection(m.selections, 'Under', 'Under 2.5', odds, bookmakerName);
         }
         continue;
@@ -157,13 +165,13 @@ function normaliseOdds(r, providerId) {
 
       // Both Teams to Score -> BTTS
       if (name === 'both teams to score' || name === 'both teams score' || name === 'btts') {
-        const m = markets['BTTS'] = markets['BTTS'] || { name: 'Both Teams to Score', selections: [] };
+        const m = (markets['BTTS'] = markets['BTTS'] || { name: 'Both Teams to Score', selections: [] });
         for (const v of bet?.values || []) {
           const value = String(v?.value || '').toLowerCase();
-          const odds  = Number(v?.odd);
+          const odds = Number(v?.odd);
           if (!Number.isFinite(odds)) continue;
           if (value === 'yes') upsertSelection(m.selections, 'Yes', 'Yes', odds, bookmakerName);
-          if (value === 'no')  upsertSelection(m.selections, 'No',  'No',  odds, bookmakerName);
+          if (value === 'no') upsertSelection(m.selections, 'No', 'No', odds, bookmakerName);
         }
         continue;
       }
@@ -184,6 +192,12 @@ function normaliseOdds(r, providerId) {
 
 function upsertSelection(arr, key, label, odds, bookmaker) {
   const existing = arr.find((s) => s.key === key);
-  if (!existing) { arr.push({ key, label, odds, bookmaker }); return; }
-  if (odds > existing.odds) { existing.odds = odds; existing.bookmaker = bookmaker; }
+  if (!existing) {
+    arr.push({ key, label, odds, bookmaker });
+    return;
+  }
+  if (odds > existing.odds) {
+    existing.odds = odds;
+    existing.bookmaker = bookmaker;
+  }
 }

@@ -11,9 +11,9 @@
  * concurrent write can't tear the response.
  */
 
-const BUCKET_MS    = 60 * 1000;          // one bucket per minute
-const WINDOW_MIN   = 24 * 60;             // 24 hours of buckets
-const buckets = new Map();                // bucketKey -> aggregate
+const BUCKET_MS = 60 * 1000; // one bucket per minute
+const WINDOW_MIN = 24 * 60; // 24 hours of buckets
+const buckets = new Map(); // bucketKey -> aggregate
 
 function bucketKey(t = Date.now()) {
   return Math.floor(t / BUCKET_MS) * BUCKET_MS;
@@ -25,9 +25,9 @@ function getBucket(key) {
     b = {
       t: key,
       reqCount: 0,
-      errCount: 0,         // status >= 500
-      clientErrCount: 0,   // 400..499
-      latencyMs: [],       // sample list, capped per bucket
+      errCount: 0, // status >= 500
+      clientErrCount: 0, // 400..499
+      latencyMs: [], // sample list, capped per bucket
       oddsLagMs: [],
     };
     buckets.set(key, b);
@@ -42,7 +42,7 @@ function pruneOld(latestKey) {
 }
 
 const LATENCY_SAMPLE_CAP = 200;
-const ODDS_SAMPLE_CAP    = 30;
+const ODDS_SAMPLE_CAP = 30;
 
 export function recordRequest(latencyMs, statusCode) {
   const b = getBucket(bucketKey());
@@ -87,16 +87,32 @@ export function getMetricsWindow() {
   for (let i = WINDOW_MIN - 1; i >= 0; i--) {
     const k = newest - i * BUCKET_MS;
     const b = buckets.get(k);
-    out.push(b
-      ? summarizeBucket(b)
-      : { t: k, reqs: 0, errs: 0, clientErrs: 0, errorRate: 0, p50Ms: 0, p95Ms: 0, p99Ms: 0, oddsP50Ms: 0, oddsMaxMs: 0 });
+    out.push(
+      b
+        ? summarizeBucket(b)
+        : {
+            t: k,
+            reqs: 0,
+            errs: 0,
+            clientErrs: 0,
+            errorRate: 0,
+            p50Ms: 0,
+            p95Ms: 0,
+            p99Ms: 0,
+            oddsP50Ms: 0,
+            oddsMaxMs: 0,
+          },
+    );
   }
   // 24-hour roll-ups for the headline tiles.
-  const total = out.reduce((s, r) => ({
-    reqs: s.reqs + r.reqs,
-    errs: s.errs + r.errs,
-    clientErrs: s.clientErrs + r.clientErrs,
-  }), { reqs: 0, errs: 0, clientErrs: 0 });
+  const total = out.reduce(
+    (s, r) => ({
+      reqs: s.reqs + r.reqs,
+      errs: s.errs + r.errs,
+      clientErrs: s.clientErrs + r.clientErrs,
+    }),
+    { reqs: 0, errs: 0, clientErrs: 0 },
+  );
 
   const allLatencies = [];
   for (const b of buckets.values()) for (const v of b.latencyMs) allLatencies.push(v);
@@ -110,10 +126,8 @@ export function getMetricsWindow() {
   // minutes that had any activity at all. Idle minutes don't count
   // against uptime — they aren't downtime, they're quiet periods.
   const activeBuckets = out.filter((r) => r.reqs > 0);
-  const goodBuckets   = activeBuckets.filter((r) => r.errs === 0);
-  const uptimePct = activeBuckets.length
-    ? Number(((goodBuckets.length / activeBuckets.length) * 100).toFixed(2))
-    : 100;
+  const goodBuckets = activeBuckets.filter((r) => r.errs === 0);
+  const uptimePct = activeBuckets.length ? Number(((goodBuckets.length / activeBuckets.length) * 100).toFixed(2)) : 100;
 
   return {
     windowMinutes: WINDOW_MIN,

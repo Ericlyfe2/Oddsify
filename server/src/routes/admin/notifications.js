@@ -27,26 +27,45 @@ router.get('/', requireAdmin, (_req, res) => {
   res.json({ notifications: all.slice(0, 100) });
 });
 
-router.post('/', requireAdmin, validate(broadcastSchema), asyncHandler(async (req, res) => {
-  const { title, body, audience, severity } = req.body;
-  const id = `nfn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const record = {
-    id, title, body, audience, severity,
-    createdBy: req.admin.id,
-    createdAt: new Date().toISOString(),
-  };
-  store.set(id, record);
-  audit(req, { action: 'admin.broadcast.sent', target: id, targetType: 'notification', meta: { audience, severity } });
-  if (audience === 'admins') emitAdmin('notification:new', record);
-  else                       emitAll('notification:new', record);
-  res.status(201).json({ ok: true, notification: record });
-}));
+router.post(
+  '/',
+  requireAdmin,
+  validate(broadcastSchema),
+  asyncHandler(async (req, res) => {
+    const { title, body, audience, severity } = req.body;
+    const id = `nfn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const record = {
+      id,
+      title,
+      body,
+      audience,
+      severity,
+      createdBy: req.admin.id,
+      createdAt: new Date().toISOString(),
+    };
+    store.set(id, record);
+    audit(req, {
+      action: 'admin.broadcast.sent',
+      target: id,
+      targetType: 'notification',
+      meta: { audience, severity },
+    });
+    if (audience === 'admins') emitAdmin('notification:new', record);
+    else emitAll('notification:new', record);
+    res.status(201).json({ ok: true, notification: record });
+  }),
+);
 
 router.delete('/:id', requireAdmin, (req, res, next) => {
   const rec = store.get(req.params.id);
   if (!rec) return next(notFound('Notification not found.'));
   store.delete(req.params.id);
-  audit(req, { action: 'admin.broadcast.deleted', target: req.params.id, targetType: 'notification', severity: 'warning' });
+  audit(req, {
+    action: 'admin.broadcast.deleted',
+    target: req.params.id,
+    targetType: 'notification',
+    severity: 'warning',
+  });
   res.json({ ok: true });
 });
 

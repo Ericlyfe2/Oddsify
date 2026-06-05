@@ -1,18 +1,26 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import {
-  findByEmail, findByGoogleId, getUserById, createUser, updateUser, publicUser, logActivity,
+  findByEmail,
+  findByGoogleId,
+  getUserById,
+  createUser,
+  updateUser,
+  publicUser,
+  logActivity,
 } from '../db/users.js';
 import { hashPassword, verifyPassword, passwordIssues } from '../services/password.js';
 import {
-  signAccessToken, issueRefreshToken, rotateRefreshToken,
-  revokeRefreshToken, lookupRefresh, revokeAllForAccount,
+  signAccessToken,
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  lookupRefresh,
+  revokeAllForAccount,
 } from '../services/token.js';
 import { verifyGoogleIdToken } from '../services/oauth.js';
 import { requireAuth } from '../middleware/auth.js';
-import {
-  publicAdmin, bruteCheck, bumpBrute, clearBrute, issueAdminSession,
-} from './admin/auth.js';
+import { publicAdmin, bruteCheck, bumpBrute, clearBrute, issueAdminSession } from './admin/auth.js';
 import { recordAudit } from '../db/audit.js';
 import { loginLimiter } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
@@ -31,15 +39,16 @@ const emailLike = z
     z
       .string()
       .min(3, 'Enter a valid email or phone.')
-      .refine(
-        (v) =>
-          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ||
-          /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')),
-        { message: 'Enter a valid email or phone.' },
-      ),
+      .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')), {
+        message: 'Enter a valid email or phone.',
+      }),
   );
 
-const country = z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'Select your country.');
+const country = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{2}$/, 'Select your country.');
 
 const registerSchema = z.object({
   email: emailLike,
@@ -89,7 +98,8 @@ router.get('/config', (_req, res) => {
 });
 
 /** Register — creates account, immediately signs in (no OTP). */
-router.post('/register',
+router.post(
+  '/register',
   validate(registerSchema),
   asyncHandler(async (req, res) => {
     const { email, password, displayName, country: countryCode } = req.body;
@@ -110,11 +120,12 @@ router.post('/register',
     log.info(`registered ${email} (${countryCode})`);
     const session = issueSession(user, req);
     res.status(201).json({ ok: true, kind: 'user', account: publicUser(user), ...session });
-  })
+  }),
 );
 
 /** Login — single step, no OTP, no email verification gate. */
-router.post('/login',
+router.post(
+  '/login',
   loginLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
@@ -128,17 +139,34 @@ router.post('/login',
       const ok = await verifyPassword(password, user.passwordHash);
       if (!ok) {
         bumpBrute(email);
-        recordAudit({ actorId: user.id, action: 'admin.login.failed', severity: 'warning', ip: req.ip, meta: { email } });
+        recordAudit({
+          actorId: user.id,
+          action: 'admin.login.failed',
+          severity: 'warning',
+          ip: req.ip,
+          meta: { email },
+        });
         logActivity(user.id, { kind: 'admin_login_failed', ip: req.ip });
         throw unauthorized('Incorrect email or password.');
       }
       if (user.suspended) {
-        recordAudit({ actorId: user.id, action: 'admin.login.suspended', severity: 'warning', ip: req.ip, meta: { email } });
+        recordAudit({
+          actorId: user.id,
+          action: 'admin.login.suspended',
+          severity: 'warning',
+          ip: req.ip,
+          meta: { email },
+        });
         throw forbidden('Admin account suspended.');
       }
       clearBrute(email);
       const session = issueAdminSession(user, req);
-      logActivity(user.id, { kind: 'admin_login_success', ip: req.ip, userAgent: req.get('user-agent'), via: 'unified' });
+      logActivity(user.id, {
+        kind: 'admin_login_success',
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+        via: 'unified',
+      });
       recordAudit({ actorId: user.id, action: 'admin.login.success', ip: req.ip, meta: { email, via: 'unified' } });
       return res.json({ ok: true, kind: 'admin', admin: publicAdmin(user), ...session });
     }
@@ -165,10 +193,11 @@ router.post('/login',
     logActivity(fresh.id, { kind: 'login_success', ip: req.ip, userAgent: req.get('user-agent') });
     const session = issueSession(fresh, req);
     res.json({ ok: true, kind: 'user', account: publicUser(fresh), ...session });
-  })
+  }),
 );
 
-router.post('/refresh',
+router.post(
+  '/refresh',
   asyncHandler(async (req, res) => {
     const token = req.body?.refreshToken;
     const record = lookupRefresh(token);
@@ -178,22 +207,26 @@ router.post('/refresh',
     const next = rotateRefreshToken(token, { ip: req.ip, userAgent: req.get('user-agent') });
     const access = signAccessToken(user);
     res.json({ ok: true, accessToken: access, refreshToken: next.token, expiresAt: next.expiresAt });
-  })
+  }),
 );
 
-router.post('/logout', asyncHandler(async (req, res) => {
-  const token = req.body?.refreshToken;
-  const record = token ? lookupRefresh(token) : null;
-  if (record) {
-    logActivity(record.accountId, { kind: 'logout', ip: req.ip, userAgent: req.get('user-agent') });
-  } else if (req.user?.id) {
-    logActivity(req.user.id, { kind: 'logout', ip: req.ip, userAgent: req.get('user-agent') });
-  }
-  if (token) revokeRefreshToken(token);
-  res.json({ ok: true });
-}));
+router.post(
+  '/logout',
+  asyncHandler(async (req, res) => {
+    const token = req.body?.refreshToken;
+    const record = token ? lookupRefresh(token) : null;
+    if (record) {
+      logActivity(record.accountId, { kind: 'logout', ip: req.ip, userAgent: req.get('user-agent') });
+    } else if (req.user?.id) {
+      logActivity(req.user.id, { kind: 'logout', ip: req.ip, userAgent: req.get('user-agent') });
+    }
+    if (token) revokeRefreshToken(token);
+    res.json({ ok: true });
+  }),
+);
 
-router.post('/change-password',
+router.post(
+  '/change-password',
   requireAuth,
   validate(changePwSchema),
   asyncHandler(async (req, res) => {
@@ -211,10 +244,11 @@ router.post('/change-password',
     revokeAllForAccount(user.id);
     logActivity(user.id, { kind: 'password_changed', ip: req.ip });
     res.json({ ok: true, message: 'Password changed. Other sessions were signed out.' });
-  })
+  }),
 );
 
-router.post('/google',
+router.post(
+  '/google',
   validate(googleSchema),
   asyncHandler(async (req, res) => {
     const profile = await verifyGoogleIdToken(req.body.credential);
@@ -239,7 +273,7 @@ router.post('/google',
     logActivity(user.id, { kind: 'login_google', ip: req.ip });
     const session = issueSession(user, req);
     res.json({ ok: true, kind: 'user', account: publicUser(user), ...session });
-  })
+  }),
 );
 
 router.get('/me', requireAuth, (req, res) => {

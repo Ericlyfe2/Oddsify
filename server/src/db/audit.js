@@ -32,21 +32,26 @@ export function recordAudit(entry) {
 
 export function listAudit({ limit = 200, action, actorId, targetType, severity, from, to } = {}) {
   const all = auditStore.get('entries') || [];
-  return all.filter((e) => {
-    if (action     && !String(e.action).includes(action)) return false;
-    if (actorId    && e.actorId !== actorId) return false;
-    if (targetType && e.targetType !== targetType) return false;
-    if (severity   && e.severity !== severity) return false;
-    if (from       && new Date(e.at) < new Date(from)) return false;
-    if (to         && new Date(e.at) > new Date(to))   return false;
-    return true;
-  }).slice(0, limit);
+  return all
+    .filter((e) => {
+      if (action && !String(e.action).includes(action)) return false;
+      if (actorId && e.actorId !== actorId) return false;
+      if (targetType && e.targetType !== targetType) return false;
+      if (severity && e.severity !== severity) return false;
+      if (from && new Date(e.at) < new Date(from)) return false;
+      if (to && new Date(e.at) > new Date(to)) return false;
+      return true;
+    })
+    .slice(0, limit);
 }
 
 export function auditStats() {
   const all = auditStore.get('entries') || [];
   const last24h = all.filter((e) => Date.now() - new Date(e.at).getTime() < 86_400_000);
-  const bySeverity = last24h.reduce((acc, e) => { acc[e.severity] = (acc[e.severity] || 0) + 1; return acc; }, {});
+  const bySeverity = last24h.reduce((acc, e) => {
+    acc[e.severity] = (acc[e.severity] || 0) + 1;
+    return acc;
+  }, {});
   return {
     total: all.length,
     last24h: last24h.length,

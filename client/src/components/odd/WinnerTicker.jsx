@@ -1,14 +1,14 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { fetchRecentWins } from '../../api/betApi.js';
 import { useVisibilityPolling } from '../../hooks/useVisibilityPolling.js';
-import { T, fmtCedi } from './tokens.js';
+import { useTokens, fmtCedi } from './tokens.jsx';
 
 const POLL_MS = 60_000;
 
 function relTime(iso) {
   const ms = Date.now() - new Date(iso).getTime();
-  if (ms < 60_000)          return 'just now';
-  if (ms < 60 * 60_000)     return `${Math.floor(ms / 60_000)}m ago`;
+  if (ms < 60_000) return 'just now';
+  if (ms < 60 * 60_000) return `${Math.floor(ms / 60_000)}m ago`;
   return `${Math.floor(ms / (60 * 60_000))}h ago`;
 }
 
@@ -17,7 +17,8 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export default function WinnerTicker() {
+export default React.memo(function WinnerTicker() {
+  const T = useTokens();
   const { data } = useVisibilityPolling(fetchRecentWins, POLL_MS, []);
   const items = data?.wins || [];
   const reduce = useMemo(prefersReducedMotion, []);
@@ -30,7 +31,10 @@ export default function WinnerTicker() {
       aria-label="Recent winners"
       style={{
         position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -47,17 +51,24 @@ export default function WinnerTicker() {
           borderRadius: 12,
           whiteSpace: 'nowrap',
           maxWidth: '90vw',
-          color: '#dff3e3',
+          color: 'var(--text)',
           animation: reduce ? 'none' : 'odd-marquee 33.33s linear infinite',
         }}
       >
         {[...items, ...items].map((it, i) => (
-          <span key={`${it.id}-${i}`} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, marginRight: 48,
-            fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 12,
-          }}>
+          <span
+            key={`${it.id}-${i}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              marginRight: 48,
+              fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+              fontSize: 12,
+            }}
+          >
             <span style={{ width: 6, height: 6, borderRadius: 999, background: T.greenBright }} />
-            <span style={{ color: '#fff' }}>📞 {it.phoneMasked}</span>
+            <span style={{ color: 'var(--text)' }}>📞 {it.phoneMasked}</span>
             <span style={{ color: T.greenBright, fontWeight: 700 }}>GHS {fmtCedi(it.amountGhs)}</span>
             <span style={{ opacity: 0.85 }}>{it.betType === 'multi' ? `Multi (${it.legs} legs)` : 'Single'}</span>
             <span style={{ opacity: 0.5 }}>{relTime(it.settledAt)}</span>
@@ -66,4 +77,4 @@ export default function WinnerTicker() {
       </div>
     </div>
   );
-}
+});

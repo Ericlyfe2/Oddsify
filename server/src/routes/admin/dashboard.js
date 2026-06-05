@@ -16,7 +16,7 @@ import { getMetricsWindow } from '../../services/metrics.js';
 const router = Router();
 
 const betsStore = createStore('bets', {});
-const txStore   = createStore('transactions', {});
+const txStore = createStore('transactions', {});
 const refreshStore = createStore('refresh_tokens', {});
 
 const DAY = 86_400_000;
@@ -56,23 +56,27 @@ function flattenTransactions() {
 
 router.get('/overview', requireAdmin, (req, res) => {
   const users = allUsers();
-  const bets  = Object.values(betsStore.all() || {});
-  const tx    = flattenTransactions();
-  const now   = Date.now();
+  const bets = Object.values(betsStore.all() || {});
+  const tx = flattenTransactions();
+  const now = Date.now();
 
   const since24h = now - DAY;
   const since30d = now - 30 * DAY;
-  const since7d  = now - 7 * DAY;
+  const since7d = now - 7 * DAY;
 
   const usersTotal = users.length;
   const usersAdmin = users.filter((u) => u.role === 'admin').length;
   const usersSuspended = users.filter((u) => u.suspended).length;
   const usersKycPending = users.filter((u) => (u.kycStatus || 'unverified') === 'pending').length;
   const usersNew24h = users.filter((u) => new Date(u.createdAt).getTime() > since24h).length;
-  const usersNew7d  = users.filter((u) => new Date(u.createdAt).getTime() > since7d).length;
+  const usersNew7d = users.filter((u) => new Date(u.createdAt).getTime() > since7d).length;
 
   const activeRefresh = refreshStore.list().filter((r) => !r.revokedAt && new Date(r.expiresAt) > new Date(now));
-  const onlineUsers = new Set(activeRefresh.filter((r) => r.scope !== 'admin' && now - new Date(r.createdAt).getTime() < 6 * HOUR).map((r) => r.accountId)).size;
+  const onlineUsers = new Set(
+    activeRefresh
+      .filter((r) => r.scope !== 'admin' && now - new Date(r.createdAt).getTime() < 6 * HOUR)
+      .map((r) => r.accountId),
+  ).size;
   const onlineAdmins = new Set(activeRefresh.filter((r) => r.scope === 'admin').map((r) => r.accountId)).size;
 
   const bets24h = bets.filter((b) => new Date(b.placedAt).getTime() > since24h);
@@ -80,18 +84,18 @@ router.get('/overview', requireAdmin, (req, res) => {
   const betsSettled = bets.filter((b) => b.status === 'won' || b.status === 'lost' || b.status === 'void').length;
   const betsCashed = bets.filter((b) => b.status === 'cashed_out').length;
 
-  const stake24h     = bets24h.reduce((s, b) => s + (b.stake || 0), 0);
-  const stakeTotal   = bets.reduce((s, b) => s + (b.stake || 0), 0);
+  const stake24h = bets24h.reduce((s, b) => s + (b.stake || 0), 0);
+  const stakeTotal = bets.reduce((s, b) => s + (b.stake || 0), 0);
   const payoutsTotal = bets.filter((b) => b.status === 'won').reduce((s, b) => s + (b.potentialWin || 0), 0);
   const cashoutTotal = bets.filter((b) => b.status === 'cashed_out').reduce((s, b) => s + (b.cashOut || 0), 0);
-  const ggr24h       = bets24h.reduce((s, b) => s + (b.status === 'won' ? -(b.potentialWin - b.stake) : (b.stake || 0)), 0);
+  const ggr24h = bets24h.reduce((s, b) => s + (b.status === 'won' ? -(b.potentialWin - b.stake) : b.stake || 0), 0);
 
-  const deposits   = tx.filter((t) => t.kind === 'deposit');
-  const withdraws  = tx.filter((t) => t.kind === 'withdraw');
-  const pendingWd  = withdraws.filter((t) => t.status === 'pending');
-  const deposits24h  = deposits.filter((t) => new Date(t.at).getTime() > since24h);
+  const deposits = tx.filter((t) => t.kind === 'deposit');
+  const withdraws = tx.filter((t) => t.kind === 'withdraw');
+  const pendingWd = withdraws.filter((t) => t.status === 'pending');
+  const deposits24h = deposits.filter((t) => new Date(t.at).getTime() > since24h);
   const withdraws24h = withdraws.filter((t) => new Date(t.at).getTime() > since24h);
-  const depositSum24h  = deposits24h.reduce((s, t) => s + (t.amount || 0), 0);
+  const depositSum24h = deposits24h.reduce((s, t) => s + (t.amount || 0), 0);
   const withdrawSum24h = withdraws24h.reduce((s, t) => s + Math.abs(t.amount || 0), 0);
 
   // 30-day chart series ------------------------------------------------------
@@ -103,19 +107,40 @@ router.get('/overview', requireAdmin, (req, res) => {
   const betsByDay = grid30.map(({ key, date }) => ({
     date: key,
     bets: bets.filter((b) => dayKey(b.placedAt) === key).length,
-    stake: Number(bets.filter((b) => dayKey(b.placedAt) === key).reduce((s, b) => s + (b.stake || 0), 0).toFixed(2)),
+    stake: Number(
+      bets
+        .filter((b) => dayKey(b.placedAt) === key)
+        .reduce((s, b) => s + (b.stake || 0), 0)
+        .toFixed(2),
+    ),
   }));
   const revenueByDay = grid30.map(({ key }) => {
     const day = bets.filter((b) => dayKey(b.placedAt) === key);
     const stake = day.reduce((s, b) => s + (b.stake || 0), 0);
-    const payout = day.filter((b) => b.status === 'won').reduce((s, b) => s + (b.potentialWin || 0), 0) +
-                   day.filter((b) => b.status === 'cashed_out').reduce((s, b) => s + (b.cashOut || 0), 0);
-    return { date: key, revenue: Number((stake - payout).toFixed(2)), stake: Number(stake.toFixed(2)), payout: Number(payout.toFixed(2)) };
+    const payout =
+      day.filter((b) => b.status === 'won').reduce((s, b) => s + (b.potentialWin || 0), 0) +
+      day.filter((b) => b.status === 'cashed_out').reduce((s, b) => s + (b.cashOut || 0), 0);
+    return {
+      date: key,
+      revenue: Number((stake - payout).toFixed(2)),
+      stake: Number(stake.toFixed(2)),
+      payout: Number(payout.toFixed(2)),
+    };
   });
   const depositsByDay = grid30.map(({ key }) => ({
     date: key,
-    deposits: Number(deposits.filter((t) => dayKey(t.at) === key).reduce((s, t) => s + (t.amount || 0), 0).toFixed(2)),
-    withdraws: Number(withdraws.filter((t) => dayKey(t.at) === key).reduce((s, t) => s + Math.abs(t.amount || 0), 0).toFixed(2)),
+    deposits: Number(
+      deposits
+        .filter((t) => dayKey(t.at) === key)
+        .reduce((s, t) => s + (t.amount || 0), 0)
+        .toFixed(2),
+    ),
+    withdraws: Number(
+      withdraws
+        .filter((t) => dayKey(t.at) === key)
+        .reduce((s, t) => s + Math.abs(t.amount || 0), 0)
+        .toFixed(2),
+    ),
   }));
 
   // Sport mix by stake
@@ -145,7 +170,10 @@ router.get('/overview', requireAdmin, (req, res) => {
 
   // Recent activity feed
   const recent = [];
-  for (const u of users.slice().sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)).slice(0, 12)) {
+  for (const u of users
+    .slice()
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
+    .slice(0, 12)) {
     for (const a of (u.activity || []).slice(0, 3)) {
       recent.push({ kind: a.kind, user: u.email, at: a.at, meta: a });
     }
@@ -153,7 +181,9 @@ router.get('/overview', requireAdmin, (req, res) => {
   recent.sort((a, b) => (a.at < b.at ? 1 : -1));
 
   const audits = auditStats();
-  const fraudAlerts = listAudit({ severity: 'critical', limit: 20 }).concat(listAudit({ severity: 'warning', limit: 20 }));
+  const fraudAlerts = listAudit({ severity: 'critical', limit: 20 }).concat(
+    listAudit({ severity: 'warning', limit: 20 }),
+  );
 
   res.json({
     generatedAt: new Date().toISOString(),
@@ -240,7 +270,12 @@ router.get('/audit', requireAdmin, (req, res) => {
   const { action, actorId, targetType, severity, from, to } = req.query;
   const entries = listAudit({
     limit: Math.min(Number(req.query.limit) || 200, 1000),
-    action, actorId, targetType, severity, from, to,
+    action,
+    actorId,
+    targetType,
+    severity,
+    from,
+    to,
   });
   res.json({ entries });
 });
@@ -252,24 +287,30 @@ router.get('/finance', requireAdmin, (req, res) => {
   const usersById = new Map(users.map((u) => [u.id, u]));
   const decorated = tx.slice(0, 400).map((t) => ({
     ...t,
-    user: usersById.get(t.userId) ? {
-      email: usersById.get(t.userId).email,
-      displayName: usersById.get(t.userId).displayName,
-      country: usersById.get(t.userId).country,
-    } : null,
+    user: usersById.get(t.userId)
+      ? {
+          email: usersById.get(t.userId).email,
+          displayName: usersById.get(t.userId).displayName,
+          country: usersById.get(t.userId).country,
+        }
+      : null,
   }));
   const now = Date.now();
   const dep = tx.filter((t) => t.kind === 'deposit');
-  const wd  = tx.filter((t) => t.kind === 'withdraw');
-  const sumIn24h  = dep.filter((t) => new Date(t.at).getTime() > now - DAY).reduce((s, t) => s + (t.amount || 0), 0);
-  const sumOut24h = wd .filter((t) => new Date(t.at).getTime() > now - DAY).reduce((s, t) => s + Math.abs(t.amount || 0), 0);
+  const wd = tx.filter((t) => t.kind === 'withdraw');
+  const sumIn24h = dep.filter((t) => new Date(t.at).getTime() > now - DAY).reduce((s, t) => s + (t.amount || 0), 0);
+  const sumOut24h = wd
+    .filter((t) => new Date(t.at).getTime() > now - DAY)
+    .reduce((s, t) => s + Math.abs(t.amount || 0), 0);
   res.json({
     summary: {
       depositCount: dep.length,
       withdrawCount: wd.length,
       depositTotal: Number(dep.reduce((s, t) => s + (t.amount || 0), 0).toFixed(2)),
       withdrawTotal: Number(wd.reduce((s, t) => s + Math.abs(t.amount || 0), 0).toFixed(2)),
-      net: Number((dep.reduce((s, t) => s + (t.amount || 0), 0) - wd.reduce((s, t) => s + Math.abs(t.amount || 0), 0)).toFixed(2)),
+      net: Number(
+        (dep.reduce((s, t) => s + (t.amount || 0), 0) - wd.reduce((s, t) => s + Math.abs(t.amount || 0), 0)).toFixed(2),
+      ),
       sumIn24h: Number(sumIn24h.toFixed(2)),
       sumOut24h: Number(sumOut24h.toFixed(2)),
     },
@@ -280,25 +321,34 @@ router.get('/finance', requireAdmin, (req, res) => {
 /** Fraud: heuristic risk signals computed on demand. */
 router.get('/fraud', requireAdmin, (_req, res) => {
   const users = allUsers().filter((u) => u.role !== 'admin');
-  const bets  = Object.values(betsStore.all() || {});
-  const tx    = flattenTransactions();
-  const now   = Date.now();
+  const bets = Object.values(betsStore.all() || {});
+  const tx = flattenTransactions();
+  const now = Date.now();
 
   const signals = [];
   for (const u of users) {
     const reasons = [];
     let score = 0;
-    if (u.suspended) { reasons.push('Suspended account'); score += 40; }
+    if (u.suspended) {
+      reasons.push('Suspended account');
+      score += 40;
+    }
     const acts = u.activity || [];
     const failedLogins = acts.filter((a) => a.kind === 'login_failed' && now - new Date(a.at).getTime() < DAY).length;
-    if (failedLogins >= 3) { reasons.push(`${failedLogins} failed logins (24h)`); score += 20 + failedLogins; }
+    if (failedLogins >= 3) {
+      reasons.push(`${failedLogins} failed logins (24h)`);
+      score += 20 + failedLogins;
+    }
     const ips = new Set(acts.filter((a) => a.ip).map((a) => a.ip));
-    if (ips.size > 5) { reasons.push(`${ips.size} unique IPs`); score += Math.min(25, ips.size); }
+    if (ips.size > 5) {
+      reasons.push(`${ips.size} unique IPs`);
+      score += Math.min(25, ips.size);
+    }
 
     const userDep = tx.filter((t) => t.userId === u.id && t.kind === 'deposit');
-    const userWd  = tx.filter((t) => t.userId === u.id && t.kind === 'withdraw');
+    const userWd = tx.filter((t) => t.userId === u.id && t.kind === 'withdraw');
     const totalDep = userDep.reduce((s, t) => s + (t.amount || 0), 0);
-    const totalWd  = userWd.reduce((s, t) => s + Math.abs(t.amount || 0), 0);
+    const totalWd = userWd.reduce((s, t) => s + Math.abs(t.amount || 0), 0);
     if (totalWd > 0 && totalDep < totalWd * 0.1) {
       reasons.push('Withdrawals exceed 10× deposits');
       score += 35;

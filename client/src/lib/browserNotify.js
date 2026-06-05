@@ -73,7 +73,11 @@ export function notify({ title, body, tag, icon, onlyWhenHidden = false } = {}) 
     });
     // Bring the tab to the front when the user clicks the notification.
     n.onclick = () => {
-      try { window.focus(); } catch { /* ignore */ }
+      try {
+        window.focus();
+      } catch {
+        /* ignore */
+      }
       n.close();
     };
     return n;

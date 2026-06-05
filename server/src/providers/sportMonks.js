@@ -31,9 +31,10 @@ export class SportMonksProvider extends Provider {
     // include set lets the normaliser surface the live clock from `periods`
     // and red-card counts from `events` — both consumed downstream by the
     // cash-out engine in services/oddsAggregator.js.
-    const url = `${this.base}/livescores/inplay`
-              + `?api_token=${this.token}`
-              + `&include=participants;scores;periods;events;league.country;round`;
+    const url =
+      `${this.base}/livescores/inplay` +
+      `?api_token=${this.token}` +
+      `&include=participants;scores;periods;events;league.country;round`;
     const json = await this.http(url);
     return (json?.data || []).map((r) => {
       const fx = normalise(r, this.id);
@@ -62,7 +63,7 @@ function normalise(r, providerId) {
   // depending on the older boolean `is_live` field (which v3 doesn't send).
   const sid = r.state_id ?? r.state?.id;
   const finished = sid >= 5;
-  const isLive   = sid === 2 || sid === 3 || sid === 4;
+  const isLive = sid === 2 || sid === 3 || sid === 4;
   return {
     key: fixtureKey('football', home, away, kickoff),
     provider: providerId,
@@ -74,7 +75,9 @@ function normalise(r, providerId) {
       country: r.league?.country?.name,
     },
     round: r.round?.name ?? null,
-    home, away, kickoff,
+    home,
+    away,
+    kickoff,
     homeId: homeP?.id != null ? String(homeP.id) : null,
     awayId: awayP?.id != null ? String(awayP.id) : null,
     status: finished ? 'finished' : isLive ? 'live' : 'upcoming',
@@ -92,11 +95,11 @@ function redCardCounts(r) {
   const parts = r.participants || [];
   const homeId = parts.find((p) => p.meta?.location === 'home')?.id;
   const awayId = parts.find((p) => p.meta?.location === 'away')?.id;
-  let home = 0, away = 0;
+  let home = 0,
+    away = 0;
   for (const e of r.events || []) {
     if (e.rescinded === true) continue;
-    const isRed = e.type_id === 20 || e.type_id === 21
-                  || /redcard/i.test(e.addition || '');
+    const isRed = e.type_id === 20 || e.type_id === 21 || /redcard/i.test(e.addition || '');
     if (!isRed) continue;
     if (e.participant_id === homeId) home++;
     else if (e.participant_id === awayId) away++;
@@ -121,8 +124,6 @@ function pickMinute(periods) {
 // `s.participant` directly and silently returned null for every match.
 function pickScore(scores, side) {
   if (!Array.isArray(scores)) return null;
-  const row = scores.find(
-    (s) => s.description === 'CURRENT' && s.score?.participant === side
-  );
+  const row = scores.find((s) => s.description === 'CURRENT' && s.score?.participant === side);
   return row?.score?.goals ?? null;
 }

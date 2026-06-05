@@ -16,10 +16,10 @@ import { io as ioClient } from 'socket.io-client';
 import { setTimeout as wait } from 'node:timers/promises';
 
 // Env BEFORE importing the app so config picks it up.
-process.env.NODE_ENV       ||= 'test';
-process.env.PORT           ||= '4099';
-process.env.JWT_SECRET     ||= 'test-secret-key-for-development-only-32+';
-process.env.ADMIN_EMAIL    ||= 'admin@oddsify.gh';
+process.env.NODE_ENV ||= 'test';
+process.env.PORT ||= '4099';
+process.env.JWT_SECRET ||= 'test-secret-key-for-development-only-32+';
+process.env.ADMIN_EMAIL ||= 'admin@oddsify.gh';
 process.env.ADMIN_PASSWORD ||= 'Admin@12345';
 
 const PORT = Number(process.env.PORT);
@@ -49,7 +49,9 @@ function fail(msg, extra) {
   if (serverProc) serverProc.kill();
   process.exit(1);
 }
-function ok(msg) { console.log('✅', msg); }
+function ok(msg) {
+  console.log('✅', msg);
+}
 
 async function rq(path, { method = 'GET', body, token, adminToken } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -62,7 +64,11 @@ async function rq(path, { method = 'GET', body, token, adminToken } = {}) {
   });
   const text = await res.text();
   let json = null;
-  try { json = text ? JSON.parse(text) : null; } catch { /* keep text */ }
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    /* keep text */
+  }
   return { status: res.status, ok: res.ok, body: json, raw: text };
 }
 
@@ -71,7 +77,9 @@ async function waitForHealth(retries = 40) {
     try {
       const r = await rq('/api/health');
       if (r.ok) return;
-    } catch { /* not up yet */ }
+    } catch {
+      /* not up yet */
+    }
     await wait(250);
   }
   fail('server did not come up on /api/health within ~10s');
@@ -86,21 +94,22 @@ const adminLogin = await rq('/api/admin/auth/login', {
   body: { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD },
 });
 if (!adminLogin.ok) fail('admin login failed', adminLogin);
-if (adminLogin.body?.requires2fa) fail('admin requires 2FA — disable for the test admin or seed without it', adminLogin.body);
+if (adminLogin.body?.requires2fa)
+  fail('admin requires 2FA — disable for the test admin or seed without it', adminLogin.body);
 const adminToken = adminLogin.body?.accessToken;
 if (!adminToken) fail('admin login returned no accessToken', adminLogin.body);
 ok(`admin logged in (${adminLogin.body?.admin?.email})`);
 
 /* ─── 2. Player sign-up + login ───────────────────────────────────── */
 const playerEmail = `notif.test+${Date.now()}@example.gh`;
-const playerPass  = 'Player@12345';
+const playerPass = 'Player@12345';
 const signup = await rq('/api/auth/register', {
   method: 'POST',
   body: { email: playerEmail, password: playerPass, displayName: 'Notif Tester', country: 'GH' },
 });
 if (!signup.ok) fail('player register failed', signup);
 const playerToken = signup.body?.accessToken;
-const playerId    = signup.body?.account?.id;
+const playerId = signup.body?.account?.id;
 if (!playerToken || !playerId) fail('register response missing token/id', signup.body);
 ok(`player registered: ${playerEmail} (id=${playerId})`);
 
@@ -112,11 +121,15 @@ const socket = ioClient(`${BASE}/live`, {
 });
 
 const connected = new Promise((resolve, reject) => {
-  socket.once('connect',       () => resolve());
+  socket.once('connect', () => resolve());
   socket.once('connect_error', (e) => reject(new Error(`socket connect_error: ${e.message}`)));
   setTimeout(() => reject(new Error('socket connect timeout')), 5_000);
 });
-try { await connected; } catch (e) { fail(e.message); }
+try {
+  await connected;
+} catch (e) {
+  fail(e.message);
+}
 ok(`player socket connected (sid=${socket.id})`);
 
 /* Listener primed BEFORE the broadcast is sent. */
@@ -140,10 +153,7 @@ if (!send.ok) fail('admin broadcast failed', send);
 ok(`admin POST /api/admin/notifications -> 201 (id=${send.body?.notification?.id})`);
 
 /* ─── 5. Player must see it over the socket ──────────────────────── */
-const received = await Promise.race([
-  gotNotification,
-  wait(5_000).then(() => null),
-]);
+const received = await Promise.race([gotNotification, wait(5_000).then(() => null)]);
 if (!received) fail('player socket did not receive notification:new within 5s');
 if (received.title !== sentTitle) fail('payload title mismatch', { expected: sentTitle, got: received });
 ok(`player received notification:new — title="${received.title}", severity=${received.severity}`);
@@ -158,7 +168,10 @@ ok(`broadcast persisted: ${found.id}`);
 /* ─── 7. Audience:'admins' must NOT reach a player ────────────────── */
 const gotAdminOnly = new Promise((resolve) => {
   const t = setTimeout(() => resolve(null), 1_500);
-  socket.once('notification:new', (p) => { clearTimeout(t); resolve(p); });
+  socket.once('notification:new', (p) => {
+    clearTimeout(t);
+    resolve(p);
+  });
 });
 const adminOnlyTitle = `Admins only ${Date.now()}`;
 const adminOnly = await rq('/api/admin/notifications', {

@@ -10,11 +10,17 @@ const STORAGE_KEY = 'bv_scroll_positions';
 function readStore() {
   try {
     return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 function writeStore(map) {
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(map)); } catch {/* ignore */}
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
 }
 
 export default function ScrollRestoration() {

@@ -30,9 +30,9 @@ export function requireAdmin(req, _res, next) {
     const claims = verifyAccessToken(token);
     if (claims.scope !== 'admin') return next(forbidden('Not an admin token.'));
     const user = getUserById(claims.sub);
-    if (!user)                   return next(unauthorized('Admin account no longer exists.'));
-    if (user.role !== 'admin')   return next(forbidden('Account is not an admin.'));
-    if (user.suspended)          return next(forbidden('Admin suspended.'));
+    if (!user) return next(unauthorized('Admin account no longer exists.'));
+    if (user.role !== 'admin') return next(forbidden('Account is not an admin.'));
+    if (user.suspended) return next(forbidden('Admin suspended.'));
     if (!ALL_ROLES.includes(user.adminRole)) return next(forbidden('Admin role not configured.'));
     req.admin = user;
     req.adminClaims = claims;
@@ -42,23 +42,25 @@ export function requireAdmin(req, _res, next) {
   }
 }
 
-export const requireRole = (...allowed) => (req, _res, next) => {
-  if (!req.admin) return next(unauthorized('Admin sign in required.'));
-  if (req.admin.adminRole === 'super_admin') return next();
-  if (!allowed.includes(req.admin.adminRole)) {
-    recordAudit({
-      actorId: req.admin.id,
-      actorRole: req.admin.adminRole,
-      action: 'rbac.denied',
-      severity: 'warning',
-      ip: req.ip,
-      userAgent: req.get('user-agent'),
-      meta: { path: req.originalUrl, allowed },
-    });
-    return next(forbidden(`Requires one of: ${allowed.join(', ')}`));
-  }
-  next();
-};
+export const requireRole =
+  (...allowed) =>
+  (req, _res, next) => {
+    if (!req.admin) return next(unauthorized('Admin sign in required.'));
+    if (req.admin.adminRole === 'super_admin') return next();
+    if (!allowed.includes(req.admin.adminRole)) {
+      recordAudit({
+        actorId: req.admin.id,
+        actorRole: req.admin.adminRole,
+        action: 'rbac.denied',
+        severity: 'warning',
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+        meta: { path: req.originalUrl, allowed },
+      });
+      return next(forbidden(`Requires one of: ${allowed.join(', ')}`));
+    }
+    next();
+  };
 
 /** Convenience helper to record an audit entry from a request. */
 export function audit(req, entry) {
@@ -72,6 +74,8 @@ export function audit(req, entry) {
   // Late import to avoid a circular dep with realtime.js (which imports token.js)
   try {
     import('../services/realtime.js').then(({ emitAdmin }) => emitAdmin('audit:event', row)).catch(() => {});
-  } catch { /* no-op */ }
+  } catch {
+    /* no-op */
+  }
   return row;
 }

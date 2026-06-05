@@ -39,7 +39,13 @@ export function normalizeMatch(m, leagueName = '') {
     featured: m.featured,
     leagueName,
     leagueLogo: m.leagueLogo || m.league?.logo || null,
-    league: leagueName?.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase() || '—',
+    league:
+      leagueName
+        ?.split(' ')
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 3)
+        .toUpperCase() || '—',
   };
 }
 
@@ -49,7 +55,5 @@ export function normalizeMatch(m, leagueName = '') {
  */
 export function flattenLeagues(payload) {
   if (!payload?.leagues) return [];
-  return payload.leagues.flatMap(l =>
-    (l.matches || []).map(m => normalizeMatch(m, l.name))
-  );
+  return payload.leagues.flatMap((l) => (l.matches || []).map((m) => normalizeMatch(m, l.name)));
 }

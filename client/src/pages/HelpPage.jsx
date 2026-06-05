@@ -64,19 +64,30 @@ export default function HelpPage() {
         <h2 style={{ fontSize: 18, marginBottom: 12, color: 'var(--text)' }}>Frequently asked</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           {FAQ.map((item, i) => (
-            <details key={item.q}
-                     open={open === i}
-                     onToggle={(e) => { if (e.currentTarget.open) setOpen(i); }}
-                     style={{
-                       background: 'var(--surface)',
-                       border: '1px solid var(--line)',
-                       borderRadius: 'var(--r)',
-                       padding: '14px 18px',
-                     }}>
-              <summary style={{
-                fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
+            <details
+              key={item.q}
+              open={open === i}
+              onToggle={(e) => {
+                if (e.currentTarget.open) setOpen(i);
+              }}
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--r)',
+                padding: '14px 18px',
+              }}
+            >
+              <summary
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  listStyle: 'none',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 {item.q}
                 <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{open === i ? '−' : '+'}</span>
               </summary>
@@ -86,21 +97,33 @@ export default function HelpPage() {
         </div>
       </section>
 
-      <section style={{
-        padding: 28, background: 'var(--surface)',
-        border: '1px solid var(--line)', borderRadius: 'var(--r-lg)',
-      }}>
+      <section
+        style={{
+          padding: 28,
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--r-lg)',
+        }}
+      >
         <h2 style={{ fontSize: 18, marginBottom: 6 }}>Contact us</h2>
         <p style={{ color: 'var(--text-soft)', fontSize: 13, marginBottom: 18 }}>
-          We reply to most messages within 30 minutes.
-          Or email <a href="mailto:support@oddsify.gh" style={{ color: 'var(--accent)' }}>support@oddsify.gh</a>.
+          We reply to most messages within 30 minutes. Or email{' '}
+          <a href="mailto:support@oddsify.gh" style={{ color: 'var(--accent)' }}>
+            support@oddsify.gh
+          </a>
+          .
         </p>
         <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
             <label style={fieldStyle}>
               <span style={labelStyle}>Your name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} required
-                     style={inputStyle} placeholder="Kwame A." />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                style={inputStyle}
+                placeholder="Kwame A."
+              />
             </label>
             <label style={fieldStyle}>
               <span style={labelStyle}>Topic</span>
@@ -115,8 +138,14 @@ export default function HelpPage() {
           </div>
           <label style={fieldStyle}>
             <span style={labelStyle}>Message</span>
-            <textarea rows={5} value={msg} onChange={(e) => setMsg(e.target.value)} required
-                      style={{ ...inputStyle, resize: 'vertical' }} placeholder="Describe the issue. Include bet IDs or transaction references where possible." />
+            <textarea
+              rows={5}
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              required
+              style={{ ...inputStyle, resize: 'vertical' }}
+              placeholder="Describe the issue. Include bet IDs or transaction references where possible."
+            />
           </label>
           <button type="submit" className="btn btn-primary" style={{ width: 'fit-content' }} disabled={busy}>
             {busy ? 'Sending…' : 'Send to support'}
@@ -128,7 +157,13 @@ export default function HelpPage() {
 }
 
 const fieldStyle = { display: 'grid', gap: 6 };
-const labelStyle = { fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' };
+const labelStyle = {
+  fontSize: 12,
+  color: 'var(--text-soft)',
+  fontWeight: 600,
+  letterSpacing: '.04em',
+  textTransform: 'uppercase',
+};
 const inputStyle = {
   background: 'var(--bg-soft)',
   color: 'var(--text)',

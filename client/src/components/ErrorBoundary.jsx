@@ -64,17 +64,20 @@ export default class ErrorBoundary extends Component {
           <div
             aria-hidden="true"
             style={{
-              width: 64, height: 64, margin: '0 auto 16px',
+              width: 64,
+              height: 64,
+              margin: '0 auto 16px',
               borderRadius: '50%',
-              background: 'rgba(229, 72, 72, 0.12)',
-              display: 'grid', placeItems: 'center',
-              color: '#e54848',
+              background: 'color-mix(in srgb, var(--danger) 12%, transparent)',
+              display: 'grid',
+              placeItems: 'center',
+              color: 'var(--danger)',
               fontSize: 32,
             }}
-          >!</div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '-0.01em' }}>
-            Something broke
-          </h1>
+          >
+            !
+          </div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '-0.01em' }}>Something broke</h1>
           <p style={{ margin: '8px 0 20px', fontSize: 13.5, color: 'var(--text-soft, #aaa)', lineHeight: 1.5 }}>
             {msg}
           </p>

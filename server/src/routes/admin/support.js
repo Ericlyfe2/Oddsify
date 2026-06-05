@@ -37,37 +37,52 @@ router.get('/tickets/:id', requireAdmin, (req, res, next) => {
   res.json({ ticket: t });
 });
 
-router.post('/tickets/:id/reply', requireAdmin, validate(replySchema), asyncHandler(async (req, res, next) => {
-  const t = store.get(req.params.id);
-  if (!t) return next(notFound('Ticket not found.'));
-  const reply = {
-    by: req.admin.email,
-    role: 'admin',
-    body: req.body.body,
-    at: new Date().toISOString(),
-  };
-  const updated = store.update(t.id, (cur) => ({
-    ...cur,
-    replies: [...(cur.replies || []), reply],
-    status: 'pending',
-    updatedAt: new Date().toISOString(),
-  }));
-  audit(req, { action: 'admin.support.replied', target: t.id, targetType: 'ticket' });
-  emitAdmin('support:reply', { ticketId: t.id, status: updated.status });
-  res.json({ ok: true, ticket: updated });
-}));
+router.post(
+  '/tickets/:id/reply',
+  requireAdmin,
+  validate(replySchema),
+  asyncHandler(async (req, res, next) => {
+    const t = store.get(req.params.id);
+    if (!t) return next(notFound('Ticket not found.'));
+    const reply = {
+      by: req.admin.email,
+      role: 'admin',
+      body: req.body.body,
+      at: new Date().toISOString(),
+    };
+    const updated = store.update(t.id, (cur) => ({
+      ...cur,
+      replies: [...(cur.replies || []), reply],
+      status: 'pending',
+      updatedAt: new Date().toISOString(),
+    }));
+    audit(req, { action: 'admin.support.replied', target: t.id, targetType: 'ticket' });
+    emitAdmin('support:reply', { ticketId: t.id, status: updated.status });
+    res.json({ ok: true, ticket: updated });
+  }),
+);
 
-router.patch('/tickets/:id', requireAdmin, validate(statusSchema), asyncHandler(async (req, res, next) => {
-  const t = store.get(req.params.id);
-  if (!t) return next(notFound('Ticket not found.'));
-  const updated = store.update(t.id, (cur) => ({
-    ...cur,
-    status: req.body.status,
-    updatedAt: new Date().toISOString(),
-  }));
-  audit(req, { action: 'admin.support.status', target: t.id, targetType: 'ticket', meta: { status: req.body.status } });
-  res.json({ ok: true, ticket: updated });
-}));
+router.patch(
+  '/tickets/:id',
+  requireAdmin,
+  validate(statusSchema),
+  asyncHandler(async (req, res, next) => {
+    const t = store.get(req.params.id);
+    if (!t) return next(notFound('Ticket not found.'));
+    const updated = store.update(t.id, (cur) => ({
+      ...cur,
+      status: req.body.status,
+      updatedAt: new Date().toISOString(),
+    }));
+    audit(req, {
+      action: 'admin.support.status',
+      target: t.id,
+      targetType: 'ticket',
+      meta: { status: req.body.status },
+    });
+    res.json({ ok: true, ticket: updated });
+  }),
+);
 
 export default router;
 export { store as ticketStore };

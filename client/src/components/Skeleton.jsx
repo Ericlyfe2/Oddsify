@@ -32,15 +32,18 @@ Skeleton.Line = function SkeletonLine({ lines = 3, lastWidth = '60%', gap = 10 }
 
 Skeleton.Card = function SkeletonCard({ aspect = '1.4 / 1' }) {
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--line)',
-      borderRadius: 'var(--r-lg)',
-      padding: 14,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-    }} aria-hidden="true">
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-lg)',
+        padding: 14,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}
+      aria-hidden="true"
+    >
       <Skeleton width="100%" style={{ aspectRatio: aspect, height: 'auto' }} radius={10} />
       <Skeleton width="70%" height={14} />
       <Skeleton width="40%" height={11} />
@@ -51,14 +54,17 @@ Skeleton.Card = function SkeletonCard({ aspect = '1.4 / 1' }) {
 
 Skeleton.Row = function SkeletonRow() {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr auto',
-      alignItems: 'center',
-      gap: 12,
-      padding: '10px 0',
-      borderBottom: '1px dashed var(--line)',
-    }} aria-hidden="true">
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 0',
+        borderBottom: '1px dashed var(--line)',
+      }}
+      aria-hidden="true"
+    >
       <div>
         <Skeleton width="40%" height={12} />
         <Skeleton width="25%" height={10} style={{ marginTop: 6 }} />

@@ -15,7 +15,9 @@ export function findByGoogleId(googleId) {
 }
 
 export function createUser(record) {
-  const id = String(record.email || record.id || '').toLowerCase().replace(/\s+/g, '');
+  const id = String(record.email || record.id || '')
+    .toLowerCase()
+    .replace(/\s+/g, '');
   if (!id) throw new Error('user requires email');
   if (users.get(id)) throw new Error('user already exists');
   const now = new Date().toISOString();

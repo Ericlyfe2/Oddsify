@@ -5,14 +5,25 @@
     "client",
     "server"
   ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "prebuild": "node scripts/build-favicons.mjs && node scripts/build-og-image.mjs",
     "build": "npm run build -w client",
-    "start": "npm run start -w server"
+    "start": "npm run start -w server",
+    "lint": "eslint . --ext .js,.jsx --ignore-pattern node_modules --ignore-pattern dist --ignore-pattern server/data --ignore-pattern client/dist",
+    "format": "prettier --check \"**/*.{js,jsx,mjs,mjs,css,json}\" --ignore-path .gitignore",
+    "format:fix": "prettier --write \"**/*.{js,jsx,mjs,mjs,css,json}\" --ignore-path .gitignore",
+    "test": "npm run test -w server",
+    "test:all": "npm run lint && npm run test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.2.5",
     "sharp": "^0.33.5"
   }
 }

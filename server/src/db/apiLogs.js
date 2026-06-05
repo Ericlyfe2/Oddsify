@@ -11,7 +11,8 @@ export function recordApiCall({ provider, endpoint, status, latencyMs, error, me
   const row = {
     id: crypto.randomBytes(4).toString('hex'),
     at: new Date().toISOString(),
-    provider, endpoint,
+    provider,
+    endpoint,
     status: Number(status) || 0,
     latencyMs: Math.round(Number(latencyMs) || 0),
     error: error ? String(error).slice(0, 300) : null,
@@ -25,7 +26,7 @@ export function recordApiCall({ provider, endpoint, status, latencyMs, error, me
 export function listApiLogs({ provider, limit = 100, since } = {}) {
   let rows = logs;
   if (provider) rows = rows.filter((l) => l.provider === provider);
-  if (since)    rows = rows.filter((l) => new Date(l.at).getTime() >= Number(since));
+  if (since) rows = rows.filter((l) => new Date(l.at).getTime() >= Number(since));
   return rows.slice(0, Math.min(limit, MAX_ENTRIES));
 }
 
@@ -38,7 +39,7 @@ export function summariseApiCalls() {
     const age = now - new Date(l.at).getTime();
     for (const [w, ms] of Object.entries(windows)) {
       if (age <= ms) {
-        const p = buckets[w][l.provider] = buckets[w][l.provider] || { calls: 0, errors: 0, totalLatency: 0 };
+        const p = (buckets[w][l.provider] = buckets[w][l.provider] || { calls: 0, errors: 0, totalLatency: 0 });
         p.calls++;
         p.totalLatency += l.latencyMs;
         if (l.status >= 400 || l.error) p.errors++;
@@ -47,12 +48,17 @@ export function summariseApiCalls() {
   }
   const out = {};
   for (const [w, providers] of Object.entries(buckets)) {
-    out[w] = Object.fromEntries(Object.entries(providers).map(([k, v]) => [k, {
-      calls: v.calls,
-      errors: v.errors,
-      avgLatency: v.calls > 0 ? Math.round(v.totalLatency / v.calls) : 0,
-      successPct: v.calls > 0 ? Number((((v.calls - v.errors) / v.calls) * 100).toFixed(1)) : 100,
-    }]));
+    out[w] = Object.fromEntries(
+      Object.entries(providers).map(([k, v]) => [
+        k,
+        {
+          calls: v.calls,
+          errors: v.errors,
+          avgLatency: v.calls > 0 ? Math.round(v.totalLatency / v.calls) : 0,
+          successPct: v.calls > 0 ? Number((((v.calls - v.errors) / v.calls) * 100).toFixed(1)) : 100,
+        },
+      ]),
+    );
   }
   return out;
 }

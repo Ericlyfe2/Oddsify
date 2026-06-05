@@ -9,20 +9,28 @@
  * deposit events globally; live odds movement will land in a follow-up.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchMatches } from '../api/betApi.js';
+import { fetchMatches, fetchRecentWins } from '../api/betApi.js';
 import { useAccount } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import {
-  T,
-  OddTopHeader, OddPromoBanner, OddCategoryGrid,
-  OddLeagueRow, OddMatchCard, OddsifyWordmark, OddIcon,
+  fmtCedi,
+  OddTopHeader,
+  OddPromoBanner,
+  OddCategoryGrid,
+  OddLeagueRow,
+  OddMatchCard,
+  OddsifyWordmark,
+  OddIcon,
 } from '../components/odd/primitives.jsx';
-import StatsStrip     from '../components/odd/StatsStrip.jsx';
-import QuickBetStrip  from '../components/odd/QuickBetStrip.jsx';
+import { useTokens, T } from '../components/odd/tokens.jsx';
+import StatsStrip from '../components/odd/StatsStrip.jsx';
+import QuickBetStrip from '../components/odd/QuickBetStrip.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';
 
 export default function Home() {
+  const T = useTokens();
   const navigate = useNavigate();
   const { account, openDeposit } = useAccount();
   const { picks, togglePick } = useSlip();
@@ -40,26 +48,42 @@ export default function Home() {
         if (!alive) return;
         setMatches(flattenLeagues(data));
         // Synthesise a "top leagues" row from the response, keeping live counts.
-        setLeagues((data.leagues || []).map((l) => ({
-          id: l.id,
-          name: l.name,
-          short: l.name.split(' · ')[0].split(' ').slice(0, 2).join(' '),
-          code: l.crest?.label || l.name.slice(0, 3).toUpperCase(),
-          color: extractColor(l.crest?.style) || '#1a1814',
-          live: (l.matches || []).filter(m => m.isLive).length,
-        })));
+        setLeagues(
+          (data.leagues || []).map((l) => ({
+            id: l.id,
+            name: l.name,
+            short: l.name.split(' · ')[0].split(' ').slice(0, 2).join(' '),
+            code: l.crest?.label || l.name.slice(0, 3).toUpperCase(),
+            color: extractColor(l.crest?.style) || '#1a1814',
+            live: (l.matches || []).filter((m) => m.isLive).length,
+          })),
+        );
       })
-      .catch((e) => { if (alive) setErr(e?.message || 'Failed to load matches.'); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+      .catch((e) => {
+        if (alive) setErr(e?.message || 'Failed to load matches.');
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const liveMatches = useMemo(() => matches.filter(m => m.isLive), [matches]);
-  const upcoming    = useMemo(() => matches.filter(m => !m.isLive).slice(0, 6), [matches]);
-  const liveCount   = liveMatches.length;
+  const liveMatches = useMemo(() => matches.filter((m) => m.isLive), [matches]);
+  const upcoming = useMemo(() => matches.filter((m) => !m.isLive).slice(0, 6), [matches]);
+  const liveCount = liveMatches.length;
 
   // Both land on Home after auth (no forced ?next). Open the matching tab.
   const onAuth = (mode) => navigate(mode === 'signup' ? '/login?mode=register' : '/login');
+
+  /* ─── current winnings ticker ─── */
+  const [wins, setWins] = useState(null);
+  useEffect(() => {
+    fetchRecentWins()
+      .then((data) => setWins(data?.wins || []))
+      .catch(() => {});
+  }, []);
 
   return (
     <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
@@ -71,84 +95,132 @@ export default function Home() {
       />
       <OddPromoBanner onAction={() => navigate('/promos')} />
       <QuickBetStrip matches={matches} loading={loading} picks={picks} onPick={togglePick} />
-      <OddCategoryGrid
-        liveCount={liveCount}
-        onPick={(c) => navigate(c.to || '/')}
-      />
+      <OddCategoryGrid liveCount={liveCount} onPick={(c) => navigate(c.to || '/')} />
 
-      <OddLeagueRow
-        leagues={leagues.length ? leagues : undefined}
-        onSeeAll={() => navigate('/sports')}
-        onPick={() => navigate('/sports')}
-      />
+      <div style={{ padding: '4px 16px 12px', overflow: 'hidden', minHeight: 49 }}>
+        {wins && wins.length > 0 && <WinningsTicker wins={wins} />}
+      </div>
+
+      <OddLeagueRow leagues={leagues.length ? leagues : undefined} onPick={() => navigate('/sports')} />
 
       <SectionHeader
-        icon={<span className="odd-live-dot" style={{
-          width: 8, height: 8, borderRadius: 999, background: T.danger,
-        }} />}
+        icon={
+          <span
+            className="odd-live-dot"
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 999,
+              background: T.danger,
+            }}
+          />
+        }
         title="Live now"
         count={liveCount}
         action="All live →"
         onAction={() => navigate('/sports')}
       />
 
-      <MatchList loading={loading} err={err} matches={liveMatches}
-        picks={picks} onPick={togglePick}
-        emptyLabel="No live matches right now — check back at kickoff." />
+      <MatchList
+        loading={loading}
+        err={err}
+        matches={liveMatches}
+        picks={picks}
+        onPick={togglePick}
+        emptyLabel="No live matches right now — check back at kickoff."
+      />
 
       <SectionHeader title="Featured upcoming" action="More →" onAction={() => navigate('/sports')} />
-      <MatchList loading={loading} err={err} matches={upcoming}
-        picks={picks} onPick={togglePick}
-        emptyLabel="Nothing scheduled yet." />
+      <MatchList
+        loading={loading}
+        err={err}
+        matches={upcoming}
+        picks={picks}
+        onPick={togglePick}
+        emptyLabel="Nothing scheduled yet."
+      />
 
       <StatsStrip />
 
       <div style={{ padding: '24px 16px 60px', textAlign: 'center' }}>
         <OddsifyWordmark size={18} color={T.ink} accent={T.greenBright} />
-        <div style={{
-          fontSize: 10, color: T.inkDim, marginTop: 8, letterSpacing: 0.4,
-        }}>18+ · BET RESPONSIBLY · LICENSED GHA</div>
+        <div
+          style={{
+            fontSize: 10,
+            color: T.inkDim,
+            marginTop: 8,
+            letterSpacing: 0.4,
+          }}
+        >
+          18+ · BET RESPONSIBLY · LICENSED GHA
+        </div>
       </div>
     </div>
   );
 }
 
 function SectionHeader({ icon, title, count, action, onAction }) {
+  const T = useTokens();
   return (
-    <div style={{
-      padding: count !== undefined ? '4px 16px 10px' : '20px 16px 10px',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    }}>
+    <div
+      style={{
+        padding: count !== undefined ? '4px 16px 10px' : '20px 16px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {icon}
-        <h3 style={{
-          fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: -0.2,
-          fontFamily: '"Space Grotesk", system-ui, sans-serif',
-        }}>{title}</h3>
-        {count !== undefined && (
-          <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>{count}</span>
-        )}
+        <h3
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: T.ink,
+            letterSpacing: -0.2,
+            fontFamily: '"Space Grotesk", system-ui, sans-serif',
+          }}
+        >
+          {title}
+        </h3>
+        {count !== undefined && <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>{count}</span>}
       </div>
       {action && (
-        <button type="button" onClick={onAction} style={{
-          fontSize: 11, color: T.greenBright, fontWeight: 600,
-          background: 'transparent', border: 0, cursor: 'pointer',
-        }}>{action}</button>
+        <button
+          type="button"
+          onClick={onAction}
+          style={{
+            fontSize: 11,
+            color: T.greenBright,
+            fontWeight: 600,
+            background: 'transparent',
+            border: 0,
+            cursor: 'pointer',
+          }}
+        >
+          {action}
+        </button>
       )}
     </div>
   );
 }
 
 function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
+  const T = useTokens();
   if (loading) {
     return (
       <div className="odd-cardgrid" style={{ padding: '0 16px', gap: 10 }}>
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{
-            height: 168, borderRadius: 16, background: T.greenDeep,
-            border: '1px solid rgba(255,255,255,0.05)',
-            opacity: 0.5 + i * 0.15,
-          }} />
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              height: 168,
+              borderRadius: 16,
+              background: T.greenDeep,
+              border: `1px solid ${T.line}`,
+              opacity: 0.5 + i * 0.15,
+            }}
+          />
         ))}
       </div>
     );
@@ -156,21 +228,37 @@ function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
   if (err) {
     return (
       <div style={{ padding: '0 16px' }}>
-        <div style={{
-          padding: '14px', borderRadius: 12, background: 'rgba(255,91,120,0.12)',
-          color: '#ff8095', fontSize: 13, fontWeight: 600,
-        }}>{err}</div>
+        <div
+          style={{
+            padding: '14px',
+            borderRadius: 12,
+            background: T.danger + '1f',
+            color: T.danger,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {err}
+        </div>
       </div>
     );
   }
   if (!matches?.length) {
     return (
       <div style={{ padding: '0 16px' }}>
-        <div style={{
-          padding: '14px', borderRadius: 12, background: T.surface,
-          border: `1px solid ${T.line}`, color: T.inkSoft,
-          fontSize: 12, textAlign: 'center',
-        }}>{emptyLabel}</div>
+        <div
+          style={{
+            padding: '14px',
+            borderRadius: 12,
+            background: T.surface,
+            border: `1px solid ${T.line}`,
+            color: T.inkSoft,
+            fontSize: 12,
+            textAlign: 'center',
+          }}
+        >
+          {emptyLabel}
+        </div>
       </div>
     );
   }
@@ -184,6 +272,68 @@ function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
     </div>
   );
 }
+
+const WinningsTicker = memo(function WinningsTicker({ wins }) {
+  const T = useTokens();
+  const items = wins.slice(0, 10);
+  const loop = [...items, ...items];
+  return (
+    <div
+      style={{
+        borderTop: `1px solid ${T.line}`,
+        borderBottom: `1px solid ${T.line}`,
+        overflow: 'hidden',
+        padding: '10px 0',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          whiteSpace: 'nowrap',
+          width: 'max-content',
+          animation: 'odd-marquee 50s linear infinite',
+          willChange: 'transform',
+          alignItems: 'center',
+        }}
+      >
+        {loop.map((w, i) => (
+          <span
+            key={`${w.id}-${i}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              marginRight: 36,
+              fontSize: 12,
+            }}
+          >
+            <span style={{ color: T.inkSoft, fontWeight: 600 }}>{w.phoneMasked}</span>
+            <span style={{ color: T.inkDim, fontWeight: 400 }}>won</span>
+            <span
+              style={{
+                color: T.greenBright,
+                fontWeight: 700,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              GHS{fmtCedi(w.amountGhs, true)}
+            </span>
+            <span
+              style={{
+                color: T.inkDim,
+                fontSize: 11,
+                marginLeft: 2,
+              }}
+            >
+              {w.betType === 'multi' ? `${w.legs}-leg` : 'Single'}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 /**
  * Pull a hex from the league crest's inline-gradient style (e.g.

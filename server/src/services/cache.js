@@ -18,7 +18,9 @@ const MAX_ENTRIES = Number(process.env.CACHE_MAX_ENTRIES) || 10_000;
 
 const store = new Map(); // insertion-ordered → cheap LRU
 
-function now() { return Date.now(); }
+function now() {
+  return Date.now();
+}
 
 function touch(key, value) {
   store.delete(key);
@@ -37,7 +39,10 @@ function alive(entry) {
 export async function get(key) {
   const e = store.get(key);
   if (!e) return null;
-  if (!alive(e)) { store.delete(key); return null; }
+  if (!alive(e)) {
+    store.delete(key);
+    return null;
+  }
   // bump LRU position on read
   store.delete(key);
   store.set(key, e);
@@ -65,7 +70,10 @@ export async function keys(pattern = '*') {
   const re = new RegExp('^' + pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
   const out = [];
   for (const [k, e] of store.entries()) {
-    if (!alive(e)) { store.delete(k); continue; }
+    if (!alive(e)) {
+      store.delete(k);
+      continue;
+    }
     if (re.test(k)) out.push(k);
   }
   return out;
@@ -86,7 +94,8 @@ export async function getOrSet(key, ttlSeconds, loader) {
 }
 
 export function stats() {
-  let live = 0, expired = 0;
-  for (const e of store.values()) (alive(e) ? live++ : expired++);
+  let live = 0,
+    expired = 0;
+  for (const e of store.values()) alive(e) ? live++ : expired++;
   return { size: store.size, live, expired, capacity: MAX_ENTRIES };
 }

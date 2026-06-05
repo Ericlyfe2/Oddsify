@@ -12,12 +12,18 @@ function read() {
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string') : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function write(list) {
   if (typeof localStorage === 'undefined') return;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch {/* ignore */}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useFavouriteLeagues() {

@@ -35,14 +35,14 @@ const COLUMNS = [
 
 // Bet keys & payouts (multiplier of bet, e.g. 36 means total return is 36x stake).
 const PAYOUTS = {
-  number:    36,  // single number
-  dozen:      3,  // 1-12 / 13-24 / 25-36
-  evenOdd:    2,  // EVEN / ODD
-  color:      2,  // RED / BLACK
-  zero:      36,  // 0 GREEN
-  column:     6,  // A-F columns of 6
-  lowHigh:    2,  // LOW (1-18) / HIGH (19-36)
-  combo:      4,  // LOW RED / HIGH RED / LOW BLACK / HIGH BLACK
+  number: 36, // single number
+  dozen: 3, // 1-12 / 13-24 / 25-36
+  evenOdd: 2, // EVEN / ODD
+  color: 2, // RED / BLACK
+  zero: 36, // 0 GREEN
+  column: 6, // A-F columns of 6
+  lowHigh: 2, // LOW (1-18) / HIGH (19-36)
+  combo: 4, // LOW RED / HIGH RED / LOW BLACK / HIGH BLACK
 };
 
 function fmt(n) {
@@ -53,21 +53,21 @@ function winsFor(key, roll) {
   const c = colorOf(roll);
   if (key === 'zero') return roll === 0;
   if (roll === 0) return false; // every non-zero bet loses on green
-  if (key.startsWith('n-'))      return roll === Number(key.slice(2));
-  if (key === 'dozen-1')         return roll >= 1  && roll <= 12;
-  if (key === 'dozen-2')         return roll >= 13 && roll <= 24;
-  if (key === 'dozen-3')         return roll >= 25 && roll <= 36;
-  if (key === 'even')            return roll % 2 === 0;
-  if (key === 'odd')             return roll % 2 === 1;
-  if (key === 'red')             return c === 'red';
-  if (key === 'black')           return c === 'black';
-  if (key === 'low')             return roll >= 1  && roll <= 18;
-  if (key === 'high')            return roll >= 19 && roll <= 36;
-  if (key === 'low-red')         return c === 'red'   && roll <= 18;
-  if (key === 'high-red')        return c === 'red'   && roll >= 19;
-  if (key === 'low-black')       return c === 'black' && roll <= 18;
-  if (key === 'high-black')      return c === 'black' && roll >= 19;
-  if (key.startsWith('col-'))    return COLUMNS.find(([id]) => id === key.slice(4))?.[1].includes(roll);
+  if (key.startsWith('n-')) return roll === Number(key.slice(2));
+  if (key === 'dozen-1') return roll >= 1 && roll <= 12;
+  if (key === 'dozen-2') return roll >= 13 && roll <= 24;
+  if (key === 'dozen-3') return roll >= 25 && roll <= 36;
+  if (key === 'even') return roll % 2 === 0;
+  if (key === 'odd') return roll % 2 === 1;
+  if (key === 'red') return c === 'red';
+  if (key === 'black') return c === 'black';
+  if (key === 'low') return roll >= 1 && roll <= 18;
+  if (key === 'high') return roll >= 19 && roll <= 36;
+  if (key === 'low-red') return c === 'red' && roll <= 18;
+  if (key === 'high-red') return c === 'red' && roll >= 19;
+  if (key === 'low-black') return c === 'black' && roll <= 18;
+  if (key === 'high-black') return c === 'black' && roll >= 19;
+  if (key.startsWith('col-')) return COLUMNS.find(([id]) => id === key.slice(4))?.[1].includes(roll);
   return false;
 }
 
@@ -94,10 +94,7 @@ export default function Spin2WinPage() {
   const [spinning, setSpinning] = useState(false);
   const [resultMsg, setResultMsg] = useState('');
 
-  const totalStake = useMemo(
-    () => Object.values(bets).reduce((s, v) => s + v, 0),
-    [bets]
-  );
+  const totalStake = useMemo(() => Object.values(bets).reduce((s, v) => s + v, 0), [bets]);
   const balance = account?.balance ?? 0;
   const canSpin = !spinning && totalStake >= MIN_BET && totalStake <= balance;
 
@@ -112,10 +109,20 @@ export default function Spin2WinPage() {
     });
   };
 
-  const clearBets = () => { if (!spinning) { setBets({}); setResultMsg(''); setRoll(null); } };
+  const clearBets = () => {
+    if (!spinning) {
+      setBets({});
+      setResultMsg('');
+      setRoll(null);
+    }
+  };
 
   const spin = () => {
-    if (!account) { toast('Sign in to play.'); navigate('/login?next=/casino/spin2win'); return; }
+    if (!account) {
+      toast('Sign in to play.');
+      navigate('/login?next=/casino/spin2win');
+      return;
+    }
     if (!canSpin) return;
     adjustBalance(-totalStake);
     setSpinning(true);
@@ -130,9 +137,7 @@ export default function Spin2WinPage() {
           const winsAny = Object.keys(bets).some((key) => winsFor(key, n));
           if (!winsAny) losing.push(n);
         }
-        r = losing.length > 0
-          ? losing[Math.floor(Math.random() * losing.length)]
-          : Math.floor(Math.random() * 37);
+        r = losing.length > 0 ? losing[Math.floor(Math.random() * losing.length)] : Math.floor(Math.random() * 37);
       } else {
         r = Math.floor(Math.random() * 37); // 0–36
       }
@@ -166,29 +171,61 @@ export default function Spin2WinPage() {
       <div className="gp-frame">
         <div className="gp-head">
           <button type="button" className="gp-back" onClick={() => navigate('/casino')} aria-label="Back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
           </button>
           <div className="gp-title">Spin2Win</div>
           <button type="button" className="gp-menu" aria-label="Menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
         </div>
 
         <div className="gp-balance-row">
-          <svg className="gp-wallet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+          <svg
+            className="gp-wallet-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+          </svg>
           <span>GHS {fmt(balance)}</span>
-          <button type="button" className="gp-add-money" onClick={openDeposit}>+ Add Money</button>
+          <button type="button" className="gp-add-money" onClick={openDeposit}>
+            + Add Money
+          </button>
         </div>
 
         {/* Number grid 1-36 (six rows of six, matching the reference) */}
         <div className="s2w-grid">
           {ROWS.flat().map((n) => (
-            <button
-              key={n}
-              type="button"
-              className={cellClass(n)}
-              onClick={() => placeBet(`n-${n}`)}
-            >
+            <button key={n} type="button" className={cellClass(n)} onClick={() => placeBet(`n-${n}`)}>
               {n}
               {bets[`n-${n}`] && <span className="chip-marker">{bets[`n-${n}`]}</span>}
             </button>
@@ -197,27 +234,58 @@ export default function Spin2WinPage() {
 
         <div className="s2w-rows">
           <div className="row cols-3">
-            {[['dozen-1', '1-12'], ['dozen-2', '13-24'], ['dozen-3', '25-36']].map(([k, lbl]) => (
-              <button key={k} type="button" className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`} onClick={() => placeBet(k)}>
-                {lbl}{bets[k] && <span className="chip-marker">{bets[k]}</span>}
+            {[
+              ['dozen-1', '1-12'],
+              ['dozen-2', '13-24'],
+              ['dozen-3', '25-36'],
+            ].map(([k, lbl]) => (
+              <button
+                key={k}
+                type="button"
+                className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`}
+                onClick={() => placeBet(k)}
+              >
+                {lbl}
+                {bets[k] && <span className="chip-marker">{bets[k]}</span>}
               </button>
             ))}
           </div>
           <div className="row cols-2">
-            {[['even', 'EVEN'], ['odd', 'ODD']].map(([k, lbl]) => (
-              <button key={k} type="button" className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`} onClick={() => placeBet(k)}>
-                {lbl}{bets[k] && <span className="chip-marker">{bets[k]}</span>}
+            {[
+              ['even', 'EVEN'],
+              ['odd', 'ODD'],
+            ].map(([k, lbl]) => (
+              <button
+                key={k}
+                type="button"
+                className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`}
+                onClick={() => placeBet(k)}
+              >
+                {lbl}
+                {bets[k] && <span className="chip-marker">{bets[k]}</span>}
               </button>
             ))}
           </div>
           <div className="row cols-3">
-            <button type="button" className={`s2w-bet-tile red${bets.red ? ' has-bet' : ''}`} onClick={() => placeBet('red')}>
+            <button
+              type="button"
+              className={`s2w-bet-tile red${bets.red ? ' has-bet' : ''}`}
+              onClick={() => placeBet('red')}
+            >
               RED{bets.red && <span className="chip-marker">{bets.red}</span>}
             </button>
-            <button type="button" className={`s2w-bet-tile black${bets.black ? ' has-bet' : ''}`} onClick={() => placeBet('black')}>
+            <button
+              type="button"
+              className={`s2w-bet-tile black${bets.black ? ' has-bet' : ''}`}
+              onClick={() => placeBet('black')}
+            >
               BLACK{bets.black && <span className="chip-marker">{bets.black}</span>}
             </button>
-            <button type="button" className={`s2w-bet-tile green${bets.zero ? ' has-bet' : ''}`} onClick={() => placeBet('zero')}>
+            <button
+              type="button"
+              className={`s2w-bet-tile green${bets.zero ? ' has-bet' : ''}`}
+              onClick={() => placeBet('zero')}
+            >
               0, GREEN{bets.zero && <span className="chip-marker">{bets.zero}</span>}
             </button>
           </div>
@@ -225,24 +293,39 @@ export default function Spin2WinPage() {
             {COLUMNS.map(([id]) => {
               const k = `col-${id}`;
               return (
-                <button key={k} type="button" className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`} onClick={() => placeBet(k)}>
-                  {id}{bets[k] && <span className="chip-marker">{bets[k]}</span>}
+                <button
+                  key={k}
+                  type="button"
+                  className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`}
+                  onClick={() => placeBet(k)}
+                >
+                  {id}
+                  {bets[k] && <span className="chip-marker">{bets[k]}</span>}
                 </button>
               );
             })}
           </div>
           <div className="row cols-2">
-            {[['low', 'LOW'], ['high', 'HIGH']].map(([k, lbl]) => (
-              <button key={k} type="button" className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`} onClick={() => placeBet(k)}>
-                {lbl}{bets[k] && <span className="chip-marker">{bets[k]}</span>}
+            {[
+              ['low', 'LOW'],
+              ['high', 'HIGH'],
+            ].map(([k, lbl]) => (
+              <button
+                key={k}
+                type="button"
+                className={`s2w-bet-tile green${bets[k] ? ' has-bet' : ''}`}
+                onClick={() => placeBet(k)}
+              >
+                {lbl}
+                {bets[k] && <span className="chip-marker">{bets[k]}</span>}
               </button>
             ))}
           </div>
           <div className="row cols-4">
             {[
-              ['low-red',    'LOW\nRED',    'red'],
-              ['high-red',   'HIGH\nRED',   'red'],
-              ['low-black',  'LOW\nBLACK',  'black'],
+              ['low-red', 'LOW\nRED', 'red'],
+              ['high-red', 'HIGH\nRED', 'red'],
+              ['low-black', 'LOW\nBLACK', 'black'],
               ['high-black', 'HIGH\nBLACK', 'black'],
             ].map(([k, lbl, color]) => (
               <button
@@ -252,7 +335,8 @@ export default function Spin2WinPage() {
                 style={{ whiteSpace: 'pre-line' }}
                 onClick={() => placeBet(k)}
               >
-                {lbl}{bets[k] && <span className="chip-marker">{bets[k]}</span>}
+                {lbl}
+                {bets[k] && <span className="chip-marker">{bets[k]}</span>}
               </button>
             ))}
           </div>
@@ -261,12 +345,12 @@ export default function Spin2WinPage() {
         <div className="gp-bet-card">
           <span className="gp-bet-label">Total stake</span>
           <span className="gp-bet-coin" />
-          <span className="gp-bet-value" style={{ display: 'inline-block', width: 'auto' }}>{fmt(totalStake)}</span>
+          <span className="gp-bet-value" style={{ display: 'inline-block', width: 'auto' }}>
+            {fmt(totalStake)}
+          </span>
         </div>
 
-        {totalStake > balance && (
-          <div className="gp-warn">Total stake exceeds your wallet balance.</div>
-        )}
+        {totalStake > balance && <div className="gp-warn">Total stake exceeds your wallet balance.</div>}
 
         <div className="gp-chips" style={{ marginTop: 8 }}>
           {CHIPS.map((v, i) => (
@@ -283,20 +367,13 @@ export default function Spin2WinPage() {
         </div>
         <div className="gp-minmax">Min: {MIN_BET} · Max: 15K · Tap a cell to stake the selected chip</div>
 
-        {resultMsg && (
-          <div className="s2w-result-banner">{resultMsg}</div>
-        )}
+        {resultMsg && <div className="s2w-result-banner">{resultMsg}</div>}
 
         <div className="gp-actions">
           <button type="button" className="s2w-clear" onClick={clearBets} disabled={spinning || !totalStake}>
             Clear bets
           </button>
-          <button
-            type="button"
-            className="gp-action gold"
-            disabled={!canSpin}
-            onClick={spin}
-          >
+          <button type="button" className="gp-action gold" disabled={!canSpin} onClick={spin}>
             {spinning ? 'Spinning…' : `Spin · ${fmt(totalStake)}`}
           </button>
         </div>

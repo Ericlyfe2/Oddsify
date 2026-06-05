@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
 
 const ThemeCtx = createContext(null);
 const STORAGE_KEY = 'oddsify_theme';
@@ -9,8 +9,7 @@ function readInitial() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'light' || saved === 'dark') return saved;
   } catch {}
-  if (typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-color-scheme: light)').matches) {
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: light)').matches) {
     return 'light';
   }
   return 'dark';
@@ -19,8 +18,10 @@ function readInitial() {
 export function ThemeProvider({ children }) {
   const [theme, setThemeRaw] = useState(readInitial);
 
-  // Reflect onto <html> so CSS can target light vs dark consistently.
-  useEffect(() => {
+  // The initial data-theme is already set by the inline script in index.html.
+  // useLayoutEffect runs synchronously after DOM commit, keeping theme synced
+  // without side-effecting inside the render body.
+  useLayoutEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
@@ -31,13 +32,17 @@ export function ThemeProvider({ children }) {
   const setTheme = useCallback((t) => {
     const next = t === 'light' ? 'light' : 'dark';
     setThemeRaw(next);
-    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {}
   }, []);
 
   const toggleTheme = useCallback(() => {
     setThemeRaw((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark';
-      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {}
       return next;
     });
   }, []);

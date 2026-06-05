@@ -4,10 +4,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  setAdminTokens, clearAdminTokens, getAdminAccess,
-  adminMe, adminLogout,
-} from '../api/adminApi.js';
+import { setAdminTokens, clearAdminTokens, getAdminAccess, adminMe, adminLogout } from '../api/adminApi.js';
 import { useTheme } from './ThemeProvider.jsx';
 
 const AdminCtx = createContext(null);
@@ -21,7 +18,7 @@ export function useAdmin() {
 export function AdminProvider({ children }) {
   const navigate = useNavigate();
   const loc = useLocation();
-  const [admin, setAdmin]     = useState(null);
+  const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(!!getAdminAccess());
   const { theme, setTheme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
@@ -34,7 +31,11 @@ export function AdminProvider({ children }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!getAdminAccess()) { setAdmin(null); setLoading(false); return null; }
+    if (!getAdminAccess()) {
+      setAdmin(null);
+      setLoading(false);
+      return null;
+    }
     try {
       const { admin } = await adminMe();
       setAdmin(admin);
@@ -48,7 +49,9 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const signIn = useCallback((resp) => {
     if (resp?.accessToken) setAdminTokens(resp.accessToken, resp.refreshToken);
@@ -56,30 +59,65 @@ export function AdminProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    try { await adminLogout(); } catch { /* ignore */ }
+    try {
+      await adminLogout();
+    } catch {
+      /* ignore */
+    }
     clearAdminTokens();
     setAdmin(null);
     showToast('Logged out');
     navigate('/admin/login', { replace: true });
   }, [navigate, showToast]);
 
-  const hasRole = useCallback((...allowed) => {
-    if (!admin) return false;
-    if (admin.adminRole === 'super_admin') return true;
-    return allowed.includes(admin.adminRole);
-  }, [admin]);
+  const hasRole = useCallback(
+    (...allowed) => {
+      if (!admin) return false;
+      if (admin.adminRole === 'super_admin') return true;
+      return allowed.includes(admin.adminRole);
+    },
+    [admin],
+  );
 
   // Auto-close mobile sidebar on route change
-  useEffect(() => { setMobileOpen(false); }, [loc.pathname]);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [loc.pathname]);
 
-  const value = useMemo(() => ({
-    admin, loading, signIn, signOut, refresh,
-    theme, setTheme, toggleTheme,
-    collapsed, setCollapsed,
-    mobileOpen, setMobileOpen,
-    toast, showToast,
-    hasRole,
-  }), [admin, loading, signIn, signOut, refresh, theme, setTheme, toggleTheme, collapsed, mobileOpen, toast, showToast, hasRole]);
+  const value = useMemo(
+    () => ({
+      admin,
+      loading,
+      signIn,
+      signOut,
+      refresh,
+      theme,
+      setTheme,
+      toggleTheme,
+      collapsed,
+      setCollapsed,
+      mobileOpen,
+      setMobileOpen,
+      toast,
+      showToast,
+      hasRole,
+    }),
+    [
+      admin,
+      loading,
+      signIn,
+      signOut,
+      refresh,
+      theme,
+      setTheme,
+      toggleTheme,
+      collapsed,
+      mobileOpen,
+      toast,
+      showToast,
+      hasRole,
+    ],
+  );
 
   return <AdminCtx.Provider value={value}>{children}</AdminCtx.Provider>;
 }
@@ -98,13 +136,16 @@ export function AdminGuard({ children }) {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'grid', placeItems: 'center',
-        background: 'var(--bg-0, #07080d)',
-        color: 'var(--text-dim, #8c91a3)',
-        fontFamily: 'Inter, system-ui, sans-serif',
-      }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: 'var(--bg-0, #07080d)',
+          color: 'var(--text-dim, #8c91a3)',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           <span className="adm-spinner" /> Establishing secure session…
         </div>

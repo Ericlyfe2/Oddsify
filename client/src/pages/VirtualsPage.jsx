@@ -16,7 +16,9 @@ export default function VirtualsPage() {
   const [countdown, setCountdown] = useState(60);
 
   useEffect(() => {
-    fetchVirtuals().then((d) => setLeagues(d.leagues || [])).catch(() => {});
+    fetchVirtuals()
+      .then((d) => setLeagues(d.leagues || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -36,10 +38,22 @@ export default function VirtualsPage() {
 
   const placeVirtual = async () => {
     const st = parseFloat(stake);
-    if (!Number.isFinite(st) || st <= 0) { toast('Enter a stake.'); return; }
-    if (!account) { toast('Sign in to play virtuals.'); return; }
-    if (st > account.balance) { toast('Insufficient balance.'); return; }
-    if (pickedCount === 0) { toast('Pick at least one virtual fixture.'); return; }
+    if (!Number.isFinite(st) || st <= 0) {
+      toast('Enter a stake.');
+      return;
+    }
+    if (!account) {
+      toast('Sign in to play virtuals.');
+      return;
+    }
+    if (st > account.balance) {
+      toast('Insufficient balance.');
+      return;
+    }
+    if (pickedCount === 0) {
+      toast('Pick at least one virtual fixture.');
+      return;
+    }
     adjustBalance(-st, `Virtual ticket placed · GHS ${formatAmt(st)}`);
     setSelections({});
     setTimeout(() => {
@@ -59,7 +73,9 @@ export default function VirtualsPage() {
       <div className="page-head">
         <p className="eyebrow">VIRTUALS</p>
         <h1>Football, every minute.</h1>
-        <p className="lede">A new draw every {countdown}s. Pick winners across simulated fixtures and settle in real time.</p>
+        <p className="lede">
+          A new draw every {countdown}s. Pick winners across simulated fixtures and settle in real time.
+        </p>
       </div>
 
       <div className="virtuals-grid">
@@ -69,14 +85,19 @@ export default function VirtualsPage() {
               <h3>{lg.name}</h3>
               <span className="countdown">Next draw · 0:{countdown.toString().padStart(2, '0')}</span>
             </header>
-            <div className="odds-headers"><span>Match</span><span>1</span><span>X</span><span>2</span></div>
+            <div className="odds-headers">
+              <span>Match</span>
+              <span>1</span>
+              <span>X</span>
+              <span>2</span>
+            </div>
             {lg.matches.map((m) => (
               <div key={m.id} className="match" style={{ gridTemplateColumns: '1fr 60px 60px 60px' }}>
                 <div className="teams-stack">
                   <div className="team-line">{m.home}</div>
                   <div className="team-line">{m.away}</div>
                 </div>
-                {(['1', 'X', '2']).map((k) => (
+                {['1', 'X', '2'].map((k) => (
                   <button
                     key={k}
                     type="button"
@@ -95,8 +116,14 @@ export default function VirtualsPage() {
 
       <aside className="virtuals-slip">
         <h4>Virtual ticket</h4>
-        <div className="sum-row"><span className="lbl">Selections</span><span className="val">{pickedCount}</span></div>
-        <div className="sum-row"><span className="lbl">Total odds</span><span className="val">{pickedCount ? totalOdds.toFixed(2) : '—'}</span></div>
+        <div className="sum-row">
+          <span className="lbl">Selections</span>
+          <span className="val">{pickedCount}</span>
+        </div>
+        <div className="sum-row">
+          <span className="lbl">Total odds</span>
+          <span className="val">{pickedCount ? totalOdds.toFixed(2) : '—'}</span>
+        </div>
         <label className="dlg-label">Stake (GHS)</label>
         <input
           type="number"

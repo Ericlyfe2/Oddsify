@@ -20,11 +20,19 @@ import { findByEmail, updateUser, publicUser, logActivity, getUserById, createUs
 import { verifyPassword, hashPassword, passwordIssues } from '../../services/password.js';
 import {
   ADMIN_INVITE_ROLES,
-  listAdminInvites, createAdminInvite, findInviteByToken, consumeInvite, revokeAdminInvite,
+  listAdminInvites,
+  createAdminInvite,
+  findInviteByToken,
+  consumeInvite,
+  revokeAdminInvite,
 } from '../../db/adminInvites.js';
 import {
-  signAdminAccessToken, issueRefreshToken, rotateRefreshToken,
-  revokeRefreshToken, lookupRefresh, revokeAllForAccount,
+  signAdminAccessToken,
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  lookupRefresh,
+  revokeAllForAccount,
 } from '../../services/token.js';
 import { requireAdmin, requireRole, audit } from '../../middleware/adminAuth.js';
 import { validate } from '../../middleware/validate.js';
@@ -47,7 +55,9 @@ const loginSchema = z.object({
   captchaToken: z.string().optional(), // accepted but not enforced in dev
 });
 
-function clearBrute(email) { bruteStore.delete(email); }
+function clearBrute(email) {
+  bruteStore.delete(email);
+}
 function bumpBrute(email) {
   const rec = bruteStore.get(email) || { attempts: 0, lockedUntil: 0 };
   rec.attempts = (rec.attempts || 0) + 1;
@@ -77,7 +87,7 @@ function publicAdmin(u) {
 }
 
 function issueAdminSession(admin, req) {
-  const access  = signAdminAccessToken(admin);
+  const access = signAdminAccessToken(admin);
   const refresh = issueRefreshToken(admin.id, {
     ip: req.ip,
     userAgent: req.get('user-agent') || '',
@@ -88,7 +98,8 @@ function issueAdminSession(admin, req) {
 
 /* ---------- routes ---------- */
 
-router.post('/login',
+router.post(
+  '/login',
   loginLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
@@ -118,26 +129,32 @@ router.post('/login',
     logActivity(user.id, { kind: 'admin_login_success', ip: req.ip, userAgent: req.get('user-agent') });
     audit(req, { actorId: user.id, action: 'admin.login.success', meta: { email } });
     res.json({ ok: true, admin: publicAdmin(user), ...session });
-  })
+  }),
 );
 
-router.post('/refresh', asyncHandler(async (req, res) => {
-  const token = req.body?.refreshToken;
-  const record = lookupRefresh(token);
-  if (!record) throw unauthorized('Invalid or expired refresh token.');
-  if (record.scope !== 'admin') throw forbidden('Not an admin refresh token.');
-  const user = getUserById(record.accountId);
-  if (!user || user.role !== 'admin' || user.suspended) throw unauthorized('Admin no longer available.');
-  const next = rotateRefreshToken(token, { ip: req.ip, userAgent: req.get('user-agent'), scope: 'admin' });
-  const access = signAdminAccessToken(user);
-  res.json({ ok: true, accessToken: access, refreshToken: next.token, expiresAt: next.expiresAt });
-}));
+router.post(
+  '/refresh',
+  asyncHandler(async (req, res) => {
+    const token = req.body?.refreshToken;
+    const record = lookupRefresh(token);
+    if (!record) throw unauthorized('Invalid or expired refresh token.');
+    if (record.scope !== 'admin') throw forbidden('Not an admin refresh token.');
+    const user = getUserById(record.accountId);
+    if (!user || user.role !== 'admin' || user.suspended) throw unauthorized('Admin no longer available.');
+    const next = rotateRefreshToken(token, { ip: req.ip, userAgent: req.get('user-agent'), scope: 'admin' });
+    const access = signAdminAccessToken(user);
+    res.json({ ok: true, accessToken: access, refreshToken: next.token, expiresAt: next.expiresAt });
+  }),
+);
 
-router.post('/logout', asyncHandler(async (req, res) => {
-  const token = req.body?.refreshToken;
-  if (token) revokeRefreshToken(token);
-  res.json({ ok: true });
-}));
+router.post(
+  '/logout',
+  asyncHandler(async (req, res) => {
+    const token = req.body?.refreshToken;
+    if (token) revokeRefreshToken(token);
+    res.json({ ok: true });
+  }),
+);
 
 router.get('/me', requireAdmin, (req, res) => {
   res.json({ admin: publicAdmin(req.admin) });
@@ -145,7 +162,8 @@ router.get('/me', requireAdmin, (req, res) => {
 
 router.get('/sessions', requireAdmin, (req, res) => {
   const refreshStore = createStore('refresh_tokens', {});
-  const sessions = refreshStore.list()
+  const sessions = refreshStore
+    .list()
     .filter((r) => r.accountId === req.admin.id && r.scope === 'admin' && !r.revokedAt)
     .map((r) => ({
       id: r.id,
@@ -173,17 +191,21 @@ router.post('/sessions/revoke-all', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-router.post('/change-password', requireAdmin, asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
-  if (!currentPassword || !newPassword) throw badRequest('Both passwords are required.');
-  const ok = await verifyPassword(currentPassword, req.admin.passwordHash);
-  if (!ok) throw unauthorized('Current password incorrect.');
-  const passwordHash = await hashPassword(newPassword);
-  updateUser(req.admin.id, { passwordHash });
-  revokeAllForAccount(req.admin.id);
-  audit(req, { action: 'admin.password.changed', severity: 'warning' });
-  res.json({ ok: true });
-}));
+router.post(
+  '/change-password',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) throw badRequest('Both passwords are required.');
+    const ok = await verifyPassword(currentPassword, req.admin.passwordHash);
+    if (!ok) throw unauthorized('Current password incorrect.');
+    const passwordHash = await hashPassword(newPassword);
+    updateUser(req.admin.id, { passwordHash });
+    revokeAllForAccount(req.admin.id);
+    audit(req, { action: 'admin.password.changed', severity: 'warning' });
+    res.json({ ok: true });
+  }),
+);
 
 /* ----------------------- invite-based admin signup ----------------------- */
 
@@ -204,8 +226,10 @@ router.get('/invites', requireAdmin, requireRole(), (_req, res) => {
   res.json({ invites: listAdminInvites() });
 });
 
-router.post('/invites',
-  requireAdmin, requireRole(),
+router.post(
+  '/invites',
+  requireAdmin,
+  requireRole(),
   validate(inviteSchema),
   asyncHandler(async (req, res) => {
     const { email, adminRole, displayName, ttlDays } = req.body;
@@ -215,21 +239,35 @@ router.post('/invites',
     }
     const ttlMs = ttlDays ? ttlDays * 24 * 60 * 60 * 1000 : undefined;
     const { invite, token } = createAdminInvite({
-      email, adminRole, createdBy: req.admin.id, displayName, ttlMs,
+      email,
+      adminRole,
+      createdBy: req.admin.id,
+      displayName,
+      ttlMs,
     });
-    audit(req, { action: 'admin.invite.created', target: invite.id, targetType: 'admin_invite', meta: { email, adminRole } });
+    audit(req, {
+      action: 'admin.invite.created',
+      target: invite.id,
+      targetType: 'admin_invite',
+      meta: { email, adminRole },
+    });
     res.status(201).json({
       invite,
       token,
       signupUrl: `${req.protocol}://${req.get('host')}/admin/signup?token=${token}`,
     });
-  })
+  }),
 );
 
 router.delete('/invites/:id', requireAdmin, requireRole(), (req, res, next) => {
   const ok = revokeAdminInvite(req.params.id, req.admin.id);
   if (!ok) return next(notFound('Invite not found or already consumed.'));
-  audit(req, { action: 'admin.invite.revoked', target: req.params.id, targetType: 'admin_invite', severity: 'warning' });
+  audit(req, {
+    action: 'admin.invite.revoked',
+    target: req.params.id,
+    targetType: 'admin_invite',
+    severity: 'warning',
+  });
   res.json({ invite: ok });
 });
 
@@ -245,7 +283,8 @@ router.get('/signup/:token', (req, res, next) => {
   });
 });
 
-router.post('/signup',
+router.post(
+  '/signup',
   validate(signupSchema),
   asyncHandler(async (req, res) => {
     const { token, displayName, password } = req.body;
@@ -291,15 +330,13 @@ router.post('/signup',
         userAgent: req.get('user-agent') || '',
         meta: { email: inv.email, role: inv.adminRole },
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     res.status(201).json({ ok: true, admin: publicAdmin(updated), ...session });
-  })
+  }),
 );
 
 export default router;
-export {
-  publicAdmin,
-  bruteCheck, bumpBrute, clearBrute,
-  issueAdminSession,
-};
+export { publicAdmin, bruteCheck, bumpBrute, clearBrute, issueAdminSession };

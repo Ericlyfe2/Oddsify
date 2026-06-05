@@ -9,9 +9,9 @@
 import { Provider, fixtureKey } from './base.js';
 
 const SPORT_KEY = {
-  football:   'soccer_epl,soccer_uefa_champs_league,soccer_spain_la_liga',
+  football: 'soccer_epl,soccer_uefa_champs_league,soccer_spain_la_liga',
   basketball: 'basketball_nba',
-  tennis:     'tennis_atp',
+  tennis: 'tennis_atp',
 };
 
 export class TheOddsApiProvider extends Provider {
@@ -39,7 +39,11 @@ export class TheOddsApiProvider extends Provider {
     for (const key of sportKeys) {
       const url = `https://api.the-odds-api.com/v4/sports/${key}/odds?regions=eu&markets=h2h,totals,btts&oddsFormat=decimal&apiKey=${this.apiKey}`;
       let data = [];
-      try { data = await this.http(url, { timeoutMs: 8000 }); } catch { continue; }
+      try {
+        data = await this.http(url, { timeoutMs: 8000 });
+      } catch {
+        continue;
+      }
       if (!Array.isArray(data)) continue;
       for (const ev of data) {
         const kickoff = ev.commence_time;
@@ -53,7 +57,7 @@ export class TheOddsApiProvider extends Provider {
           for (const m of bk.markets || []) {
             const mkey = m.key === 'h2h' ? '1X2' : m.key === 'totals' ? 'OU25' : m.key === 'btts' ? 'BTTS' : null;
             if (!mkey) continue;
-            const target = markets[mkey] = markets[mkey] || { name: mkey, selections: {} };
+            const target = (markets[mkey] = markets[mkey] || { name: mkey, selections: {} });
             for (const o of m.outcomes || []) {
               const selKey = mapOutcome(mkey, o, home, away);
               if (!selKey) continue;
@@ -74,7 +78,9 @@ export class TheOddsApiProvider extends Provider {
           provider: this.id,
           sport,
           sourceId: ev.id,
-          home, away, kickoff,
+          home,
+          away,
+          kickoff,
           status: 'upcoming',
           league: { id: key, name: prettyLeague(key) },
           markets: normalised,
@@ -94,7 +100,7 @@ function mapOutcome(market, outcome, home, away) {
     if (name.includes('draw')) return 'X';
   }
   if (market === 'OU25') {
-    if (name.includes('over'))  return 'Over';
+    if (name.includes('over')) return 'Over';
     if (name.includes('under')) return 'Under';
   }
   if (market === 'BTTS') {
@@ -105,11 +111,13 @@ function mapOutcome(market, outcome, home, away) {
 }
 
 function prettyLeague(k) {
-  return ({
-    soccer_epl: 'Premier League',
-    soccer_uefa_champs_league: 'UEFA Champions League',
-    soccer_spain_la_liga: 'La Liga',
-    basketball_nba: 'NBA',
-    tennis_atp: 'ATP Tour',
-  })[k] || k.replace(/_/g, ' ');
+  return (
+    {
+      soccer_epl: 'Premier League',
+      soccer_uefa_champs_league: 'UEFA Champions League',
+      soccer_spain_la_liga: 'La Liga',
+      basketball_nba: 'NBA',
+      tennis_atp: 'ATP Tour',
+    }[k] || k.replace(/_/g, ' ')
+  );
 }

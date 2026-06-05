@@ -53,7 +53,9 @@ export class FootballDataOrgProvider extends Provider {
 
   // No-op: see file header for why. Adding paid odds later means hitting
   // /v4/matches/{id} per fixture and parsing the `odds` block.
-  async fetchOdds() { return []; }
+  async fetchOdds() {
+    return [];
+  }
 }
 
 function normalise(m, providerId) {
@@ -67,15 +69,19 @@ function normalise(m, providerId) {
   // FINISHED and AWARDED both terminate the match; LIVE/IN_PLAY/PAUSED are
   // the in-play window.
   const finished = status === 'FINISHED' || status === 'AWARDED';
-  const live     = status === 'LIVE' || status === 'IN_PLAY' || status === 'PAUSED';
+  const live = status === 'LIVE' || status === 'IN_PLAY' || status === 'PAUSED';
   const finalScore = m.score?.fullTime || {};
-  const liveScore  = m.score?.halfTime || {}; // only useful when not yet finished
-  const sh = Number.isFinite(finalScore.home) ? finalScore.home
-           : Number.isFinite(liveScore.home)  ? liveScore.home
-           : null;
-  const sa = Number.isFinite(finalScore.away) ? finalScore.away
-           : Number.isFinite(liveScore.away)  ? liveScore.away
-           : null;
+  const liveScore = m.score?.halfTime || {}; // only useful when not yet finished
+  const sh = Number.isFinite(finalScore.home)
+    ? finalScore.home
+    : Number.isFinite(liveScore.home)
+      ? liveScore.home
+      : null;
+  const sa = Number.isFinite(finalScore.away)
+    ? finalScore.away
+    : Number.isFinite(liveScore.away)
+      ? liveScore.away
+      : null;
   return {
     key: fixtureKey('football', home, away, kickoff),
     provider: providerId,
@@ -86,7 +92,9 @@ function normalise(m, providerId) {
       name: m.competition?.name,
       country: m.area?.name,
     },
-    home, away, kickoff,
+    home,
+    away,
+    kickoff,
     homeId: m.homeTeam?.id != null ? String(m.homeTeam.id) : null,
     awayId: m.awayTeam?.id != null ? String(m.awayTeam.id) : null,
     status: finished ? 'finished' : live ? 'live' : 'upcoming',

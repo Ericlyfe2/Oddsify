@@ -15,9 +15,7 @@ import {
   BONUS_RATE,
   CURRENCY,
 } from '../matchesData.js';
-import {
-  adminLookupSelection, adminLookupFixture, buildPublicSnapshot,
-} from '../db/sportsAdmin.js';
+import { adminLookupSelection, adminLookupFixture, buildPublicSnapshot } from '../db/sportsAdmin.js';
 import { listActivePromotions } from '../db/promotions.js';
 import { oddsApiStatus } from '../services/oddsApi.js';
 import { getRecentWins } from '../services/recentWins.js';
@@ -56,8 +54,8 @@ function uniqueBookingCode() {
   return generateBookingCode() + Math.floor(Math.random() * 9 + 1);
 }
 
-const betsStore        = createStore('bets', {});         // { betId: receipt }
-const jackpotStore     = createStore('jackpot_entries', {});
+const betsStore = createStore('bets', {}); // { betId: receipt }
+const jackpotStore = createStore('jackpot_entries', {});
 
 function pushBet(receipt) {
   betsStore.set(receipt.id, receipt);
@@ -73,9 +71,10 @@ function listUserBets(userId) {
 function attachCashoutOffer(bet) {
   if (bet.status !== 'open') return bet;
   if (bet.lastCashOutOffer?.amount != null) return bet;
-  const cashoutOffer = bet.mode === 'system'
-    ? Number((bet.stake * bet.totalOdds * 0.6).toFixed(2))
-    : Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+  const cashoutOffer =
+    bet.mode === 'system'
+      ? Number((bet.stake * bet.totalOdds * 0.6).toFixed(2))
+      : Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
   return { ...bet, cashoutOffer };
 }
 
@@ -91,12 +90,16 @@ const placeSchema = z.object({
   }),
   // System-bet metadata — required when mode === 'system'.
   systemType: z.string().optional(),
-  selections: z.array(z.object({
-    matchId: z.string().min(1),
-    market:  z.string().default('1X2'),
-    outcome: z.string().min(1),
-    odds:    z.union([z.number(), z.string()]).transform((v) => Number(v)),
-  })).min(1, 'Add at least one selection.'),
+  selections: z
+    .array(
+      z.object({
+        matchId: z.string().min(1),
+        market: z.string().default('1X2'),
+        outcome: z.string().min(1),
+        odds: z.union([z.number(), z.string()]).transform((v) => Number(v)),
+      }),
+    )
+    .min(1, 'Add at least one selection.'),
 });
 
 const jackpotEnterSchema = z.object({
@@ -104,16 +107,18 @@ const jackpotEnterSchema = z.object({
 });
 
 const cashoutSchema = z.object({
-  acceptedAmount: z.union([z.number(), z.string()])
+  acceptedAmount: z
+    .union([z.number(), z.string()])
     .optional()
-    .transform((v) => v === undefined ? undefined : Number(v))
+    .transform((v) => (v === undefined ? undefined : Number(v)))
     .refine((v) => v === undefined || (Number.isFinite(v) && v >= 0), 'invalid acceptedAmount'),
   // Partial cash-out: a fraction in (0, 1) of the stake to cash out now.
   // The remaining (1 - fraction) of the stake stays in play on a residual
   // ticket. Omit or set to 1 for a full cash-out.
-  fraction: z.union([z.number(), z.string()])
+  fraction: z
+    .union([z.number(), z.string()])
     .optional()
-    .transform((v) => v === undefined ? undefined : Number(v))
+    .transform((v) => (v === undefined ? undefined : Number(v)))
     .refine((v) => v === undefined || (Number.isFinite(v) && v > 0 && v <= 1), 'fraction must be in (0, 1]'),
 });
 
@@ -135,68 +140,83 @@ router.get('/sports', (_req, res) => {
   });
 });
 
-router.get('/matches', asyncHandler(async (req, res) => {
-  const sport = String(req.query.sport || 'football').toLowerCase();
-  if (!getSport(sport)) throw notFound(`Unknown sport "${sport}"`);
-  await ensureFreshLeagues(sport);
-  res.json({
-    updatedAt: new Date().toISOString(),
-    currency: CURRENCY,
-    ...buildPublicSnapshot(sport, buildSeedSelections),
-  });
-}));
+router.get(
+  '/matches',
+  asyncHandler(async (req, res) => {
+    const sport = String(req.query.sport || 'football').toLowerCase();
+    if (!getSport(sport)) throw notFound(`Unknown sport "${sport}"`);
+    await ensureFreshLeagues(sport);
+    res.json({
+      updatedAt: new Date().toISOString(),
+      currency: CURRENCY,
+      ...buildPublicSnapshot(sport, buildSeedSelections),
+    });
+  }),
+);
 
-router.get('/matches/:matchId', asyncHandler(async (req, res) => {
-  await ensureFreshLeagues('football');
-  const row = adminLookupFixture(req.params.matchId);
-  if (!row) throw notFound('Match not found');
-  res.json({
-    updatedAt: new Date().toISOString(),
-    currency: CURRENCY,
-    sport: row.sport?.id || row.sport,
-    league: {
-      id: row.league.id,
-      name: row.league.name,
-      region: row.league.region,
-      countryMeta: row.league.countryMeta,
-      crest: row.league.crest,
-    },
-    match: row.match,
-  });
-}));
+router.get(
+  '/matches/:matchId',
+  asyncHandler(async (req, res) => {
+    await ensureFreshLeagues('football');
+    const row = adminLookupFixture(req.params.matchId);
+    if (!row) throw notFound('Match not found');
+    res.json({
+      updatedAt: new Date().toISOString(),
+      currency: CURRENCY,
+      sport: row.sport?.id || row.sport,
+      league: {
+        id: row.league.id,
+        name: row.league.name,
+        region: row.league.region,
+        countryMeta: row.league.countryMeta,
+        crest: row.league.crest,
+      },
+      match: row.match,
+    });
+  }),
+);
 
-router.get('/leagues', asyncHandler(async (req, res) => {
-  const sport = String(req.query.sport || 'football').toLowerCase();
-  const sp = getSport(sport);
-  if (!sp) throw notFound(`Unknown sport "${sport}"`);
-  await ensureFreshLeagues(sport);
-  res.json({
-    updatedAt: new Date().toISOString(),
-    sport: sp.id,
-    leagues: sp.leagues.map((lg) => ({
-      id: lg.id, name: lg.name, region: lg.region,
-      countryMeta: lg.countryMeta, crest: lg.crest,
-      matchCount: lg.matches.length,
-    })),
-  });
-}));
+router.get(
+  '/leagues',
+  asyncHandler(async (req, res) => {
+    const sport = String(req.query.sport || 'football').toLowerCase();
+    const sp = getSport(sport);
+    if (!sp) throw notFound(`Unknown sport "${sport}"`);
+    await ensureFreshLeagues(sport);
+    res.json({
+      updatedAt: new Date().toISOString(),
+      sport: sp.id,
+      leagues: sp.leagues.map((lg) => ({
+        id: lg.id,
+        name: lg.name,
+        region: lg.region,
+        countryMeta: lg.countryMeta,
+        crest: lg.crest,
+        matchCount: lg.matches.length,
+      })),
+    });
+  }),
+);
 
-router.get('/leagues/:leagueId/matches', asyncHandler(async (req, res) => {
-  await ensureFreshLeagues('football');
-  for (const sp of SPORTS) {
-    const lg = sp.leagues.find((l) => l.id === req.params.leagueId);
-    if (lg) {
-      return res.json({
-        updatedAt: new Date().toISOString(),
-        currency: CURRENCY,
-        sport: sp.id,
-        league: { id: lg.id, name: lg.name, region: lg.region, countryMeta: lg.countryMeta, crest: lg.crest },
-        matches: lg.matches,
-      });
+router.get(
+  '/leagues/:leagueId/matches',
+  asyncHandler(async (req, res) => {
+    await ensureFreshLeagues('football');
+    for (const sp of SPORTS) {
+      const lg = sp.leagues.find((l) => l.id === req.params.leagueId);
+      if (lg) {
+        return res.json({
+          updatedAt: new Date().toISOString(),
+          currency: CURRENCY,
+          sport: sp.id,
+          league: { id: lg.id, name: lg.name, region: lg.region, countryMeta: lg.countryMeta, crest: lg.crest },
+          matches: lg.matches,
+        });
+      }
     }
-  }
-  throw notFound('League not found');
-}));
+    throw notFound('League not found');
+  }),
+);
 
 /* ------------ authenticated bet operations ------------ */
 
@@ -216,7 +236,8 @@ router.get('/recent-wins', (_req, res) => {
   res.json(getRecentWins());
 });
 
-router.post('/place',
+router.post(
+  '/place',
   requireAuth,
   validate(placeSchema),
   asyncHandler(async (req, res) => {
@@ -227,10 +248,15 @@ router.post('/place',
     const normalized = [];
     for (const sel of selections) {
       const dedupe = `${sel.matchId}:${sel.market}:${sel.outcome}`;
-      if (seen.has(dedupe)) return res.json({ success: false, error: `Duplicate selection ${sel.market} ${sel.outcome}.` });
+      if (seen.has(dedupe))
+        return res.json({ success: false, error: `Duplicate selection ${sel.market} ${sel.outcome}.` });
       seen.add(dedupe);
       const found = adminLookupSelection({ matchId: sel.matchId, market: sel.market, outcome: sel.outcome });
-      if (!found) return res.json({ success: false, error: `Invalid selection ${sel.market} ${sel.outcome} for match ${sel.matchId}.` });
+      if (!found)
+        return res.json({
+          success: false,
+          error: `Invalid selection ${sel.market} ${sel.outcome} for match ${sel.matchId}.`,
+        });
       const fxView = found.row?.match || found.row;
       // Only block placement when the market is *actually* closed:
       //   - admin has explicitly suspended the fixture, or
@@ -240,10 +266,18 @@ router.post('/place',
       // same simulated score, so the user still gets a booking code now.
       const hasRealResult = fxView?.finished && (fxView.finalSource === 'feed' || fxView.finalSource === 'manual');
       if (hasRealResult || fxView?.suspended) {
-        return res.json({ success: false, error: 'Market closed — fixture is no longer available.', code: 'MARKET_CLOSED' });
+        return res.json({
+          success: false,
+          error: 'Market closed — fixture is no longer available.',
+          code: 'MARKET_CLOSED',
+        });
       }
       if (found.market?.suspended || found.selection?.suspended) {
-        return res.json({ success: false, error: 'Selection suspended — refresh and try a different market.', code: 'SELECTION_SUSPENDED' });
+        return res.json({
+          success: false,
+          error: 'Selection suspended — refresh and try a different market.',
+          code: 'SELECTION_SUSPENDED',
+        });
       }
       const serverOdds = found.selection.odds;
       // Live odds drift constantly. Only reject when the price *dropped*
@@ -263,43 +297,73 @@ router.post('/place',
         });
       }
       normalized.push({
-        matchId: sel.matchId, market: sel.market, outcome: sel.outcome, odds: serverOdds,
-        home: found.row.match.home, away: found.row.match.away,
+        matchId: sel.matchId,
+        market: sel.market,
+        outcome: sel.outcome,
+        odds: serverOdds,
+        home: found.row.match.home,
+        away: found.row.match.away,
         marketName: found.row.match.markets?.[sel.market]?.name || sel.market,
       });
     }
-    if (mode === 'single' && normalized.length > 1) return res.json({ success: false, error: 'Single mode allows only one selection.' });
-    if (mode === 'multiple' && normalized.length < 2) return res.json({ success: false, error: 'Multiple bets need at least two selections.' });
+    if (mode === 'single' && normalized.length > 1)
+      return res.json({ success: false, error: 'Single mode allows only one selection.' });
+    if (mode === 'multiple' && normalized.length < 2)
+      return res.json({ success: false, error: 'Multiple bets need at least two selections.' });
 
     // Compute totals based on the bet mode.
-    let totalOdds, totalStake, potentialWin, systemDef = null, linesCount = null, stakePerLine = null;
+    let totalOdds,
+      totalStake,
+      potentialWin,
+      systemDef = null,
+      linesCount = null,
+      stakePerLine = null;
 
     if (mode === 'system') {
       const key = String(systemType || '').toLowerCase();
       systemDef = SYSTEM_TYPES[key];
-      if (!systemDef) return res.json({ success: false, error: `Unknown system type "${systemType}". Pick one of: ${Object.keys(SYSTEM_TYPES).join(', ')}.` });
+      if (!systemDef)
+        return res.json({
+          success: false,
+          error: `Unknown system type "${systemType}". Pick one of: ${Object.keys(SYSTEM_TYPES).join(', ')}.`,
+        });
       if (normalized.length !== systemDef.selections) {
-        return res.json({ success: false, error: `${systemDef.label} needs exactly ${systemDef.selections} selections (you have ${normalized.length}).` });
+        return res.json({
+          success: false,
+          error: `${systemDef.label} needs exactly ${systemDef.selections} selections (you have ${normalized.length}).`,
+        });
       }
       stakePerLine = Number(stake);
-      linesCount   = systemDef.totalLines;
-      totalStake   = Number((stakePerLine * linesCount).toFixed(2));
+      linesCount = systemDef.totalLines;
+      totalStake = Number((stakePerLine * linesCount).toFixed(2));
       // For system bets, "totalOdds" doesn't really exist; we expose the
       // max return divided by total stake as a rough headline number so
       // the bet history list has something useful to show.
-      potentialWin = Number(maxSystemReturn(normalized.map((s) => s.odds), key, stakePerLine).toFixed(2));
-      totalOdds    = Number((potentialWin / totalStake).toFixed(4));
+      potentialWin = Number(
+        maxSystemReturn(
+          normalized.map((s) => s.odds),
+          key,
+          stakePerLine,
+        ).toFixed(2),
+      );
+      totalOdds = Number((potentialWin / totalStake).toFixed(4));
     } else {
-      totalStake   = Number(stake);
-      totalOdds    = mode === 'single' ? normalized[0].odds : normalized.reduce((acc, s) => acc * s.odds, 1);
+      totalStake = Number(stake);
+      totalOdds = mode === 'single' ? normalized[0].odds : normalized.reduce((acc, s) => acc * s.odds, 1);
       potentialWin = totalStake * totalOdds * (1 + BONUS_RATE);
     }
 
     if (totalStake < 300) {
-      return res.json({ success: false, error: `Minimum stake is GHS 300. This ticket requires only GHS ${totalStake.toFixed(2)}.` });
+      return res.json({
+        success: false,
+        error: `Minimum stake is GHS 300. This ticket requires only GHS ${totalStake.toFixed(2)}.`,
+      });
     }
     if (totalStake > user.balance) {
-      return res.json({ success: false, error: `Insufficient balance. This ticket requires GHS ${totalStake.toFixed(2)} (your balance is GHS ${user.balance.toFixed(2)}).` });
+      return res.json({
+        success: false,
+        error: `Insufficient balance. This ticket requires GHS ${totalStake.toFixed(2)} (your balance is GHS ${user.balance.toFixed(2)}).`,
+      });
     }
 
     const id = `bv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -318,7 +382,7 @@ router.post('/place',
       legs: normalized,
       status: 'open',
       lastCashOutOffer: null,
-      cashOutHistory:   [],
+      cashOutHistory: [],
       ...(mode === 'system' && {
         systemType: systemType.toLowerCase(),
         systemLabel: systemDef.label,
@@ -333,13 +397,21 @@ router.post('/place',
 
     const updated = updateUser(user.id, { balance: Number((user.balance - totalStake).toFixed(2)) });
     pushTx(user.id, {
-      kind: 'bet_placed', amount: -totalStake, status: 'completed',
-      balanceAfter: updated.balance, ref: id,
+      kind: 'bet_placed',
+      amount: -totalStake,
+      status: 'completed',
+      balanceAfter: updated.balance,
+      ref: id,
     });
     logActivity(user.id, { kind: 'bet_placed', betId: id, stake: totalStake });
 
     // Realtime: notify the player's other tabs/devices and the admin observability dashboard.
-    emitToUser(user.id, 'wallet:update', { balance: updated.balance, delta: -totalStake, reason: 'bet:placed', ref: id });
+    emitToUser(user.id, 'wallet:update', {
+      balance: updated.balance,
+      delta: -totalStake,
+      reason: 'bet:placed',
+      ref: id,
+    });
     emitAdmin('bet:placed', { betId: id, userId: user.id, stake: totalStake, mode, legs: normalized.length });
 
     res.status(201).json({
@@ -347,7 +419,7 @@ router.post('/place',
       bet: receipt,
       account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
     });
-  })
+  }),
 );
 
 router.get('/history', requireAuth, (req, res) => {
@@ -357,9 +429,7 @@ router.get('/history', requireAuth, (req, res) => {
 // IMPORTANT: this literal route must come BEFORE /bets/:id or Express will
 // match "unacknowledged" as an id.
 router.get('/bets/unacknowledged', requireAuth, (req, res) => {
-  const wins = Object.values(betsStore.all() || {}).filter((b) =>
-    b.userId === req.user.id && b.wonNotAcknowledged
-  );
+  const wins = Object.values(betsStore.all() || {}).filter((b) => b.userId === req.user.id && b.wonNotAcknowledged);
   res.json({ bets: wins });
 });
 
@@ -380,13 +450,15 @@ router.get('/bets/:id', requireAuth, (req, res, next) => {
   res.json({ bet });
 });
 
-router.delete('/bets/:id',
+router.delete(
+  '/bets/:id',
   requireAuth,
   validate(cashoutSchema),
   asyncHandler(async (req, res) => {
     const bet = betsStore.get(req.params.id);
     if (!bet || bet.userId !== req.user.id) throw notFound('Bet not found');
-    if (bet.status !== 'open') throw conflict('Bet is already settled and cannot be cashed out.', { code: 'ALREADY_SETTLED' });
+    if (bet.status !== 'open')
+      throw conflict('Bet is already settled and cannot be cashed out.', { code: 'ALREADY_SETTLED' });
 
     let cashOut;
     if (bet.mode === 'system') {
@@ -396,7 +468,10 @@ router.delete('/bets/:id',
       const last = cashOutEngine.getLastOffer(bet.id);
       if (last) {
         if (last.cashOut === 0) {
-          throw conflict('This bet has busted — cash-out is no longer available. The natural settlement will run shortly.', { code: 'OFFER_ZERO' });
+          throw conflict(
+            'This bet has busted — cash-out is no longer available. The natural settlement will run shortly.',
+            { code: 'OFFER_ZERO' },
+          );
         }
         cashOut = last.cashOut;
       } else {
@@ -406,12 +481,14 @@ router.delete('/bets/:id',
       }
       // Validate drift in both paths when client provided acceptedAmount.
       if (req.body?.acceptedAmount !== undefined) {
-        const drift = cashOut > 0
-          ? Math.abs(req.body.acceptedAmount - cashOut) / cashOut
-          : Math.abs(req.body.acceptedAmount - cashOut);
+        const drift =
+          cashOut > 0
+            ? Math.abs(req.body.acceptedAmount - cashOut) / cashOut
+            : Math.abs(req.body.acceptedAmount - cashOut);
         if (drift > LIVE_BETTING.driftTolerance) {
           throw conflict('Cash-out offer changed before you confirmed. Refresh and try again.', {
-            code: 'OFFER_STALE', currentOffer: cashOut,
+            code: 'OFFER_STALE',
+            currentOffer: cashOut,
           });
         }
       }
@@ -421,9 +498,10 @@ router.delete('/bets/:id',
     // running on a fresh residual ticket. System bets keep the v1 behaviour
     // (full cash-out only) — partial only applies to single/multiple.
     const rawFraction = req.body?.fraction;
-    const fraction = (bet.mode !== 'system' && rawFraction !== undefined && rawFraction > 0 && rawFraction < 1)
-      ? Number(rawFraction)
-      : 1;
+    const fraction =
+      bet.mode !== 'system' && rawFraction !== undefined && rawFraction > 0 && rawFraction < 1
+        ? Number(rawFraction)
+        : 1;
     const cashedPortion = Number((cashOut * fraction).toFixed(2));
     const residualStake = Number((bet.stake * (1 - fraction)).toFixed(2));
 
@@ -479,14 +557,27 @@ router.delete('/bets/:id',
     });
     logActivity(req.user.id, { kind: 'cash_out', betId: bet.id, cashOut: cashedPortion, fraction });
 
-    emitToUser(req.user.id, 'wallet:update', { balance: updated.balance, delta: cashedPortion, reason: 'cash_out', ref: bet.id });
-    emitAdmin('cashout:executed', { betId: bet.id, userId: req.user.id, cashOut: cashedPortion, fraction, ts: Date.now() });
+    emitToUser(req.user.id, 'wallet:update', {
+      balance: updated.balance,
+      delta: cashedPortion,
+      reason: 'cash_out',
+      ref: bet.id,
+    });
+    emitAdmin('cashout:executed', {
+      betId: bet.id,
+      userId: req.user.id,
+      cashOut: cashedPortion,
+      fraction,
+      ts: Date.now(),
+    });
 
     res.json({
-      ok: true, bet, residual,
+      ok: true,
+      bet,
+      residual,
       account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
     });
-  })
+  }),
 );
 
 /* ------------ casino, virtuals, jackpot, promos ------------ */
@@ -501,7 +592,8 @@ router.get('/virtuals', (_req, res) => res.json({ leagues: VIRTUAL_LEAGUES }));
 
 router.get('/jackpot', (_req, res) => res.json({ jackpot: JACKPOT_GAME }));
 
-router.post('/jackpot/enter',
+router.post(
+  '/jackpot/enter',
   requireAuth,
   validate(jackpotEnterSchema),
   asyncHandler(async (req, res) => {
@@ -517,17 +609,32 @@ router.post('/jackpot/enter',
     }
     const id = `jp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const entry = {
-      id, userId: user.id, placedAt: new Date().toISOString(),
-      fee: JACKPOT_GAME.entryFee, currency: CURRENCY, picks, drawsIn: JACKPOT_GAME.drawsIn,
+      id,
+      userId: user.id,
+      placedAt: new Date().toISOString(),
+      fee: JACKPOT_GAME.entryFee,
+      currency: CURRENCY,
+      picks,
+      drawsIn: JACKPOT_GAME.drawsIn,
     };
     jackpotStore.set(id, entry);
     const updated = updateUser(user.id, {
       balance: Number((user.balance - JACKPOT_GAME.entryFee).toFixed(2)),
     });
-    pushTx(user.id, { kind: 'jackpot_entry', amount: -JACKPOT_GAME.entryFee, status: 'completed', balanceAfter: updated.balance, ref: id });
+    pushTx(user.id, {
+      kind: 'jackpot_entry',
+      amount: -JACKPOT_GAME.entryFee,
+      status: 'completed',
+      balanceAfter: updated.balance,
+      ref: id,
+    });
     logActivity(user.id, { kind: 'jackpot_entry', entryId: id });
-    res.status(201).json({ ok: true, entry, account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined } });
-  })
+    res.status(201).json({
+      ok: true,
+      entry,
+      account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
+    });
+  }),
 );
 
 router.get('/promos', (_req, res) => {

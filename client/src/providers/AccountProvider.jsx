@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  setTokens, clearTokens, getAccess,
-  fetchMe, logout as apiLogout,
+  setTokens,
+  clearTokens,
+  getAccess,
+  fetchMe,
+  logout as apiLogout,
   deposit as apiDeposit,
-  fetchUnacknowledgedWins, acknowledgeBet,
+  fetchUnacknowledgedWins,
+  acknowledgeBet,
 } from '../api/betApi.js';
 import { onLive, refreshAuth, disconnectSocket } from '../api/socketClient.js';
 import WinTrophyModal from '../components/WinTrophyModal.jsx';
@@ -15,19 +19,28 @@ import { appendTxCache } from '../lib/txCache.js';
 import { requestNotificationPermission, notify as osNotify } from '../lib/browserNotify.js';
 
 export const AccountCtx = React.createContext(null);
-export const ToastCtx   = React.createContext(null);
+export const ToastCtx = React.createContext(null);
 
 const EMPTY_ACCOUNT = {
-  account: null, loading: false,
-  signIn: () => {}, signOut: () => {}, adjustBalance: () => {},
-  setAccount: () => {}, openDeposit: () => {}, openWithdraw: () => {},
-  refresh: () => {}, showWin: () => {},
-  notifications: [], unreadCount: 0, clearNotifications: () => {}, markNotificationRead: () => {},
+  account: null,
+  loading: false,
+  signIn: () => {},
+  signOut: () => {},
+  adjustBalance: () => {},
+  setAccount: () => {},
+  openDeposit: () => {},
+  openWithdraw: () => {},
+  refresh: () => {},
+  showWin: () => {},
+  notifications: [],
+  unreadCount: 0,
+  clearNotifications: () => {},
+  markNotificationRead: () => {},
 };
 const EMPTY_TOAST = { toast: () => {} };
 
 export const useAccount = () => React.useContext(AccountCtx) || EMPTY_ACCOUNT;
-export const useToast   = () => React.useContext(ToastCtx)   || EMPTY_TOAST;
+export const useToast = () => React.useContext(ToastCtx) || EMPTY_TOAST;
 
 function formatAmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -58,13 +71,13 @@ export default function AppProviders({ children }) {
 
   const [toasts, setToasts] = useState([]);
 
-  const depositDlg  = useRef(null);
-  const MIN_DEPOSIT  = 300;
-  const MAX_DEPOSIT  = 50000;
-  const [depositAmt,  setDepositAmt]   = useState(String(MIN_DEPOSIT));
+  const depositDlg = useRef(null);
+  const MIN_DEPOSIT = 300;
+  const MAX_DEPOSIT = 50000;
+  const [depositAmt, setDepositAmt] = useState(String(MIN_DEPOSIT));
   const [depositMethod, setDepositMethod] = useState('paystack'); // 'paystack' | 'paybill'
   const [busy, setBusy] = useState(false);
-  const [err,  setErr]  = useState('');
+  const [err, setErr] = useState('');
   const [wins, setWins] = useState([]);
   // Queue of deposit decisions still to show. Approve/reject events push into
   // it; the modal pops the head when dismissed. A queue (not a single value)
@@ -75,7 +88,9 @@ export default function AppProviders({ children }) {
     try {
       const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('sp_notifications') : null;
       return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -84,43 +99,58 @@ export default function AppProviders({ children }) {
   const updateNotifications = useCallback((updater) => {
     setNotifications((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      try { localStorage.setItem('sp_notifications', JSON.stringify(next.slice(0, 200))); } catch {}
+      try {
+        localStorage.setItem('sp_notifications', JSON.stringify(next.slice(0, 200)));
+      } catch {}
       return next;
     });
   }, []);
 
-  const addNotification = useCallback((n) => {
-    updateNotifications((prev) => {
-      const entry = { ...n, read: false, receivedAt: new Date().toISOString() };
-      // De-dupe by id so a poll arriving after a socket push doesn't double-list.
-      if (n.id && prev.some((x) => x.id === n.id)) return prev;
-      return [entry, ...prev].slice(0, 200);
-    });
-  }, [updateNotifications]);
+  const addNotification = useCallback(
+    (n) => {
+      updateNotifications((prev) => {
+        const entry = { ...n, read: false, receivedAt: new Date().toISOString() };
+        // De-dupe by id so a poll arriving after a socket push doesn't double-list.
+        if (n.id && prev.some((x) => x.id === n.id)) return prev;
+        return [entry, ...prev].slice(0, 200);
+      });
+    },
+    [updateNotifications],
+  );
 
   const clearNotifications = useCallback(() => {
     updateNotifications([]);
   }, [updateNotifications]);
 
-  const markNotificationRead = useCallback((id) => {
-    updateNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  }, [updateNotifications]);
+  const markNotificationRead = useCallback(
+    (id) => {
+      updateNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    },
+    [updateNotifications],
+  );
 
   const dismissToast = useCallback((id) => {
     setToasts((cur) => cur.filter((t) => t.id !== id));
   }, []);
 
-  const toast = useCallback((msg, kind = 'info', opts = {}) => {
-    if (!msg) return null;
-    const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const ttl = typeof opts.ttl === 'number' ? opts.ttl : 3500;
-    setToasts((cur) => [...cur.slice(-3), { id, message: msg, kind }]);
-    if (ttl > 0) setTimeout(() => dismissToast(id), ttl);
-    return id;
-  }, [dismissToast]);
+  const toast = useCallback(
+    (msg, kind = 'info', opts = {}) => {
+      if (!msg) return null;
+      const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const ttl = typeof opts.ttl === 'number' ? opts.ttl : 3500;
+      setToasts((cur) => [...cur.slice(-3), { id, message: msg, kind }]);
+      if (ttl > 0) setTimeout(() => dismissToast(id), ttl);
+      return id;
+    },
+    [dismissToast],
+  );
 
   const refresh = useCallback(async () => {
-    if (!getAccess()) { setAccount(null); setLoading(false); return null; }
+    if (!getAccess()) {
+      setAccount(null);
+      setLoading(false);
+      return null;
+    }
     try {
       const data = await fetchMe();
       setAccount(data.account);
@@ -139,14 +169,18 @@ export default function AppProviders({ children }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   // Re-hydrate when the tab returns from being hidden (laptop wake, mobile
   // app switch). The access token may have expired silently while we were
   // backgrounded; this fetch will trigger the refresh dance in betApi.
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
-    const onVisible = () => { if (document.visibilityState === 'visible' && getAccess()) refresh(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && getAccess()) refresh();
+    };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh]);
@@ -162,7 +196,11 @@ export default function AppProviders({ children }) {
   // the entire session.
   const accountId = account?.id;
   useEffect(() => {
-    if (!accountId) { setWins([]); disconnectSocket(); return; }
+    if (!accountId) {
+      setWins([]);
+      disconnectSocket();
+      return;
+    }
     let alive = true;
 
     refreshAuth(); // re-handshake the socket with the now-current access token
@@ -179,7 +217,9 @@ export default function AppProviders({ children }) {
           for (const b of bets) if (!seen.has(b.id)) merged.push(b);
           return merged;
         });
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
     tick();
     const id = setInterval(tick, 60_000);
@@ -187,7 +227,7 @@ export default function AppProviders({ children }) {
     // Live updates pushed by the server.
     const offWallet = onLive('wallet:update', ({ balance }) => {
       if (typeof balance === 'number') {
-        setAccount((prev) => prev ? { ...prev, balance } : prev);
+        setAccount((prev) => (prev ? { ...prev, balance } : prev));
       }
     });
     const offPending = onLive('wallet:pending', ({ transaction, amount }) => {
@@ -197,9 +237,9 @@ export default function AppProviders({ children }) {
     const offApproved = onLive('deposit:approved', ({ transaction, account: updatedAccount }) => {
       if (updatedAccount) setAccount(updatedAccount);
       const txId = transaction?.id;
-      const amt  = transaction?.amount;
+      const amt = transaction?.amount;
       const title = 'Deposit approved';
-      const body  = `GHS ${formatAmt(amt)} has been credited to your wallet.`;
+      const body = `GHS ${formatAmt(amt)} has been credited to your wallet.`;
       toast(`Deposit approved! GHS ${formatAmt(amt)} credited.`, 'success');
       // Persistent inbox entry — survives reload, de-duped by tx id.
       addNotification({
@@ -224,9 +264,9 @@ export default function AppProviders({ children }) {
     });
     const offRejected = onLive('deposit:rejected', ({ transaction, reason }) => {
       const txId = transaction?.id;
-      const amt  = transaction?.amount;
+      const amt = transaction?.amount;
       const title = 'Deposit rejected';
-      const body  = `Your GHS ${formatAmt(amt)} deposit was rejected${reason ? ': ' + reason : '.'}`;
+      const body = `Your GHS ${formatAmt(amt)} deposit was rejected${reason ? ': ' + reason : '.'}`;
       toast(`Deposit of GHS ${formatAmt(amt)} rejected${reason ? ': ' + reason : ''}.`, 'warn');
       addNotification({
         id: `deposit-rejected-${txId || Date.now()}`,
@@ -245,19 +285,37 @@ export default function AppProviders({ children }) {
         return [...prev, { kind: 'rejected', amount: amt, reason, txId, at: Date.now() }];
       });
     });
-    const offWin = onLive('bet:won', async () => { try { await tick(); } catch {} });
+    const offWin = onLive('bet:won', async () => {
+      try {
+        await tick();
+      } catch {}
+    });
     const offNotif = onLive('notification:new', (payload) => {
       if (payload?.title) {
         addNotification(payload);
-        toast(`${payload.title}${payload.body ? ': ' + payload.body : ''}`, payload.severity === 'critical' ? 'warn' : 'info', { ttl: 6000 });
+        toast(
+          `${payload.title}${payload.body ? ': ' + payload.body : ''}`,
+          payload.severity === 'critical' ? 'warn' : 'info',
+          { ttl: 6000 },
+        );
       }
     });
-    const offSettled = onLive('bet:settled', async () => { try { await tick(); } catch {} });
+    const offSettled = onLive('bet:settled', async () => {
+      try {
+        await tick();
+      } catch {}
+    });
 
     return () => {
       alive = false;
       clearInterval(id);
-      offWallet?.(); offPending?.(); offApproved?.(); offRejected?.(); offNotif?.(); offWin?.(); offSettled?.();
+      offWallet?.();
+      offPending?.();
+      offApproved?.();
+      offRejected?.();
+      offNotif?.();
+      offWin?.();
+      offSettled?.();
     };
   }, [accountId]);
 
@@ -265,44 +323,73 @@ export default function AppProviders({ children }) {
     const toAck = [...wins];
     setWins([]);
     for (const b of toAck) {
-      try { await acknowledgeBet(b.id); } catch { /* swallow */ }
+      try {
+        await acknowledgeBet(b.id);
+      } catch {
+        /* swallow */
+      }
     }
     // Refresh balance in case settlement credited the wallet between calls.
-    try { await refresh(); } catch { /* ignore */ }
+    try {
+      await refresh();
+    } catch {
+      /* ignore */
+    }
   }, [wins, refresh]);
 
   /** Persist tokens + load account from a successful auth response. */
-  const signIn = useCallback((authResponse) => {
-    if (authResponse?.accessToken) setTokens(authResponse.accessToken, authResponse.refreshToken);
-    if (authResponse?.account) setAccount(authResponse.account);
-    if (authResponse?.account) toast(`Signed in as ${authResponse.account.displayName || authResponse.account.email}`);
-    // Sign-in is a user gesture, so this is a good moment to ask for browser
-    // notification permission. Fire-and-forget — the helper no-ops on refusal
-    // or unsupported platforms, and never re-prompts once decided.
-    requestNotificationPermission().catch(() => {});
-  }, [toast]);
+  const signIn = useCallback(
+    (authResponse) => {
+      if (authResponse?.accessToken) setTokens(authResponse.accessToken, authResponse.refreshToken);
+      if (authResponse?.account) setAccount(authResponse.account);
+      if (authResponse?.account)
+        toast(`Signed in as ${authResponse.account.displayName || authResponse.account.email}`);
+      // Sign-in is a user gesture, so this is a good moment to ask for browser
+      // notification permission. Fire-and-forget — the helper no-ops on refusal
+      // or unsupported platforms, and never re-prompts once decided.
+      requestNotificationPermission().catch(() => {});
+    },
+    [toast],
+  );
 
   const signOut = useCallback(async () => {
-    try { await apiLogout(); } catch { /* ignore network */ }
+    try {
+      await apiLogout();
+    } catch {
+      /* ignore network */
+    }
     clearTokens();
     setAccount(null);
     toast('Logged out.');
     navigate('/', { replace: true });
   }, [toast, navigate]);
 
-  const adjustBalance = useCallback((delta, label) => {
-    setAccount((prev) => prev ? { ...prev, balance: Number((prev.balance + delta).toFixed(2)) } : prev);
-    if (label) toast(label);
-  }, [toast]);
+  const adjustBalance = useCallback(
+    (delta, label) => {
+      setAccount((prev) => (prev ? { ...prev, balance: Number((prev.balance + delta).toFixed(2)) } : prev));
+      if (label) toast(label);
+    },
+    [toast],
+  );
 
   const openDeposit = useCallback(() => {
-    if (!account) { toast('Sign in to deposit.'); navigate('/login'); return; }
-    setErr(''); setDepositAmt(String(MIN_DEPOSIT)); setDepositMethod('paystack');
+    if (!account) {
+      toast('Sign in to deposit.');
+      navigate('/login');
+      return;
+    }
+    setErr('');
+    setDepositAmt(String(MIN_DEPOSIT));
+    setDepositMethod('paystack');
     depositDlg.current?.showModal();
   }, [account, toast, navigate]);
 
   const openWithdraw = useCallback(() => {
-    if (!account) { toast('Sign in to withdraw.'); navigate('/login'); return; }
+    if (!account) {
+      toast('Sign in to withdraw.');
+      navigate('/login');
+      return;
+    }
     navigate('/withdraw');
   }, [account, toast, navigate]);
 
@@ -310,8 +397,14 @@ export default function AppProviders({ children }) {
     e.preventDefault();
     setErr('');
     const amt = parseFloat(String(depositAmt).replace(/,/g, ''));
-    if (!Number.isFinite(amt) || amt <= 0) { setErr('Enter a valid amount.'); return; }
-    if (amt < MIN_DEPOSIT) { setErr(`Minimum deposit is GHS ${MIN_DEPOSIT}.`); return; }
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setErr('Enter a valid amount.');
+      return;
+    }
+    if (amt < MIN_DEPOSIT) {
+      setErr(`Minimum deposit is GHS ${MIN_DEPOSIT}.`);
+      return;
+    }
     // Submitting a deposit is the moment the user most wants notified about
     // its outcome — request browser permission here so the approve/reject
     // socket event can surface even when the tab is backgrounded.
@@ -324,10 +417,15 @@ export default function AppProviders({ children }) {
       }
       depositDlg.current?.close();
       const labels = { paystack: 'Paystack', paybill: 'Paybill' };
-      toast(`Deposit of GHS ${formatAmt(amt)} via ${labels[depositMethod] || depositMethod} submitted for admin approval.`, 'info');
+      toast(
+        `Deposit of GHS ${formatAmt(amt)} via ${labels[depositMethod] || depositMethod} submitted for admin approval.`,
+        'info',
+      );
     } catch (e) {
       setErr(e.message || 'Deposit failed.');
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Public callback so cash-outs (and any other "instant payout" flow) can
@@ -341,13 +439,39 @@ export default function AppProviders({ children }) {
     });
   }, []);
 
-  const accountValue = useMemo(() => ({
-    account, loading,
-    signIn, signOut, adjustBalance, setAccount,
-    openDeposit, openWithdraw, refresh,
-    showWin,
-    notifications, unreadCount, clearNotifications, markNotificationRead,
-  }), [account, loading, signIn, signOut, adjustBalance, openDeposit, openWithdraw, refresh, showWin, notifications, unreadCount, clearNotifications, markNotificationRead]);
+  const accountValue = useMemo(
+    () => ({
+      account,
+      loading,
+      signIn,
+      signOut,
+      adjustBalance,
+      setAccount,
+      openDeposit,
+      openWithdraw,
+      refresh,
+      showWin,
+      notifications,
+      unreadCount,
+      clearNotifications,
+      markNotificationRead,
+    }),
+    [
+      account,
+      loading,
+      signIn,
+      signOut,
+      adjustBalance,
+      openDeposit,
+      openWithdraw,
+      refresh,
+      showWin,
+      notifications,
+      unreadCount,
+      clearNotifications,
+      markNotificationRead,
+    ],
+  );
 
   const balance = account?.balance ?? 0;
 
@@ -356,11 +480,7 @@ export default function AppProviders({ children }) {
       <ToastCtx.Provider value={{ toast }}>
         {children}
 
-        <WinTrophyModal
-          wins={wins}
-          onClose={dismissWins}
-          onViewSlip={() => navigate('/my-bets')}
-        />
+        <WinTrophyModal wins={wins} onClose={dismissWins} onViewSlip={() => navigate('/my-bets')} />
 
         <DepositResultModal
           result={depositResults[0] || null}
@@ -377,9 +497,7 @@ export default function AppProviders({ children }) {
               aria-label="Dismiss notification"
             >
               <span className="toast-icon" aria-hidden="true">
-                {t.kind === 'success' ? '✓' :
-                 t.kind === 'error'   ? '!' :
-                 t.kind === 'warn'    ? '⚠' : 'ℹ'}
+                {t.kind === 'success' ? '✓' : t.kind === 'error' ? '!' : t.kind === 'warn' ? '⚠' : 'ℹ'}
               </span>
               <span className="toast-body">{t.message}</span>
             </button>
@@ -393,8 +511,17 @@ export default function AppProviders({ children }) {
             const accountIdentifier = account?.phone || account?.email || '';
             const maskedIdentifier = maskPhone(accountIdentifier);
             const identifierLabel = account?.phone ? 'Account phone' : 'Account';
-            const closeDlg = () => { try { depositDlg.current?.close(); } catch { /* ignore */ } };
-            const selectMethod = (m) => { setErr(''); setDepositMethod(m); };
+            const closeDlg = () => {
+              try {
+                depositDlg.current?.close();
+              } catch {
+                /* ignore */
+              }
+            };
+            const selectMethod = (m) => {
+              setErr('');
+              setDepositMethod(m);
+            };
 
             return (
               <>
@@ -402,9 +529,18 @@ export default function AppProviders({ children }) {
                   asDialog
                   title="Deposit"
                   onBack={closeDlg}
-                  onForward={() => { closeDlg(); navigate(1); }}
-                  onHelp={() => { closeDlg(); navigate('/help'); }}
-                  onHome={() => { closeDlg(); navigate('/'); }}
+                  onForward={() => {
+                    closeDlg();
+                    navigate(1);
+                  }}
+                  onHelp={() => {
+                    closeDlg();
+                    navigate('/help');
+                  }}
+                  onHome={() => {
+                    closeDlg();
+                    navigate('/');
+                  }}
                 />
 
                 <div className="deposit-body">
@@ -419,7 +555,17 @@ export default function AppProviders({ children }) {
                       onClick={() => selectMethod('paystack')}
                     >
                       <div className="dep-tile-icon" style={{ background: 'var(--surface-2)', color: 'var(--accent)' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
                           <rect x="2" y="6" width="20" height="14" rx="2" />
                           <line x1="2" y1="10" x2="22" y2="10" />
                         </svg>
@@ -436,7 +582,17 @@ export default function AppProviders({ children }) {
                       onClick={() => selectMethod('paybill')}
                     >
                       <div className="dep-tile-icon" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
                           <path d="M3 21h18" />
                           <path d="M5 21V10l7-4 7 4v11" />
                           <path d="M9 21v-6h6v6" />
@@ -449,7 +605,16 @@ export default function AppProviders({ children }) {
 
                   <div className="dep-account-row">
                     <div className="dep-account-icon" aria-hidden="true">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <rect x="5" y="2" width="14" height="20" rx="2" />
                         <line x1="12" y1="18" x2="12.01" y2="18" />
                       </svg>

@@ -47,10 +47,17 @@ export function compiledLeagues() {
     for (const fx of Object.values(custom || {})) {
       if (fx.sport !== sp.id) continue;
       const leagueId = fx.leagueId || 'admin-misc';
-      let target = liveLeagues.find((lg) => lg.id === leagueId) ||
-                   extraLeagues.find((lg) => lg.id === leagueId);
+      let target = liveLeagues.find((lg) => lg.id === leagueId) || extraLeagues.find((lg) => lg.id === leagueId);
       if (!target) {
-        target = { id: leagueId, name: 'Admin fixtures', region: 'admin', crest: { style: 'background:linear-gradient(135deg,#7c5cff,#22d3ee);color:#fff', label: 'ADM' }, matches: [], sport: sp.id, admin: true };
+        target = {
+          id: leagueId,
+          name: 'Admin fixtures',
+          region: 'admin',
+          crest: { style: 'background:linear-gradient(135deg,#7c5cff,#22d3ee);color:#fff', label: 'ADM' },
+          matches: [],
+          sport: sp.id,
+          admin: true,
+        };
         extraLeagues.push(target);
       }
       const view = applyOverride(fx, overrides[fx.id], oddsOverrides[fx.id], suspensions[fx.id], results[fx.id]);
@@ -85,7 +92,7 @@ function applyOverride(match, patch, oddsPatch, suspendPatch, result) {
         nextMarket = {
           ...market,
           selections: (market.selections || []).map((sel) =>
-            oddsPatch[mKey][sel.key] !== undefined ? { ...sel, odds: Number(oddsPatch[mKey][sel.key]) } : sel
+            oddsPatch[mKey][sel.key] !== undefined ? { ...sel, odds: Number(oddsPatch[mKey][sel.key]) } : sel,
           ),
         };
       }
@@ -96,7 +103,7 @@ function applyOverride(match, patch, oddsPatch, suspendPatch, result) {
         nextMarket = {
           ...nextMarket,
           selections: (nextMarket.selections || []).map((sel) =>
-            suspendPatch.selections.includes(`${mKey}:${sel.key}`) ? { ...sel, suspended: true } : sel
+            suspendPatch.selections.includes(`${mKey}:${sel.key}`) ? { ...sel, suspended: true } : sel,
           ),
         };
       }
@@ -156,7 +163,9 @@ export function addMarketToFixture(matchId, marketKey, marketDef) {
   markets[marketKey] = {
     name: marketDef.name || marketKey,
     selections: (marketDef.selections || []).map((s) => ({
-      key: s.key, label: s.label || s.key, odds: Number(s.odds),
+      key: s.key,
+      label: s.label || s.key,
+      odds: Number(s.odds),
     })),
   };
   store.set('custom', { ...cur, [matchId]: { ...fx, markets, moreMarkets: Object.keys(markets).length } });
@@ -232,7 +241,10 @@ export function adminLookupSelection({ matchId, market, outcome }) {
   return { row: view, market: mk, selection: sel };
 }
 
-function publicMatch(m) { const { fh, fa, ...rest } = m; return rest; }
+function publicMatch(m) {
+  const { fh, fa, ...rest } = m;
+  return rest;
+}
 
 /** Build a getOddsSnapshot-style payload that reflects all admin overrides. */
 export function buildPublicSnapshot(sportId = 'football', seedSlipFn) {
@@ -241,14 +253,18 @@ export function buildPublicSnapshot(sportId = 'football', seedSlipFn) {
   return {
     sport: sport.id,
     sports: sports.map((s) => ({
-      id: s.id, name: s.name,
+      id: s.id,
+      name: s.name,
       count: (s.leagues || []).reduce((n, l) => n + (l.matches?.length || 0), 0),
     })),
     featuredMatchId: sport.leagues[0]?.matches[0]?.id || null,
     seedSlip: sport.id === 'football' && typeof seedSlipFn === 'function' ? seedSlipFn() : [],
     leagues: (sport.leagues || []).map((lg) => ({
-      id: lg.id, name: lg.name, region: lg.region,
-      countryMeta: lg.countryMeta, crest: lg.crest,
+      id: lg.id,
+      name: lg.name,
+      region: lg.region,
+      countryMeta: lg.countryMeta,
+      crest: lg.crest,
       matches: (lg.matches || []).map(publicMatch),
     })),
   };

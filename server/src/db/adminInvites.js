@@ -28,7 +28,7 @@ function safe(invite) {
   const { tokenHash, ...rest } = invite;
   const now = Date.now();
   let status = 'pending';
-  if (invite.usedAt)     status = 'used';
+  if (invite.usedAt) status = 'used';
   else if (invite.revokedAt) status = 'revoked';
   else if (new Date(invite.expiresAt).getTime() < now) status = 'expired';
   return { ...rest, status };

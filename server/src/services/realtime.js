@@ -43,7 +43,7 @@ let liveNs = null;
 let adminNs = null;
 
 // Track sockets per user / per admin for monitoring
-const liveByUser = new Map();   // userId -> Set<socket>
+const liveByUser = new Map(); // userId -> Set<socket>
 const adminSockets = new Set();
 
 // Per-fixture rolling snapshot of the last known live state. Pushed to
@@ -81,7 +81,7 @@ export function attachRealtime(httpServer) {
     transports: ['websocket', 'polling'],
   });
 
-  liveNs  = io.of('/live');
+  liveNs = io.of('/live');
   adminNs = io.of('/admin');
 
   // --- /live namespace (player site) ---------------------------------------
@@ -95,7 +95,9 @@ export function attachRealtime(httpServer) {
           const u = getUserById(claims.sub);
           if (u && !u.suspended) socket.data.user = u;
         }
-      } catch { /* anonymous, still allowed */ }
+      } catch {
+        /* anonymous, still allowed */
+      }
     }
     next();
   });
@@ -126,13 +128,16 @@ export function attachRealtime(httpServer) {
     socket.on('unsubscribe', (payload = {}) => {
       const { fixtureIds = [], sportIds = [] } = payload;
       for (const id of fixtureIds) socket.leave(`fixture:${id}`);
-      for (const id of sportIds)   socket.leave(`sport:${id}`);
+      for (const id of sportIds) socket.leave(`sport:${id}`);
     });
 
     socket.on('disconnect', () => {
       if (user) {
         const set = liveByUser.get(user.id);
-        if (set) { set.delete(socket); if (set.size === 0) liveByUser.delete(user.id); }
+        if (set) {
+          set.delete(socket);
+          if (set.size === 0) liveByUser.delete(user.id);
+        }
       }
     });
   });
@@ -164,7 +169,9 @@ export function attachRealtime(httpServer) {
       for (const id of providers) socket.join(`provider:${id}`);
     });
 
-    socket.on('disconnect', () => { adminSockets.delete(socket); });
+    socket.on('disconnect', () => {
+      adminSockets.delete(socket);
+    });
   });
 
   log.info('Realtime: Socket.IO attached on /socket.io (namespaces /live and /admin)');

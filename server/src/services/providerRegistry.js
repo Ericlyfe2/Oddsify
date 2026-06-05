@@ -5,21 +5,18 @@
  *
  * Adding a new provider is one import + one entry below.
  */
-import { TheOddsApiProvider }      from '../providers/theOddsApi.js';
-import { ApiFootballProvider }     from '../providers/apiFootball.js';
-import { SportMonksProvider }      from '../providers/sportMonks.js';
-import { SharpApiProvider }        from '../providers/sharpApi.js';
-import { SportsGameOddsProvider }  from '../providers/sportsGameOdds.js';
+import { TheOddsApiProvider } from '../providers/theOddsApi.js';
+import { ApiFootballProvider } from '../providers/apiFootball.js';
+import { SportMonksProvider } from '../providers/sportMonks.js';
+import { SharpApiProvider } from '../providers/sharpApi.js';
+import { SportsGameOddsProvider } from '../providers/sportsGameOdds.js';
 import { FootballDataOrgProvider } from '../providers/footballDataOrg.js';
 import { RapidApiFootballProvider } from '../providers/rapidApiFootball.js';
 
 const env = process.env;
 
 const _providers = [
-  new TheOddsApiProvider(
-    env.ODDS_API_KEY || '',
-    Number(env.ODDS_API_DAILY_BUDGET) || null,
-  ),
+  new TheOddsApiProvider(env.ODDS_API_KEY || '', Number(env.ODDS_API_DAILY_BUDGET) || null),
   new ApiFootballProvider(
     env.APIFOOTBALL_KEY || env.APIFOOTBALL_TOKEN || '',
     env.APIFOOTBALL_HOST || 'v3.football.api-sports.io',
@@ -29,13 +26,24 @@ const _providers = [
   new SharpApiProvider(env.SHARPAPI_KEY || ''),
   new SportsGameOddsProvider(env.SPORTSGAMEODDS_KEY || ''),
   new FootballDataOrgProvider(env.FOOTBALL_DATA_TOKEN || ''),
-  new RapidApiFootballProvider(env.RAPIDAPI_FOOTBALL_KEY || '', env.RAPIDAPI_FOOTBALL_HOST || 'free-api-live-football-data.p.rapidapi.com'),
+  new RapidApiFootballProvider(
+    env.RAPIDAPI_FOOTBALL_KEY || '',
+    env.RAPIDAPI_FOOTBALL_HOST || 'free-api-live-football-data.p.rapidapi.com',
+  ),
 ];
 
-export function listProviders() { return _providers; }
-export function enabledProviders() { return _providers.filter((p) => p.enabled); }
-export function getProvider(id) { return _providers.find((p) => p.id === id) || null; }
-export function providersHealth() { return _providers.map((p) => p.health()); }
+export function listProviders() {
+  return _providers;
+}
+export function enabledProviders() {
+  return _providers.filter((p) => p.enabled);
+}
+export function getProvider(id) {
+  return _providers.find((p) => p.id === id) || null;
+}
+export function providersHealth() {
+  return _providers.map((p) => p.health());
+}
 
 /**
  * Fetch live in-play odds across all enabled providers. Each provider
@@ -44,9 +52,7 @@ export function providersHealth() { return _providers.map((p) => p.health()); }
  */
 export async function fetchLiveOddsAll(sport = 'football') {
   const results = await Promise.all(
-    enabledProviders().map((p) =>
-      Promise.resolve(p.fetchOdds(sport, { live: true })).catch(() => [])
-    )
+    enabledProviders().map((p) => Promise.resolve(p.fetchOdds(sport, { live: true })).catch(() => [])),
   );
   return results.flat();
 }
@@ -56,9 +62,7 @@ export async function fetchLiveOddsAll(sport = 'football') {
  */
 export async function fetchLiveScoresAll(sport = 'football') {
   const results = await Promise.all(
-    enabledProviders().map((p) =>
-      Promise.resolve(p.fetchScores(sport)).catch(() => [])
-    )
+    enabledProviders().map((p) => Promise.resolve(p.fetchScores(sport)).catch(() => [])),
   );
   return results.flat();
 }

@@ -10,39 +10,66 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAdmin } from '../providers/AdminProvider.jsx';
 import { Toast } from '../components/admin/primitives.jsx';
 import {
-  IconDashboard, IconUsers, IconReceipt, IconChart, IconShield, IconCash, IconBell,
-  IconLifebuoy, IconCog, IconSearch, IconSun, IconMoon, IconMenu, IconLogout,
-  IconChevronRight, IconLive, IconBot, IconBook, IconSparkles, IconActivity,
+  IconDashboard,
+  IconUsers,
+  IconReceipt,
+  IconChart,
+  IconShield,
+  IconCash,
+  IconBell,
+  IconLifebuoy,
+  IconCog,
+  IconSearch,
+  IconSun,
+  IconMoon,
+  IconMenu,
+  IconLogout,
+  IconChevronRight,
+  IconLive,
+  IconBot,
+  IconBook,
+  IconSparkles,
+  IconActivity,
 } from '../components/admin/Icons.jsx';
 
 const NAV = [
-  { section: 'Overview', items: [
-    { to: '/admin',            label: 'Dashboard',     icon: <IconDashboard />, exact: true },
-    { to: '/admin/live',       label: 'Live betting',  icon: <IconLive />, badge: 'LIVE' },
-    { to: '/admin/analytics',  label: 'Analytics',     icon: <IconChart /> },
-  ]},
-  { section: 'Operations', items: [
-    { to: '/admin/users',      label: 'Users',         icon: <IconUsers /> },
-    { to: '/admin/stages',     label: 'Player stages', icon: <IconActivity /> },
-    { to: '/admin/bets',       label: 'Bets',          icon: <IconReceipt /> },
-    { to: '/admin/sports',     label: 'Sports & odds', icon: <IconBook />,    roles: ['odds_manager'] },
-    { to: '/admin/promotions', label: 'Promotions',    icon: <IconSparkles /> },
-    { to: '/admin/finance',    label: 'Finance',       icon: <IconCash />,    roles: ['finance_admin'] },
-    { to: '/admin/deposits',   label: 'Deposits',      icon: <IconCash />,    roles: ['finance_admin'] },
-  ]},
-  { section: 'Trust & safety', items: [
-    { to: '/admin/fraud',      label: 'Fraud & AI',    icon: <IconBot />,    roles: ['moderator'] },
-    { to: '/admin/audit',      label: 'Audit logs',    icon: <IconShield /> },
-    { to: '/admin/notifications', label: 'Notifications', icon: <IconBell /> },
-    { to: '/admin/support',    label: 'Support',       icon: <IconLifebuoy />, roles: ['support'] },
-  ]},
-  { section: 'Integrations', items: [
-    { to: '/admin/providers',  label: 'API providers', icon: <IconActivity /> },
-  ]},
-  { section: 'System', items: [
-    { to: '/admin/health',     label: 'Health',        icon: <IconActivity /> },
-    { to: '/admin/settings',   label: 'Settings',      icon: <IconCog /> },
-  ]},
+  {
+    section: 'Overview',
+    items: [
+      { to: '/admin', label: 'Dashboard', icon: <IconDashboard />, exact: true },
+      { to: '/admin/live', label: 'Live betting', icon: <IconLive />, badge: 'LIVE' },
+      { to: '/admin/analytics', label: 'Analytics', icon: <IconChart /> },
+    ],
+  },
+  {
+    section: 'Operations',
+    items: [
+      { to: '/admin/users', label: 'Users', icon: <IconUsers /> },
+      { to: '/admin/stages', label: 'Player stages', icon: <IconActivity /> },
+      { to: '/admin/bets', label: 'Bets', icon: <IconReceipt /> },
+      { to: '/admin/sports', label: 'Sports & odds', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/promotions', label: 'Promotions', icon: <IconSparkles /> },
+      { to: '/admin/finance', label: 'Finance', icon: <IconCash />, roles: ['finance_admin'] },
+      { to: '/admin/deposits', label: 'Deposits', icon: <IconCash />, roles: ['finance_admin'] },
+    ],
+  },
+  {
+    section: 'Trust & safety',
+    items: [
+      { to: '/admin/fraud', label: 'Fraud & AI', icon: <IconBot />, roles: ['moderator'] },
+      { to: '/admin/audit', label: 'Audit logs', icon: <IconShield /> },
+      { to: '/admin/notifications', label: 'Notifications', icon: <IconBell /> },
+      { to: '/admin/support', label: 'Support', icon: <IconLifebuoy />, roles: ['support'] },
+    ],
+  },
+  { section: 'Integrations', items: [{ to: '/admin/providers', label: 'API providers', icon: <IconActivity /> }] },
+  {
+    section: 'System',
+    items: [
+      { to: '/admin/health', label: 'Health', icon: <IconActivity /> },
+      { to: '/admin/settings', label: 'Settings', icon: <IconCog /> },
+    ],
+  },
 ];
 
 function crumbsFor(pathname) {
@@ -54,7 +81,8 @@ function crumbsFor(pathname) {
 }
 
 export default function AdminShell() {
-  const { admin, theme, toggleTheme, collapsed, setCollapsed, mobileOpen, setMobileOpen, signOut, toast, hasRole } = useAdmin();
+  const { admin, theme, toggleTheme, collapsed, setCollapsed, mobileOpen, setMobileOpen, signOut, toast, hasRole } =
+    useAdmin();
   const loc = useLocation();
 
   const crumbs = useMemo(() => crumbsFor(loc.pathname), [loc.pathname]);
@@ -65,7 +93,11 @@ export default function AdminShell() {
       <aside className={`adm-side ${mobileOpen ? 'open' : ''}`}>
         <div className="adm-brand">
           <div className="mark" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2.2"/><circle cx="11" cy="11" r="3.5" stroke="currentColor" strokeWidth="1.8"/><circle cx="11" cy="11" r="1.2" fill="currentColor"/></svg>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2.2" />
+              <circle cx="11" cy="11" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="11" cy="11" r="1.2" fill="currentColor" />
+            </svg>
           </div>
           <div className="text">
             <div className="name">Oddsify</div>
@@ -81,8 +113,12 @@ export default function AdminShell() {
               <div key={sec.section}>
                 <div className="adm-nav-section">{sec.section}</div>
                 {visibleItems.map((it) => (
-                  <NavLink key={it.to} to={it.to} end={it.exact}
-                    className={({ isActive }) => (isActive ? 'active' : '')}>
+                  <NavLink
+                    key={it.to}
+                    to={it.to}
+                    end={it.exact}
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                  >
                     <span className="icn">{it.icon}</span>
                     <span className="lbl">{it.label}</span>
                     {it.badge && <span className="badge">{it.badge}</span>}
@@ -99,17 +135,23 @@ export default function AdminShell() {
             <div className="n">{admin?.displayName || admin?.email}</div>
             <div className="r">{ADMIN_ROLE_LABEL[admin?.adminRole] || admin?.adminRole}</div>
           </div>
-          <button title="Logout" onClick={signOut} aria-label="Logout"><IconLogout /></button>
+          <button title="Logout" onClick={signOut} aria-label="Logout">
+            <IconLogout />
+          </button>
         </div>
       </aside>
 
       {/* Main column */}
       <div className="adm-main">
         <header className="adm-top">
-          <button className="toggle" onClick={() => {
-            if (window.innerWidth <= 980) setMobileOpen((m) => !m);
-            else setCollapsed((c) => !c);
-          }} aria-label="Toggle navigation">
+          <button
+            className="toggle"
+            onClick={() => {
+              if (window.innerWidth <= 980) setMobileOpen((m) => !m);
+              else setCollapsed((c) => !c);
+            }}
+            aria-label="Toggle navigation"
+          >
             <IconMenu />
           </button>
 
@@ -117,15 +159,15 @@ export default function AdminShell() {
             {crumbs.map((c, i) => (
               <span key={c.href}>
                 {i > 0 && <span className="sep"> · </span>}
-                {i === crumbs.length - 1
-                  ? <strong>{c.label}</strong>
-                  : <span>{c.label}</span>}
+                {i === crumbs.length - 1 ? <strong>{c.label}</strong> : <span>{c.label}</span>}
               </span>
             ))}
           </div>
 
           <div className="adm-search">
-            <span className="icn"><IconSearch size={16} /></span>
+            <span className="icn">
+              <IconSearch size={16} />
+            </span>
             <input placeholder="Search users, bets, matches, transactions…" aria-label="Search" />
             <kbd>⌘K</kbd>
           </div>
@@ -138,7 +180,11 @@ export default function AdminShell() {
               <IconBell />
               <span className="dot" />
             </button>
-            <button className="adm-icon-btn" aria-label="Account" style={{ background: 'var(--grad-brand)', color: '#fff', borderColor: 'transparent' }}>
+            <button
+              className="adm-icon-btn"
+              aria-label="Account"
+              style={{ background: 'var(--grad-brand)', color: '#fff', borderColor: 'transparent' }}
+            >
               {(admin?.displayName || admin?.email || 'A').charAt(0).toUpperCase()}
             </button>
           </div>

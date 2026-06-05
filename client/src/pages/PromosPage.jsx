@@ -4,16 +4,18 @@ import { useToast, useAccount } from '../layout/AppShell.jsx';
 import PageBack from '../components/PageBack.jsx';
 
 const ACCENTS = {
-  WELCOME:  { hue: 'hsl(95, 90%, 60%)', tone: 'accent' },
-  CASHBACK: { hue: 'hsl(40, 92%, 60%)', tone: 'warm'   },
-  BOOST:    { hue: 'hsl(200, 92%, 65%)', tone: 'cool'  },
-  FREEBET:  { hue: 'hsl(280, 80%, 70%)', tone: 'purple' },
-  REFERRAL: { hue: 'hsl(160, 75%, 60%)', tone: 'teal'  },
-  default:  { hue: 'hsl(120, 30%, 60%)', tone: 'accent' },
+  WELCOME: { hue: 'hsl(95, 90%, 60%)', tone: 'accent' },
+  CASHBACK: { hue: 'hsl(40, 92%, 60%)', tone: 'warm' },
+  BOOST: { hue: 'hsl(200, 92%, 65%)', tone: 'cool' },
+  FREEBET: { hue: 'hsl(280, 80%, 70%)', tone: 'purple' },
+  REFERRAL: { hue: 'hsl(160, 75%, 60%)', tone: 'teal' },
+  default: { hue: 'hsl(120, 30%, 60%)', tone: 'accent' },
 };
 
 function accentFor(p) {
-  const key = String(p.tag || p.badge || p.title || '').toUpperCase().split(/\s+/)[0];
+  const key = String(p.tag || p.badge || p.title || '')
+    .toUpperCase()
+    .split(/\s+/)[0];
   return ACCENTS[key] || ACCENTS.default;
 }
 
@@ -21,9 +23,13 @@ export default function PromosPage() {
   const { toast } = useToast();
   const { account } = useAccount();
   const [promos, setPromos] = useState([]);
-  const [busy, setBusy]     = useState(false);
+  const [busy, setBusy] = useState(false);
   const [claimed, setClaimed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('bv_claimed') || '[]'); } catch { return []; }
+    try {
+      return JSON.parse(localStorage.getItem('bv_claimed') || '[]');
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {
@@ -35,8 +41,14 @@ export default function PromosPage() {
   }, []);
 
   const claim = (p) => {
-    if (!account) { toast('Sign in to claim promotions.'); return; }
-    if (claimed.includes(p.id)) { toast('Already claimed.'); return; }
+    if (!account) {
+      toast('Sign in to claim promotions.');
+      return;
+    }
+    if (claimed.includes(p.id)) {
+      toast('Already claimed.');
+      return;
+    }
     const next = [...claimed, p.id];
     setClaimed(next);
     localStorage.setItem('bv_claimed', JSON.stringify(next));
@@ -44,7 +56,7 @@ export default function PromosPage() {
   };
 
   const headline = promos[0];
-  const rest     = promos.slice(1);
+  const rest = promos.slice(1);
 
   return (
     <main className="promos-page">
@@ -57,38 +69,47 @@ export default function PromosPage() {
             <h1>Boosts, bonuses, cashback — claim once.</h1>
             <p>Live offers for new and existing customers. Claim activates instantly and applies automatically.</p>
             <div className="promos-hero-stats">
-              <div><strong>{promos.length}</strong> <span>live offers</span></div>
+              <div>
+                <strong>{promos.length}</strong> <span>live offers</span>
+              </div>
               <div className="dot" />
-              <div><strong>0%</strong> <span>wagering fees</span></div>
+              <div>
+                <strong>0%</strong> <span>wagering fees</span>
+              </div>
               <div className="dot" />
-              <div><strong>24/7</strong> <span>support</span></div>
+              <div>
+                <strong>24/7</strong> <span>support</span>
+              </div>
             </div>
           </div>
         </header>
 
         {headline && (
-          <article className="promo-headline fade-up" style={{ animationDelay: '0.05s', '--accent': accentFor(headline).hue }}>
+          <article
+            className="promo-headline fade-up"
+            style={{ animationDelay: '0.05s', '--accent': accentFor(headline).hue }}
+          >
             <div className="promo-headline-badge">{headline.tag || headline.badge || 'FEATURED'}</div>
             <div className="promo-headline-grid">
               <div className="promo-headline-text">
                 <h2>{headline.title}</h2>
                 <p>{headline.body || headline.subtitle}</p>
-                {headline.expires && (
-                  <span className="promo-headline-meta">Expires {headline.expires}</span>
-                )}
+                {headline.expires && <span className="promo-headline-meta">Expires {headline.expires}</span>}
                 <button
                   type="button"
                   className={`btn ${claimed.includes(headline.id) ? 'btn-ghost' : 'btn-primary'} promo-headline-btn`}
                   onClick={() => claim(headline)}
                   disabled={claimed.includes(headline.id)}
                 >
-                  {claimed.includes(headline.id) ? '✓ Claimed' : (headline.cta || 'Claim now')}
+                  {claimed.includes(headline.id) ? '✓ Claimed' : headline.cta || 'Claim now'}
                 </button>
               </div>
               <div className="promo-headline-art" aria-hidden>
                 <div className="promo-headline-orb" />
                 <div className="promo-headline-orb b" />
-                <div className="promo-headline-chip">+{headline.bonusRate ? `${Math.round(headline.bonusRate * 100)}%` : '100%'}</div>
+                <div className="promo-headline-chip">
+                  +{headline.bonusRate ? `${Math.round(headline.bonusRate * 100)}%` : '100%'}
+                </div>
               </div>
             </div>
           </article>
@@ -99,33 +120,35 @@ export default function PromosPage() {
             <p className="promos-empty">Loading promotions…</p>
           ) : !rest.length ? (
             !headline && <p className="promos-empty">No active promotions right now — check back soon.</p>
-          ) : rest.map((p, i) => {
-            const isClaimed = claimed.includes(p.id);
-            const a = accentFor(p);
-            return (
-              <article
-                key={p.id || i}
-                className="promo-card fade-up"
-                style={{ animationDelay: `${0.08 + i * 0.04}s`, '--accent': a.hue }}
-              >
-                <div className="promo-card-stripe" aria-hidden />
-                <div className="promo-card-tag">{p.tag || p.badge || 'OFFER'}</div>
-                <h3>{p.title}</h3>
-                <p>{p.body || p.subtitle}</p>
-                <div className="promo-card-foot">
-                  {p.expires && <span className="promo-card-meta">Expires {p.expires}</span>}
-                  <button
-                    type="button"
-                    className={`btn ${isClaimed ? 'btn-ghost' : 'btn-primary'}`}
-                    onClick={() => claim(p)}
-                    disabled={isClaimed}
-                  >
-                    {isClaimed ? '✓ Claimed' : (p.cta || 'Claim')}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+          ) : (
+            rest.map((p, i) => {
+              const isClaimed = claimed.includes(p.id);
+              const a = accentFor(p);
+              return (
+                <article
+                  key={p.id || i}
+                  className="promo-card fade-up"
+                  style={{ animationDelay: `${0.08 + i * 0.04}s`, '--accent': a.hue }}
+                >
+                  <div className="promo-card-stripe" aria-hidden />
+                  <div className="promo-card-tag">{p.tag || p.badge || 'OFFER'}</div>
+                  <h3>{p.title}</h3>
+                  <p>{p.body || p.subtitle}</p>
+                  <div className="promo-card-foot">
+                    {p.expires && <span className="promo-card-meta">Expires {p.expires}</span>}
+                    <button
+                      type="button"
+                      className={`btn ${isClaimed ? 'btn-ghost' : 'btn-primary'}`}
+                      onClick={() => claim(p)}
+                      disabled={isClaimed}
+                    >
+                      {isClaimed ? '✓ Claimed' : p.cta || 'Claim'}
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          )}
         </div>
       </div>
 

@@ -14,7 +14,7 @@
  *   - `picks` is an object keyed by match.id: picks[id] = { match, key, val }.
  *   - onPick (= togglePick) signature: (match, outcomeKey, oddsValue) => void.
  */
-import { T } from './tokens.js';
+import { useTokens } from './tokens.jsx';
 import { TeamLogo } from './teamBranding.jsx';
 
 function relativeKickoff(timeStr, day) {
@@ -25,9 +25,9 @@ function relativeKickoff(timeStr, day) {
     const now = new Date();
     const then = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
     const ms = then.getTime() - Date.now();
-    if (ms < 0)               return 'Started';
-    if (ms < 60_000)          return 'in <1m';
-    if (ms < 60 * 60_000)     return `in ${Math.floor(ms / 60_000)}m`;
+    if (ms < 0) return 'Started';
+    if (ms < 60_000) return 'in <1m';
+    if (ms < 60 * 60_000) return `in ${Math.floor(ms / 60_000)}m`;
     const h = Math.floor(ms / (60 * 60_000));
     const rem = Math.floor((ms % (60 * 60_000)) / 60_000);
     return `in ${h}h ${rem}m`;
@@ -39,31 +39,43 @@ function relativeKickoff(timeStr, day) {
 function get1X2(match) {
   const o = match.odds;
   if (!o || o['1'] == null || o['2'] == null) return null;
-  return { '1': Number(o['1']), 'X': Number(o['X'] ?? 0), '2': Number(o['2']) };
+  return { 1: Number(o['1']), X: Number(o['X'] ?? 0), 2: Number(o['2']) };
 }
 
 function OddsBtn({ label, value, active, onClick }) {
+  const T = useTokens();
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        flex: 1, minWidth: 0, height: 52,
+        flex: 1,
+        minWidth: 0,
+        height: 52,
         background: active ? T.greenSoft : T.surfaceAlt,
         border: active ? `2px solid ${T.greenBright}` : `1px solid ${T.line}`,
         borderRadius: 8,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 2, cursor: 'pointer', padding: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        cursor: 'pointer',
+        padding: 0,
         transition: 'background 0.15s, border-color 0.15s',
       }}
       aria-label={`${label} at odds ${value}`}
     >
       <span style={{ fontSize: 10, color: T.inkSoft, fontWeight: 700 }}>{label}</span>
-      <span style={{
-        fontSize: 14, fontWeight: 700, color: active ? T.greenBright : T.ink,
-        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-        fontVariantNumeric: 'tabular-nums',
-      }}>
+      <span
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          color: active ? T.greenBright : T.ink,
+          fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {value > 0 ? Number(value).toFixed(2) : '—'}
       </span>
     </button>
@@ -71,6 +83,7 @@ function OddsBtn({ label, value, active, onClick }) {
 }
 
 function MatchCard({ match, picks, onPick }) {
+  const T = useTokens();
   const odds = get1X2(match);
   if (!odds) return null;
 
@@ -83,27 +96,41 @@ function MatchCard({ match, picks, onPick }) {
   return (
     <article
       style={{
-        flex: '0 0 280px', width: 280, height: 144, scrollSnapAlign: 'start',
-        background: T.surface, border: `1px solid ${T.line}`, borderRadius: 12,
-        padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        flex: '0 0 280px',
+        width: 280,
+        height: 144,
+        scrollSnapAlign: 'start',
+        background: T.surface,
+        border: `1px solid ${T.line}`,
+        borderRadius: 12,
+        padding: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
       }}
       aria-label={`${match.home} vs ${match.away}`}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 600, color: T.ink, whiteSpace: 'nowrap',
-          overflow: 'hidden', textOverflow: 'ellipsis',
-          display: 'flex', alignItems: 'center', gap: 4,
-        }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: T.ink,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
           <TeamLogo name={match.home} size={16} />
           {match.home}
           <span style={{ opacity: 0.4, fontSize: 10 }}>vs</span>
           <TeamLogo name={match.away} size={16} />
           {match.away}
         </div>
-        <div style={{ fontSize: 11, color: T.inkSoft }}>
-          {relativeKickoff(match.time, match.day)}
-        </div>
+        <div style={{ fontSize: 11, color: T.inkSoft }}>{relativeKickoff(match.time, match.day)}</div>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         <OddsBtn label="1" value={odds['1']} active={isActive('1')} onClick={() => click('1')} />
@@ -115,13 +142,22 @@ function MatchCard({ match, picks, onPick }) {
 }
 
 function Skeletons() {
+  const T = useTokens();
   return (
     <div className="odd-pane" style={{ display: 'flex', gap: 10, padding: '0 16px', overflowX: 'auto' }}>
       {[0, 1, 2].map((i) => (
-        <div key={i} style={{
-          flex: '0 0 280px', width: 280, height: 144, borderRadius: 12,
-          background: T.surface, border: `1px solid ${T.line}`, opacity: 0.5 + i * 0.15,
-        }} />
+        <div
+          key={i}
+          style={{
+            flex: '0 0 280px',
+            width: 280,
+            height: 144,
+            borderRadius: 12,
+            background: T.surface,
+            border: `1px solid ${T.line}`,
+            opacity: 0.5 + i * 0.15,
+          }}
+        />
       ))}
     </div>
   );
@@ -138,7 +174,10 @@ export default function QuickBetStrip({ matches, loading, picks, onPick }) {
       role="region"
       aria-label="Quick bet — next kickoffs"
       style={{
-        display: 'flex', gap: 10, padding: '6px 16px 12px', overflowX: 'auto',
+        display: 'flex',
+        gap: 10,
+        padding: '6px 16px 12px',
+        overflowX: 'auto',
         scrollSnapType: 'x mandatory',
       }}
     >

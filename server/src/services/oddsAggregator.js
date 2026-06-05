@@ -21,18 +21,18 @@ import { setOddsOverride } from '../db/sportsAdmin.js';
 import { log } from '../utils/logger.js';
 import { recordOddsLag } from './metrics.js';
 
-const POLL_INTERVAL_MS = 60_000;     // base cadence
-const PROVIDER_STAGGER_MS = 4_000;   // stagger so we don't burst all providers
+const POLL_INTERVAL_MS = 60_000; // base cadence
+const PROVIDER_STAGGER_MS = 4_000; // stagger so we don't burst all providers
 const CACHE_KEY_AGG = 'odds:aggregate';
-const CACHE_TTL_S   = 90;
+const CACHE_TTL_S = 90;
 
 let timer = null;
 let running = false;
 
 const lastPriceByKey = new Map(); // canonicalKey -> { [market]: { [sel]: odds } }
-const failureStreak  = new Map(); // providerId -> consecutive failures
+const failureStreak = new Map(); // providerId -> consecutive failures
 
-const liveLastByKey  = new Map(); // fixtureKey -> { scoreHome, scoreAway, minute, redCardsHome, redCardsAway }
+const liveLastByKey = new Map(); // fixtureKey -> { scoreHome, scoreAway, minute, redCardsHome, redCardsAway }
 const liveFailureStreak = new Map(); // 'live' -> consecutive global live-loop failures
 let liveTimer = null;
 let liveRunning = false;
@@ -50,7 +50,10 @@ function isKickOff(next) {
  */
 function deriveEventKinds(prev, next) {
   const out = [];
-  if (!prev) { if (isKickOff(next)) out.push('kick_off'); return out; }
+  if (!prev) {
+    if (isKickOff(next)) out.push('kick_off');
+    return out;
+  }
   if (next.scoreHome > (prev.scoreHome ?? 0)) out.push('goal_home');
   if (next.scoreAway > (prev.scoreAway ?? 0)) out.push('goal_away');
   if ((next.redCardsHome ?? 0) > (prev.redCardsHome ?? 0)) out.push('red_card');
@@ -98,7 +101,7 @@ function mergeRows(rows) {
   // For each other provider, fold its markets into base, picking highest odds for player benefit
   for (const r of sorted.slice(1)) {
     for (const [mk, market] of Object.entries(r.markets || {})) {
-      const target = base.markets[mk] = base.markets[mk] || { name: market.name, selections: [] };
+      const target = (base.markets[mk] = base.markets[mk] || { name: market.name, selections: [] });
       for (const sel of market.selections || []) {
         const existing = target.selections.find((s) => s.key === sel.key);
         if (!existing) target.selections.push({ ...sel });
@@ -124,7 +127,8 @@ function diffEmit(fix) {
         emitOddsMovement({
           fixtureId: fix.sourceId || fix.key,
           key: fix.key,
-          home: fix.home, away: fix.away,
+          home: fix.home,
+          away: fix.away,
           market: mk,
           selection: sel.key,
           prev: prevPrice,
@@ -157,7 +161,9 @@ function maybePushToOverrides(fix) {
   if (!fix?.sourceId) return;
   for (const [mk, market] of Object.entries(fix.markets || {})) {
     for (const sel of market.selections || []) {
-      try { setOddsOverride(fix.sourceId, mk, sel.key, sel.odds); } catch {}
+      try {
+        setOddsOverride(fix.sourceId, mk, sel.key, sel.odds);
+      } catch {}
     }
   }
 }
@@ -173,11 +179,13 @@ export async function aggregateOnce() {
       return { providers: 0, fixtures: 0 };
     }
 
-    const rowsPerProvider = await Promise.all(providers.map(async (p, i) => {
-      // soft stagger across providers
-      if (i) await new Promise((r) => setTimeout(r, i * PROVIDER_STAGGER_MS));
-      return pullProvider(p, 'football');
-    }));
+    const rowsPerProvider = await Promise.all(
+      providers.map(async (p, i) => {
+        // soft stagger across providers
+        if (i) await new Promise((r) => setTimeout(r, i * PROVIDER_STAGGER_MS));
+        return pullProvider(p, 'football');
+      }),
+    );
 
     // bucket by fixtureKey
     const byKey = new Map();
@@ -217,8 +225,12 @@ export async function getAggregatedOdds() {
 export function startAggregator() {
   if (timer) return;
   // first run with a 4s delay so the rest of boot finishes first
-  setTimeout(() => { aggregateOnce().catch(() => {}); }, 4000);
-  timer = setInterval(() => { aggregateOnce().catch(() => {}); }, POLL_INTERVAL_MS);
+  setTimeout(() => {
+    aggregateOnce().catch(() => {});
+  }, 4000);
+  timer = setInterval(() => {
+    aggregateOnce().catch(() => {});
+  }, POLL_INTERVAL_MS);
 }
 
 export function stopAggregator() {
@@ -254,9 +266,7 @@ async function liveLoop() {
     // running, which is the difference between burning quota and surviving.
     const scoreRows = await fetchLiveScoresAll('football').catch(() => []);
     const hasLive = scoreRows.some((r) => r?.status === 'live');
-    const oddsRows = hasLive
-      ? await fetchLiveOddsAll('football').catch(() => [])
-      : [];
+    const oddsRows = hasLive ? await fetchLiveOddsAll('football').catch(() => []) : [];
 
     // 1) Score & match-event emits.
     const { emitScoreUpdate } = await import('./realtime.js');
@@ -265,13 +275,14 @@ async function liveLoop() {
       const prev = liveLastByKey.get(fx.key);
       const kinds = deriveEventKinds(prev, fx);
       liveLastByKey.set(fx.key, {
-        scoreHome: fx.scoreHome, scoreAway: fx.scoreAway, minute: fx.minute,
-        redCardsHome: fx.redCardsHome, redCardsAway: fx.redCardsAway,
+        scoreHome: fx.scoreHome,
+        scoreAway: fx.scoreAway,
+        minute: fx.minute,
+        redCardsHome: fx.redCardsHome,
+        redCardsAway: fx.redCardsAway,
       });
-      const scoreOrMinuteChanged = !prev
-        || prev.scoreHome !== fx.scoreHome
-        || prev.scoreAway !== fx.scoreAway
-        || prev.minute    !== fx.minute;
+      const scoreOrMinuteChanged =
+        !prev || prev.scoreHome !== fx.scoreHome || prev.scoreAway !== fx.scoreAway || prev.minute !== fx.minute;
       if (kinds.length > 0) {
         for (const kind of kinds) {
           emitScoreUpdate({
@@ -344,13 +355,20 @@ export async function startLiveTrack() {
     log.info('Live track disabled — no football-capable providers configured.');
     return;
   }
-  liveTimer = setInterval(() => { liveLoop().catch(() => {}); }, LIVE_BETTING.pollMs);
+  liveTimer = setInterval(() => {
+    liveLoop().catch(() => {});
+  }, LIVE_BETTING.pollMs);
   liveLoop().catch(() => {});
-  log.info(`Live track started (${liveCapable.length} provider${liveCapable.length === 1 ? '' : 's'}: ${liveCapable.map((p) => p.id).join(', ')}), polling every ${LIVE_BETTING.pollMs}ms.`);
+  log.info(
+    `Live track started (${liveCapable.length} provider${liveCapable.length === 1 ? '' : 's'}: ${liveCapable.map((p) => p.id).join(', ')}), polling every ${LIVE_BETTING.pollMs}ms.`,
+  );
 }
 
 export function stopLiveTrack() {
-  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  if (liveTimer) {
+    clearInterval(liveTimer);
+    liveTimer = null;
+  }
 }
 
 /**

@@ -52,10 +52,10 @@ export default function JackpotPage() {
     return () => clearInterval(id);
   }, [secondsLeft > 0]);
 
-  const completed   = jackpot ? jackpot.legs.filter((l) => picks[l.id]).length : 0;
-  const allPicked   = jackpot ? completed === jackpot.legs.length : false;
+  const completed = jackpot ? jackpot.legs.filter((l) => picks[l.id]).length : 0;
+  const allPicked = jackpot ? completed === jackpot.legs.length : false;
   const progressPct = jackpot ? Math.round((completed / jackpot.legs.length) * 100) : 0;
-  const countdown   = useMemo(() => formatCountdown(secondsLeft), [secondsLeft]);
+  const countdown = useMemo(() => formatCountdown(secondsLeft), [secondsLeft]);
 
   if (!jackpot) {
     return (
@@ -83,9 +83,18 @@ export default function JackpotPage() {
   };
 
   const submit = async () => {
-    if (!allPicked) { toast(`Pick all ${jackpot.legs.length} legs to enter.`); return; }
-    if (!account)   { toast('Sign in to enter the jackpot.'); return; }
-    if (account.balance < jackpot.entryFee) { toast(`Top up — entry fee is GHS ${jackpot.entryFee}`); return; }
+    if (!allPicked) {
+      toast(`Pick all ${jackpot.legs.length} legs to enter.`);
+      return;
+    }
+    if (!account) {
+      toast('Sign in to enter the jackpot.');
+      return;
+    }
+    if (account.balance < jackpot.entryFee) {
+      toast(`Top up — entry fee is GHS ${jackpot.entryFee}`);
+      return;
+    }
     try {
       setSubmitting(true);
       const res = await enterJackpot(picks);
@@ -121,13 +130,25 @@ export default function JackpotPage() {
             </div>
 
             <div className="jp-countdown" aria-live="polite">
-              <div className="jp-cd-cell"><strong>{countdown.d}</strong><span>days</span></div>
+              <div className="jp-cd-cell">
+                <strong>{countdown.d}</strong>
+                <span>days</span>
+              </div>
               <div className="jp-cd-sep">:</div>
-              <div className="jp-cd-cell"><strong>{countdown.h}</strong><span>hrs</span></div>
+              <div className="jp-cd-cell">
+                <strong>{countdown.h}</strong>
+                <span>hrs</span>
+              </div>
               <div className="jp-cd-sep">:</div>
-              <div className="jp-cd-cell"><strong>{countdown.m}</strong><span>min</span></div>
+              <div className="jp-cd-cell">
+                <strong>{countdown.m}</strong>
+                <span>min</span>
+              </div>
               <div className="jp-cd-sep">:</div>
-              <div className="jp-cd-cell"><strong>{countdown.s}</strong><span>sec</span></div>
+              <div className="jp-cd-cell">
+                <strong>{countdown.s}</strong>
+                <span>sec</span>
+              </div>
             </div>
           </div>
         </header>
@@ -142,15 +163,18 @@ export default function JackpotPage() {
             </span>
           </div>
           <div className="jp-toolbar-actions">
-            <button type="button" className="btn btn-ghost" onClick={clearAll} disabled={!completed}>Clear</button>
-            <button type="button" className="btn btn-ghost" onClick={autoFill}>Auto-pick</button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={submit}
-              disabled={submitting || !allPicked}
-            >
-              {submitting ? 'Entering…' : allPicked ? `Enter · GHS ${jackpot.entryFee}` : `Pick ${jackpot.legs.length - completed} more`}
+            <button type="button" className="btn btn-ghost" onClick={clearAll} disabled={!completed}>
+              Clear
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={autoFill}>
+              Auto-pick
+            </button>
+            <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !allPicked}>
+              {submitting
+                ? 'Entering…'
+                : allPicked
+                  ? `Enter · GHS ${jackpot.entryFee}`
+                  : `Pick ${jackpot.legs.length - completed} more`}
             </button>
           </div>
         </section>
@@ -189,13 +213,12 @@ export default function JackpotPage() {
 
         {/* sticky submit on mobile */}
         <div className="jp-sticky-submit">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={submit}
-            disabled={submitting || !allPicked}
-          >
-            {submitting ? 'Entering…' : allPicked ? `Enter · GHS ${jackpot.entryFee}` : `${completed}/${jackpot.legs.length} picked`}
+          <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !allPicked}>
+            {submitting
+              ? 'Entering…'
+              : allPicked
+                ? `Enter · GHS ${jackpot.entryFee}`
+                : `${completed}/${jackpot.legs.length} picked`}
           </button>
         </div>
       </div>
@@ -213,8 +236,8 @@ const JP_CSS = `
 .jp-hero {
   position: relative; overflow: hidden;
   border-radius: 22px;
-  background: linear-gradient(135deg, #0f1413 0%, #1a2421 100%);
-  border: 1px solid rgba(255, 181, 71, .25);
+  background: var(--surface);
+  border: 1px solid var(--line);
   padding: 28px;
 }
 .jp-hero-bg {
@@ -260,17 +283,17 @@ const JP_CSS = `
 
 .jp-countdown {
   display: inline-flex; align-items: stretch; gap: 6px;
-  background: rgba(0, 0, 0, .25);
+  background: var(--surface-2);
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 181, 71, .14);
+  border: 1px solid var(--line);
 }
 .jp-cd-cell {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   min-width: 44px;
 }
 .jp-cd-cell strong {
-  font-size: 20px; font-weight: 900; color: #fff;
+  font-size: 20px; font-weight: 900; color: var(--text);
   font-variant-numeric: tabular-nums; letter-spacing: -.02em;
 }
 .jp-cd-cell span {
