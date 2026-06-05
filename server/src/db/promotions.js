@@ -9,14 +9,16 @@ import { createStore } from './store.js';
 const store = createStore('promotions', {});
 
 export function listPromotions() {
-  return Object.values(store.all() || {}).sort((a, b) =>
-    (a.order ?? 0) - (b.order ?? 0) || (a.createdAt < b.createdAt ? 1 : -1)
+  return Object.values(store.all() || {}).sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt < b.createdAt ? 1 : -1),
   );
 }
 export function listActivePromotions() {
   return listPromotions().filter((p) => p.active);
 }
-export function getPromotion(id) { return store.get(id) || null; }
+export function getPromotion(id) {
+  return store.get(id) || null;
+}
 export function createPromotion(input) {
   const id = `pr-${crypto.randomBytes(4).toString('hex')}`;
   const rec = {

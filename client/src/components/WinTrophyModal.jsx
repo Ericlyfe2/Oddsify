@@ -45,7 +45,10 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
     if (!wins.length) return;
     setIndex(0);
     dlgRef.current?.showModal?.();
-    const onCancel = (e) => { e.preventDefault(); onClose?.(); };
+    const onCancel = (e) => {
+      e.preventDefault();
+      onClose?.();
+    };
     const node = dlgRef.current;
     node?.addEventListener('cancel', onCancel);
     const autoClose = setTimeout(() => onClose?.(), 45_000);
@@ -58,30 +61,38 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
   // Each entry's effective payout: cash-outs use `cashOut`, plain wins use
   // `potentialWin`. Same logic feeds both the totals row and the focused tile.
   const payoutOf = (b) => Number(b?.cashOut ?? b?.potentialWin ?? 0);
-  const totalPayout = useMemo(
-    () => wins.reduce((s, b) => s + payoutOf(b), 0),
-    [wins]
-  );
+  const totalPayout = useMemo(() => wins.reduce((s, b) => s + payoutOf(b), 0), [wins]);
 
   if (!wins.length) return null;
 
-  const focus    = wins[Math.min(index, wins.length - 1)];
-  const single   = wins.length === 1;
+  const focus = wins[Math.min(index, wins.length - 1)];
+  const single = wins.length === 1;
   const isCashOut = !!focus.cashOut || focus.status === 'cashed_out';
   const showPayout = single ? payoutOf(focus) : totalPayout;
-  const legs     = focus.legs?.length || 1;
-  const modeLbl  = focus.mode === 'single' ? 'Single'
-                 : focus.mode === 'multiple' ? 'Multiple'
-                 : focus.mode === 'system' ? 'System' : (focus.mode || 'Bet');
+  const legs = focus.legs?.length || 1;
+  const modeLbl =
+    focus.mode === 'single'
+      ? 'Single'
+      : focus.mode === 'multiple'
+        ? 'Multiple'
+        : focus.mode === 'system'
+          ? 'System'
+          : focus.mode || 'Bet';
   const slipCode = focus.bookingCode || toBookingCode(focus.id);
-  const paidAt   = paidAtLabel(focus.settledAt || focus.placedAt);
+  const paidAt = paidAtLabel(focus.settledAt || focus.placedAt);
   const badgeLabel = isCashOut ? 'CASH-OUT CONFIRMED' : 'WIN CONFIRMED';
   const subCopy = isCashOut
     ? 'Your cash-out has been credited to your wallet.'
     : 'Your winning bet has been paid successfully.';
-  const metaSingle = isCashOut
-    ? <>Cashed out · {legs} selection{legs > 1 ? 's' : ''}</>
-    : <>{modeLbl} · {legs} selection{legs > 1 ? 's' : ''}</>;
+  const metaSingle = isCashOut ? (
+    <>
+      Cashed out · {legs} selection{legs > 1 ? 's' : ''}
+    </>
+  ) : (
+    <>
+      {modeLbl} · {legs} selection{legs > 1 ? 's' : ''}
+    </>
+  );
 
   const handleViewSlip = () => {
     onViewSlip?.(focus);
@@ -95,12 +106,7 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
       <div className="bv-trophy-card" role="alertdialog" aria-labelledby="bv-trophy-title">
         <header className="bv-trophy-head">
           <span className="bv-trophy-badge">{badgeLabel}</span>
-          <button
-            type="button"
-            className="bv-trophy-x"
-            onClick={onClose}
-            aria-label="Close"
-          >
+          <button type="button" className="bv-trophy-x" onClick={onClose} aria-label="Close">
             ×
           </button>
         </header>
@@ -109,7 +115,9 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
           <TrophyBadge />
         </div>
 
-        <h2 id="bv-trophy-title" className="bv-trophy-title">Congratulations!</h2>
+        <h2 id="bv-trophy-title" className="bv-trophy-title">
+          Congratulations!
+        </h2>
         <p className="bv-trophy-sub">{subCopy}</p>
 
         <div className="bv-trophy-amount">
@@ -117,9 +125,13 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
           <span className="amt">{fmt(showPayout)}</span>
         </div>
         <div className="bv-trophy-meta">
-          {single
-            ? metaSingle
-            : <>{wins.length} {isCashOut ? 'cash-outs · combined payout' : 'winning tickets · combined payout'}</>}
+          {single ? (
+            metaSingle
+          ) : (
+            <>
+              {wins.length} {isCashOut ? 'cash-outs · combined payout' : 'winning tickets · combined payout'}
+            </>
+          )}
         </div>
 
         <div className="bv-trophy-grid">
@@ -153,18 +165,10 @@ export default function WinTrophyModal({ wins = [], onClose, onViewSlip }) {
         )}
 
         <div className="bv-trophy-actions">
-          <button
-            type="button"
-            className="bv-trophy-btn bv-trophy-btn-ghost"
-            onClick={handleViewSlip}
-          >
+          <button type="button" className="bv-trophy-btn bv-trophy-btn-ghost" onClick={handleViewSlip}>
             View Slip
           </button>
-          <button
-            type="button"
-            className="bv-trophy-btn bv-trophy-btn-primary"
-            onClick={onClose}
-          >
+          <button type="button" className="bv-trophy-btn bv-trophy-btn-primary" onClick={onClose}>
             Awesome
           </button>
         </div>
@@ -181,9 +185,9 @@ function TrophyBadge() {
       <svg viewBox="0 0 64 64" width="42" height="42" aria-hidden>
         <defs>
           <linearGradient id="bvCupBody" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0"   stopColor="#fff3b8" />
+            <stop offset="0" stopColor="#fff3b8" />
             <stop offset=".55" stopColor="#f3a01a" />
-            <stop offset="1"   stopColor="#a86200" />
+            <stop offset="1" stopColor="#a86200" />
           </linearGradient>
           <linearGradient id="bvCupBase" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#7a3f00" />
@@ -197,8 +201,10 @@ function TrophyBadge() {
         <path d="M28 46 H36 V52 H28 Z" fill="url(#bvCupBase)" />
         <path d="M22 52 H42 V55 H22 Z" fill="url(#bvCupBase)" />
         <circle cx="32" cy="26" r="6" fill="#fff3b8" opacity=".75" />
-        <path d="M32 22 l1.6 3.2 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5 z"
-              fill="#a86200" />
+        <path
+          d="M32 22 l1.6 3.2 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5 z"
+          fill="#a86200"
+        />
       </svg>
     </div>
   );
@@ -208,8 +214,8 @@ function Confetti({ count = 36 }) {
   const pieces = Array.from({ length: count }).map((_, i) => {
     const left = Math.random() * 100;
     const delay = Math.random() * 1.4;
-    const dur   = 2.4 + Math.random() * 2.2;
-    const rot   = Math.random() * 360;
+    const dur = 2.4 + Math.random() * 2.2;
+    const rot = Math.random() * 360;
     const colors = ['#ffd76d', '#ffb800', '#ffd54f', '#d4a857', '#ffcc33', '#ff9f1c'];
     const c = colors[i % colors.length];
     return { left, delay, dur, rot, c, key: i, w: 6 + Math.random() * 6, h: 9 + Math.random() * 9 };
@@ -217,14 +223,18 @@ function Confetti({ count = 36 }) {
   return (
     <div className="bv-trophy-confetti" aria-hidden>
       {pieces.map((p) => (
-        <span key={p.key} style={{
-          left: `${p.left}%`,
-          animationDelay: `${p.delay}s`,
-          animationDuration: `${p.dur}s`,
-          background: p.c,
-          width: p.w, height: p.h,
-          transform: `rotate(${p.rot}deg)`,
-        }} />
+        <span
+          key={p.key}
+          style={{
+            left: `${p.left}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.dur}s`,
+            background: p.c,
+            width: p.w,
+            height: p.h,
+            transform: `rotate(${p.rot}deg)`,
+          }}
+        />
       ))}
     </div>
   );

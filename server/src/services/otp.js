@@ -12,9 +12,9 @@ import { badRequest, tooMany } from '../utils/httpError.js';
 
 const otpStore = createStore('otps', {});
 
-const TTL_MS         = 10 * 60 * 1000;
-const RESEND_MS      = 60 * 1000;
-const MAX_ATTEMPTS   = 5;
+const TTL_MS = 10 * 60 * 1000;
+const RESEND_MS = 60 * 1000;
+const MAX_ATTEMPTS = 5;
 
 function key(email, purpose) {
   return `${purpose}:${email.toLowerCase()}`;
@@ -75,6 +75,9 @@ export function consumeOtp(email, purpose) {
 export function hasPending(email, purpose) {
   const r = otpStore.get(key(email, purpose));
   if (!r) return false;
-  if (r.expiresAt < Date.now()) { otpStore.delete(key(email, purpose)); return false; }
+  if (r.expiresAt < Date.now()) {
+    otpStore.delete(key(email, purpose));
+    return false;
+  }
   return true;
 }

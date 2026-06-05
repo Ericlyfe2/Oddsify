@@ -35,7 +35,11 @@ function normalise(ev, sport, providerId) {
     const mk = m.key || m.type;
     markets[mk] = {
       name: m.name || mk,
-      selections: (m.outcomes || []).map((o) => ({ key: o.key || o.code, label: o.label || o.name, odds: Number(o.price) })),
+      selections: (m.outcomes || []).map((o) => ({
+        key: o.key || o.code,
+        label: o.label || o.name,
+        odds: Number(o.price),
+      })),
     };
   }
   return {
@@ -44,7 +48,9 @@ function normalise(ev, sport, providerId) {
     sourceId: String(ev.id),
     sport,
     league: { id: ev.league?.id, name: ev.league?.name },
-    home, away, kickoff,
+    home,
+    away,
+    kickoff,
     status: ev.status || 'upcoming',
     markets,
     arbitrage: typeof ev.arbitrage === 'number' ? ev.arbitrage : null,

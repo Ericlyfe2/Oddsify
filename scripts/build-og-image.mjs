@@ -11,7 +11,8 @@ import sharp from 'sharp';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(__dirname, '..', 'client', 'public', 'og-image.png');
 
-const W = 1200, H = 630;
+const W = 1200,
+  H = 630;
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -56,4 +57,7 @@ async function main() {
   console.log(`wrote og-image.png (${buf.length} bytes, ${W}×${H})`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

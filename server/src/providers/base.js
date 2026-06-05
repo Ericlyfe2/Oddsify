@@ -85,12 +85,18 @@ export class Provider {
     this._budgetUsed = 0;
     this._budgetDenied = 0;
     this._cooldownUntil = 0; // epoch ms; 0 means not in cooldown
-    this._lastCallAt = 0;    // epoch ms of last outbound attempt
+    this._lastCallAt = 0; // epoch ms of last outbound attempt
   }
 
-  async fetchFixtures(/* sport */) { return []; }
-  async fetchOdds(/* sport */)     { return []; }
-  async fetchScores(/* sport */)   { return []; }
+  async fetchFixtures(/* sport */) {
+    return [];
+  }
+  async fetchOdds(/* sport */) {
+    return [];
+  }
+  async fetchScores(/* sport */) {
+    return [];
+  }
 
   /** Resets the daily counter if we've rolled past UTC midnight. */
   _rolloverIfNewDay() {
@@ -136,17 +142,16 @@ export class Provider {
       lastError: this._lastError,
       calls: this._calls,
       errors: this._errors,
-      successPct: this._calls > 0
-        ? Number((((this._calls - this._errors) / this._calls) * 100).toFixed(1))
-        : 100,
+      successPct: this._calls > 0 ? Number((((this._calls - this._errors) / this._calls) * 100).toFixed(1)) : 100,
       dailyBudget: Number.isFinite(this.dailyBudget) ? this.dailyBudget : null,
       budgetUsed: this._budgetUsed,
       budgetDenied: this._budgetDenied,
       cooldownRemainingMs,
       minCallIntervalMs: this.minCallIntervalMs || 0,
-      nextCallInMs: this.minCallIntervalMs > 0 && this._lastCallAt > 0
-        ? Math.max(0, this._lastCallAt + this.minCallIntervalMs - Date.now())
-        : 0,
+      nextCallInMs:
+        this.minCallIntervalMs > 0 && this._lastCallAt > 0
+          ? Math.max(0, this._lastCallAt + this.minCallIntervalMs - Date.now())
+          : 0,
     };
   }
 
@@ -160,7 +165,9 @@ export class Provider {
       throw err;
     }
     const start = Date.now();
-    let status = 0, error = null, payload = null;
+    let status = 0,
+      error = null,
+      payload = null;
     // Reserve the budget slot AND stamp the pacing clock BEFORE the request
     // so concurrent calls in the same tick can't both pass the gate. If the
     // upstream cuts us off with a 429 we still treat the slot as used (the
@@ -212,7 +219,13 @@ function utcDayKey() {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD in UTC
 }
 
-function safeParse(t) { try { return JSON.parse(t); } catch { return t; } }
+function safeParse(t) {
+  try {
+    return JSON.parse(t);
+  } catch {
+    return t;
+  }
+}
 
 /** Remove any apiKey query/header from logs. */
 function scrubUrl(u) {
@@ -220,19 +233,15 @@ function scrubUrl(u) {
     const url = new URL(u);
     for (const k of ['apiKey', 'api_key', 'token', 'key']) url.searchParams.delete(k);
     return url.toString();
-  } catch { return String(u); }
+  } catch {
+    return String(u);
+  }
 }
 
 /** Canonical key used for fixture dedup across providers. */
 export function fixtureKey(sport, home, away, kickoffIso) {
   const day = (kickoffIso || '').slice(0, 10);
-  return [
-    String(sport || '').toLowerCase(),
-    norm(home),
-    'vs',
-    norm(away),
-    day,
-  ].join('|');
+  return [String(sport || '').toLowerCase(), norm(home), 'vs', norm(away), day].join('|');
 }
 
 export function norm(s) {

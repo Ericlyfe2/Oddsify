@@ -13,7 +13,7 @@ import { createStore } from '../db/store.js';
 import { getLiveCount } from './oddsAggregator.js';
 
 const betsStore = createStore('bets', {});
-const txStore   = createStore('transactions', {});
+const txStore = createStore('transactions', {});
 
 const CACHE_TTL_MS = 30_000;
 const TWENTY_FOUR_HRS_MS = 24 * 60 * 60 * 1000;
@@ -25,7 +25,7 @@ export function getPublicStats() {
   if (_cache.value && _cache.expiresAt > now) return _cache.value;
 
   const bets = Object.values(betsStore.all() || {});
-  const txs  = Object.values(txStore.all() || {});
+  const txs = Object.values(txStore.all() || {});
 
   let totalPayoutsGhs = 0;
   const active = new Set();
@@ -44,14 +44,16 @@ export function getPublicStats() {
   }
 
   const value = {
-    totalBets:       bets.length,
+    totalBets: bets.length,
     totalPayoutsGhs: Math.floor(totalPayoutsGhs),
-    activeUsers24h:  active.size,
-    liveMatches:     getLiveCount(),
+    activeUsers24h: active.size,
+    liveMatches: getLiveCount(),
   };
   _cache = { value, expiresAt: now + CACHE_TTL_MS };
   return value;
 }
 
 /** Internal: clear cache so verification scripts are deterministic. */
-export function _resetCacheForTests() { _cache = { value: null, expiresAt: 0 }; }
+export function _resetCacheForTests() {
+  _cache = { value: null, expiresAt: 0 };
+}

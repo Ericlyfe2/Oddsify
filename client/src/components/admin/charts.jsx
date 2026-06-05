@@ -29,7 +29,8 @@ function niceMax(v) {
 }
 
 export function Sparkline({ data = [], width = 120, height = 36, stroke = '#7c5cff', fill = 'rgba(124,92,255,.18)' }) {
-  if (!data.length) return <svg className="adm-spark" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} />;
+  if (!data.length)
+    return <svg className="adm-spark" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} />;
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
   const span = max - min || 1;
@@ -38,7 +39,13 @@ export function Sparkline({ data = [], width = 120, height = 36, stroke = '#7c5c
   const line = pathSmooth(pts);
   const area = `${line} L${width},${height} L0,${height} Z`;
   return (
-    <svg className="adm-spark" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" width="100%" height={height}>
+    <svg
+      className="adm-spark"
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      width="100%"
+      height={height}
+    >
       <path d={area} fill={fill} />
       <path d={line} stroke={stroke} strokeWidth="2" fill="none" strokeLinecap="round" />
     </svg>
@@ -49,15 +56,12 @@ export function Sparkline({ data = [], width = 120, height = 36, stroke = '#7c5c
  * Multi-series line / area chart with hover tooltip.
  * series = [{ key, label, color, data: [{ x: 'date', y: number }] }]
  */
-export function LineChart({
-  series = [],
-  height = 220,
-  area = true,
-  yFormat = (v) => v,
-  labelKey = 'date',
-}) {
+export function LineChart({ series = [], height = 220, area = true, yFormat = (v) => v, labelKey = 'date' }) {
   const W = 800;
-  const padL = 38, padR = 12, padT = 14, padB = 26;
+  const padL = 38,
+    padR = 12,
+    padT = 14,
+    padB = 26;
   const innerW = W - padL - padR;
   const innerH = height - padT - padB;
 
@@ -72,15 +76,24 @@ export function LineChart({
 
   const [hover, setHover] = useState(null);
 
-  const seriesGeom = useMemo(() => series.map((s) => {
-    const points = (s.data || []).map((p) => ({
-      x: padL + xIdx.get(p[labelKey]) * xStep,
-      y: padT + innerH - (Number(p.y) || 0) / max * innerH,
-      raw: p,
-    }));
-    return { ...s, points, linePath: pathSmooth(points), areaPath: `${pathSmooth(points)} L${padL + (points.length - 1) * xStep},${padT + innerH} L${padL},${padT + innerH} Z` };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [series, max, xStep, innerH, innerW]);
+  const seriesGeom = useMemo(
+    () =>
+      series.map((s) => {
+        const points = (s.data || []).map((p) => ({
+          x: padL + xIdx.get(p[labelKey]) * xStep,
+          y: padT + innerH - ((Number(p.y) || 0) / max) * innerH,
+          raw: p,
+        }));
+        return {
+          ...s,
+          points,
+          linePath: pathSmooth(points),
+          areaPath: `${pathSmooth(points)} L${padL + (points.length - 1) * xStep},${padT + innerH} L${padL},${padT + innerH} Z`,
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }),
+    [series, max, xStep, innerH, innerW],
+  );
 
   function onMove(e) {
     const svg = e.currentTarget.getBoundingClientRect();
@@ -94,15 +107,16 @@ export function LineChart({
 
   return (
     <div style={{ position: 'relative' }} onMouseLeave={() => setHover(null)}>
-      <svg className="adm-chart-svg" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none"
-           onMouseMove={onMove}>
+      <svg className="adm-chart-svg" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" onMouseMove={onMove}>
         {/* grid + y axis */}
         {yTicks.map((t, i) => {
           const y = padT + innerH - (t / max) * innerH;
           return (
             <g key={i}>
               <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="rgba(255,255,255,.05)" />
-              <text x={padL - 8} y={y + 3} fontSize="10" fill="rgba(180,185,210,.65)" textAnchor="end">{yFormat(t)}</text>
+              <text x={padL - 8} y={y + 3} fontSize="10" fill="rgba(180,185,210,.65)" textAnchor="end">
+                {yFormat(t)}
+              </text>
             </g>
           );
         })}
@@ -110,7 +124,11 @@ export function LineChart({
         {uniqXs.map((x, i) => {
           if (i % Math.ceil(uniqXs.length / 7) !== 0 && i !== uniqXs.length - 1) return null;
           const xx = padL + i * xStep;
-          return <text key={i} x={xx} y={height - 8} fontSize="10" fill="rgba(180,185,210,.7)" textAnchor="middle">{String(x).slice(5)}</text>;
+          return (
+            <text key={i} x={xx} y={height - 8} fontSize="10" fill="rgba(180,185,210,.7)" textAnchor="middle">
+              {String(x).slice(5)}
+            </text>
+          );
         })}
 
         {/* series */}
@@ -118,22 +136,52 @@ export function LineChart({
           <g key={s.key || idx}>
             {area && <path d={s.areaPath} fill={s.color || '#7c5cff'} opacity=".14" />}
             <path d={s.linePath} fill="none" stroke={s.color || '#7c5cff'} strokeWidth="2.2" strokeLinecap="round" />
-            {hover && (() => {
-              const idx2 = uniqXs.indexOf(hover.label);
-              const pt = s.points[idx2];
-              return pt ? <circle cx={pt.x} cy={pt.y} r="4" fill={s.color || '#7c5cff'} stroke="rgba(0,0,0,.5)" strokeWidth="1.5" /> : null;
-            })()}
+            {hover &&
+              (() => {
+                const idx2 = uniqXs.indexOf(hover.label);
+                const pt = s.points[idx2];
+                return pt ? (
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="4"
+                    fill={s.color || '#7c5cff'}
+                    stroke="rgba(0,0,0,.5)"
+                    strokeWidth="1.5"
+                  />
+                ) : null;
+              })()}
           </g>
         ))}
 
-        {hover && <line x1={hover.x} x2={hover.x} y1={padT} y2={padT + innerH} stroke="rgba(255,255,255,.18)" strokeDasharray="3 3" />}
+        {hover && (
+          <line
+            x1={hover.x}
+            x2={hover.x}
+            y1={padT}
+            y2={padT + innerH}
+            stroke="rgba(255,255,255,.18)"
+            strokeDasharray="3 3"
+          />
+        )}
       </svg>
       {hover && (
-        <div className="adm-chart-tip" style={{ left: `${(hover.x / W) * 100}%`, top: 8, transform: 'translateX(-50%)' }}>
+        <div
+          className="adm-chart-tip"
+          style={{ left: `${(hover.x / W) * 100}%`, top: 8, transform: 'translateX(-50%)' }}
+        >
           <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>{hover.label}</div>
           {series.map((s, i) => (
             <div key={s.key || i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color || '#7c5cff', display: 'inline-block' }} />
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 2,
+                  background: s.color || '#7c5cff',
+                  display: 'inline-block',
+                }}
+              />
               <span style={{ color: 'var(--text-dim)' }}>{s.label || s.key}</span>
               <strong style={{ marginLeft: 'auto' }}>{yFormat(hover.values[i]?.y ?? 0)}</strong>
             </div>
@@ -144,15 +192,25 @@ export function LineChart({
   );
 }
 
-export function BarChart({ data = [], height = 220, color = '#22d3ee', yFormat = (v) => v, labelKey = 'date', valueKey = 'value' }) {
+export function BarChart({
+  data = [],
+  height = 220,
+  color = '#22d3ee',
+  yFormat = (v) => v,
+  labelKey = 'date',
+  valueKey = 'value',
+}) {
   const W = 800;
-  const padL = 38, padR = 12, padT = 14, padB = 26;
+  const padL = 38,
+    padR = 12,
+    padT = 14,
+    padB = 26;
   const innerW = W - padL - padR;
   const innerH = height - padT - padB;
   const values = data.map((d) => Number(d[valueKey]) || 0);
   const max = niceMax(Math.max(0, ...values));
   const yTicks = [0, max * 0.5, max];
-  const bw = Math.max(2, (innerW / Math.max(data.length, 1)) - 4);
+  const bw = Math.max(2, innerW / Math.max(data.length, 1) - 4);
   const [hover, setHover] = useState(null);
 
   return (
@@ -163,7 +221,9 @@ export function BarChart({ data = [], height = 220, color = '#22d3ee', yFormat =
           return (
             <g key={i}>
               <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="rgba(255,255,255,.05)" />
-              <text x={padL - 8} y={y + 3} fontSize="10" fill="rgba(180,185,210,.65)" textAnchor="end">{yFormat(t)}</text>
+              <text x={padL - 8} y={y + 3} fontSize="10" fill="rgba(180,185,210,.65)" textAnchor="end">
+                {yFormat(t)}
+              </text>
             </g>
           );
         })}
@@ -173,9 +233,11 @@ export function BarChart({ data = [], height = 220, color = '#22d3ee', yFormat =
           const h = (v / max) * innerH;
           const y = padT + innerH - h;
           return (
-            <g key={i}
-               onMouseEnter={() => setHover({ x: x + bw / 2, label: d[labelKey], value: v })}
-               onMouseLeave={() => setHover(null)}>
+            <g
+              key={i}
+              onMouseEnter={() => setHover({ x: x + bw / 2, label: d[labelKey], value: v })}
+              onMouseLeave={() => setHover(null)}
+            >
               <rect x={x} y={y} width={bw} height={h} rx="3" fill={color} opacity=".82" />
               <rect x={x} y={padT} width={bw} height={innerH} fill="transparent" />
             </g>
@@ -185,11 +247,18 @@ export function BarChart({ data = [], height = 220, color = '#22d3ee', yFormat =
         {data.map((d, i) => {
           if (i % Math.ceil(data.length / 7) !== 0 && i !== data.length - 1) return null;
           const x = padL + (innerW / Math.max(data.length, 1)) * i + bw / 2 + 2;
-          return <text key={i} x={x} y={height - 8} fontSize="10" fill="rgba(180,185,210,.7)" textAnchor="middle">{String(d[labelKey]).slice(5)}</text>;
+          return (
+            <text key={i} x={x} y={height - 8} fontSize="10" fill="rgba(180,185,210,.7)" textAnchor="middle">
+              {String(d[labelKey]).slice(5)}
+            </text>
+          );
         })}
       </svg>
       {hover && (
-        <div className="adm-chart-tip" style={{ left: `${(hover.x / W) * 100}%`, top: 4, transform: 'translateX(-50%)' }}>
+        <div
+          className="adm-chart-tip"
+          style={{ left: `${(hover.x / W) * 100}%`, top: 4, transform: 'translateX(-50%)' }}
+        >
           <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{hover.label}</div>
           <strong>{yFormat(hover.value)}</strong>
         </div>
@@ -198,7 +267,12 @@ export function BarChart({ data = [], height = 220, color = '#22d3ee', yFormat =
   );
 }
 
-export function PieChart({ data = [], size = 200, donut = 0.62, palette = ['#7c5cff', '#22d3ee', '#18f0a1', '#ffb547', '#ff5d6c', '#ff5fb1', '#4f8bff'] }) {
+export function PieChart({
+  data = [],
+  size = 200,
+  donut = 0.62,
+  palette = ['#7c5cff', '#22d3ee', '#18f0a1', '#ffb547', '#ff5d6c', '#ff5fb1', '#4f8bff'],
+}) {
   const total = data.reduce((s, d) => s + (Number(d.value) || 0), 0) || 1;
   let a = -Math.PI / 2;
   const r = size / 2;
@@ -210,17 +284,29 @@ export function PieChart({ data = [], size = 200, donut = 0.62, palette = ['#7c5
     const a1 = a + ang;
     a = a1;
     const large = ang > Math.PI ? 1 : 0;
-    const x0 = r + r * Math.cos(a0), y0 = r + r * Math.sin(a0);
-    const x1 = r + r * Math.cos(a1), y1 = r + r * Math.sin(a1);
-    const xi1 = r + ri * Math.cos(a1), yi1 = r + ri * Math.sin(a1);
-    const xi0 = r + ri * Math.cos(a0), yi0 = r + ri * Math.sin(a0);
+    const x0 = r + r * Math.cos(a0),
+      y0 = r + r * Math.sin(a0);
+    const x1 = r + r * Math.cos(a1),
+      y1 = r + r * Math.sin(a1);
+    const xi1 = r + ri * Math.cos(a1),
+      yi1 = r + ri * Math.sin(a1);
+    const xi0 = r + ri * Math.cos(a0),
+      yi0 = r + ri * Math.sin(a0);
     const path = `M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${xi1},${yi1} A${ri},${ri} 0 ${large} 0 ${xi0},${yi0} Z`;
-    return { path, color: d.color || palette[i % palette.length], label: d.label, value: v, pct: (v / total * 100).toFixed(1) };
+    return {
+      path,
+      color: d.color || palette[i % palette.length],
+      label: d.label,
+      value: v,
+      pct: ((v / total) * 100).toFixed(1),
+    };
   });
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-        {slices.map((s, i) => <path key={i} d={s.path} fill={s.color} stroke="var(--bg-1)" strokeWidth="1.5" />)}
+        {slices.map((s, i) => (
+          <path key={i} d={s.path} fill={s.color} stroke="var(--bg-1)" strokeWidth="1.5" />
+        ))}
       </svg>
       <div className="adm-legend" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
         {slices.map((s, i) => (
@@ -247,12 +333,21 @@ export function Heatmap({ matrix = [], rows = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'
     <div className="adm-heatmap">
       <div className="h-lbl" />
       {Array.from({ length: 24 }).map((_, i) => (
-        <div key={i} className="h-lbl" style={{ textAlign: 'center' }}>{i % 4 === 0 ? `${i.toString().padStart(2, '0')}:00` : ''}</div>
+        <div key={i} className="h-lbl" style={{ textAlign: 'center' }}>
+          {i % 4 === 0 ? `${i.toString().padStart(2, '0')}:00` : ''}
+        </div>
       ))}
       {matrix.flatMap((row, ri) => [
-        <div key={`r${ri}`} className="h-lbl">{rows[ri]}</div>,
+        <div key={`r${ri}`} className="h-lbl">
+          {rows[ri]}
+        </div>,
         ...row.map((v, ci) => (
-          <div key={`${ri}-${ci}`} className="cell" data-int={intensityFor(v)} title={`${rows[ri]} ${ci}:00 — ${v} bets`} />
+          <div
+            key={`${ri}-${ci}`}
+            className="cell"
+            data-int={intensityFor(v)}
+            title={`${rows[ri]} ${ci}:00 — ${v} bets`}
+          />
         )),
       ])}
     </div>

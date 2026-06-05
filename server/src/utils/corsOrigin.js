@@ -24,7 +24,9 @@ const VERCEL_HOST = 'vercel.app';
  */
 export function buildOriginAllowlist({ isProd, allowedOrigins, vercelProject }) {
   // Escape so a project name like "foo.bar" can't bypass the regex.
-  const safePrefix = String(vercelProject || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const safePrefix = String(vercelProject || '')
+    .trim()
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const vercelPattern = safePrefix
     ? new RegExp(`^https://${safePrefix}(-[\\w-]+)?\\.${VERCEL_HOST.replace(/\./g, '\\.')}$`)
     : null;
@@ -41,7 +43,8 @@ export function buildOriginAllowlist({ isProd, allowedOrigins, vercelProject }) 
         origin.startsWith('http://localhost') ||
         origin.startsWith('http://127.0.0.1') ||
         origin.startsWith('http://192.168.')
-      ) return true;
+      )
+        return true;
     }
 
     if (allowedOrigins.includes(origin)) return true;

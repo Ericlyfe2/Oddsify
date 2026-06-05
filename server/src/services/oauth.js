@@ -12,14 +12,14 @@ export async function verifyGoogleIdToken(idToken) {
     const ticket = await client.verifyIdToken({ idToken, audience: GOOGLE.clientId });
     const payload = ticket.getPayload();
     if (!payload) throw unauthorized('Invalid Google credential.');
-    if (!payload.email)            throw unauthorized('Google account has no email.');
-    if (!payload.email_verified)   throw unauthorized('Google account email is not verified.');
+    if (!payload.email) throw unauthorized('Google account has no email.');
+    if (!payload.email_verified) throw unauthorized('Google account email is not verified.');
     if (payload.aud !== GOOGLE.clientId) throw unauthorized('Credential audience mismatch.');
     return {
-      email:         payload.email.toLowerCase(),
-      displayName:   payload.name || payload.given_name || payload.email,
-      googleId:      payload.sub,
-      picture:       payload.picture || null,
+      email: payload.email.toLowerCase(),
+      displayName: payload.name || payload.given_name || payload.email,
+      googleId: payload.sub,
+      picture: payload.picture || null,
       emailVerified: true,
     };
   } catch (e) {

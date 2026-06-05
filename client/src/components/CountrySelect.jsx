@@ -25,9 +25,7 @@ export default function CountrySelect({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return COUNTRIES;
-    return COUNTRIES.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q),
-    );
+    return COUNTRIES.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
   }, [query]);
 
   useEffect(() => {
@@ -38,7 +36,9 @@ export default function CountrySelect({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  useEffect(() => { if (open) setActiveIdx(0); }, [open, query]);
+  useEffect(() => {
+    if (open) setActiveIdx(0);
+  }, [open, query]);
 
   function pick(c) {
     onChange?.(c.code);
@@ -48,9 +48,14 @@ export default function CountrySelect({
 
   function onKey(e) {
     if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) {
-      setOpen(true); e.preventDefault(); return;
+      setOpen(true);
+      e.preventDefault();
+      return;
     }
-    if (e.key === 'Escape') { setOpen(false); return; }
+    if (e.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIdx((i) => Math.min(filtered.length - 1, i + 1));
@@ -80,10 +85,10 @@ export default function CountrySelect({
         <span className="cs-flag" aria-hidden="true">
           {selected ? selected.flag : '🌍'}
         </span>
-        <span className="cs-label">
-          {selected ? selected.name : placeholder}
+        <span className="cs-label">{selected ? selected.name : placeholder}</span>
+        <span className="cs-caret" aria-hidden="true">
+          ▾
         </span>
-        <span className="cs-caret" aria-hidden="true">▾</span>
       </button>
 
       {open && (
@@ -108,7 +113,9 @@ export default function CountrySelect({
                 onMouseEnter={() => setActiveIdx(i)}
                 onClick={() => pick(c)}
               >
-                <span className="cs-flag" aria-hidden="true">{c.flag}</span>
+                <span className="cs-flag" aria-hidden="true">
+                  {c.flag}
+                </span>
                 <span className="cs-name">{c.name}</span>
                 <span className="cs-code">{c.code}</span>
               </li>
@@ -117,15 +124,7 @@ export default function CountrySelect({
         </div>
       )}
 
-      {required && (
-        <input
-          type="hidden"
-          name="country"
-          value={value || ''}
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-      )}
+      {required && <input type="hidden" name="country" value={value || ''} aria-hidden="true" tabIndex={-1} />}
     </div>
   );
 }

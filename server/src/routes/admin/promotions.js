@@ -8,24 +8,31 @@ import { requireAdmin, requireRole, audit } from '../../middleware/adminAuth.js'
 import { validate } from '../../middleware/validate.js';
 import { notFound } from '../../utils/httpError.js';
 import {
-  listPromotions, getPromotion, createPromotion, updatePromotion, deletePromotion,
+  listPromotions,
+  getPromotion,
+  createPromotion,
+  updatePromotion,
+  deletePromotion,
 } from '../../db/promotions.js';
 
 const router = Router();
 
 const promoSchema = z.object({
   title: z.string().trim().min(2).max(80),
-  body:  z.string().trim().max(500).optional(),
+  body: z.string().trim().max(500).optional(),
   badge: z.string().trim().max(20).optional(),
-  cta:   z.string().trim().max(40).optional(),
-  accent: z.string().regex(/^#?[0-9a-f]{3,8}$/i).optional(),
+  cta: z.string().trim().max(40).optional(),
+  accent: z
+    .string()
+    .regex(/^#?[0-9a-f]{3,8}$/i)
+    .optional(),
   image: z.string().max(400).optional(),
   eligibility: z.enum(['all', 'new', 'vip', 'mobile']).optional(),
   minDeposit: z.number().nonnegative().max(1_000_000).optional(),
-  bonusRate:  z.number().nonnegative().max(5).optional(),
+  bonusRate: z.number().nonnegative().max(5).optional(),
   capPerUser: z.number().nonnegative().max(1_000_000).optional().nullable(),
   active: z.boolean().optional(),
-  order:  z.number().int().optional(),
+  order: z.number().int().optional(),
 });
 
 router.get('/', requireAdmin, (_req, res) => {

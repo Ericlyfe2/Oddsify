@@ -21,7 +21,7 @@ import { log } from '../utils/logger.js';
 import { emitToUser, emitAdmin, emitScoreUpdate } from './realtime.js';
 
 const betsStore = createStore('bets', {});
-const txStore   = createStore('transactions', {});
+const txStore = createStore('transactions', {});
 
 const SETTLE_INTERVAL_MS = 30_000;
 const SIM_AFTER_MS = 110 * 60 * 1000; // ~110 minutes after kickoff
@@ -32,12 +32,28 @@ let timer = null;
 /* ------------ score simulation ------------ */
 
 const FOOTBALL_SCORES = [
-  [1, 0], [0, 1], [1, 1], [2, 1], [1, 2], [2, 0], [0, 2],
-  [2, 2], [3, 1], [1, 3], [3, 0], [0, 0], [3, 2], [2, 3], [0, 3], [4, 0],
+  [1, 0],
+  [0, 1],
+  [1, 1],
+  [2, 1],
+  [1, 2],
+  [2, 0],
+  [0, 2],
+  [2, 2],
+  [3, 1],
+  [1, 3],
+  [3, 0],
+  [0, 0],
+  [3, 2],
+  [2, 3],
+  [0, 3],
+  [4, 0],
 ];
 const BASKET_TOTALS = [210, 218, 222, 226, 230, 234];
 
-function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rand(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 function simulateScore(sport, match) {
   if (sport === 'basketball' || sport === 'ml') {
@@ -112,13 +128,13 @@ function legWon(leg, scoreHome, scoreAway) {
   }
   if (m === 'OU25') {
     const total = scoreHome + scoreAway;
-    if (o === 'Over')  return total > 2.5;
+    if (o === 'Over') return total > 2.5;
     if (o === 'Under') return total < 2.5;
   }
   if (m === 'BTTS') {
     const both = scoreHome > 0 && scoreAway > 0;
     if (o === 'Yes') return both;
-    if (o === 'No')  return !both;
+    if (o === 'No') return !both;
   }
   if (m === 'DC') {
     if (o === '1X') return scoreHome >= scoreAway;
@@ -128,13 +144,13 @@ function legWon(leg, scoreHome, scoreAway) {
   if (m === 'TP') {
     const total = scoreHome + scoreAway;
     const line = leg.line || 220.5;
-    if (o === 'Over')  return total > line;
+    if (o === 'Over') return total > line;
     if (o === 'Under') return total < line;
   }
   if (m === 'HCAP') {
     const hc = Number(leg.handicap || 0);
-    if (o === '1H') return (scoreHome - hc) > scoreAway;
-    if (o === '2H') return (scoreAway + hc) > scoreHome;
+    if (o === '1H') return scoreHome - hc > scoreAway;
+    if (o === '2H') return scoreAway + hc > scoreHome;
   }
   return null; // unknown market → void leg
 }
@@ -157,7 +173,9 @@ export function settleNow() {
   }
 
   const open = Object.values(betsStore.all() || {}).filter((b) => b.status === 'open');
-  let settledWins = 0, settledLoss = 0, settledVoid = 0;
+  let settledWins = 0,
+    settledLoss = 0,
+    settledVoid = 0;
   for (const bet of open) {
     let allReady = true;
     const legResults = [];
@@ -178,20 +196,26 @@ export function settleNow() {
     if (!allReady) continue;
 
     const anyVoid = legResults.some((r) => r.won === null);
-    const allWon  = legResults.every((r) => r.won === true);
-    const status  = anyVoid && legResults.every((r) => r.won !== false) ? 'void'
-                  : allWon ? 'won' : 'lost';
+    const allWon = legResults.every((r) => r.won === true);
+    const status = anyVoid && legResults.every((r) => r.won !== false) ? 'void' : allWon ? 'won' : 'lost';
 
     const user = getUserById(bet.userId);
     let credit = 0;
-    if (status === 'won')  credit = bet.potentialWin;
+    if (status === 'won') credit = bet.potentialWin;
     if (status === 'void') credit = bet.stake;
     const updated = {
       ...bet,
       status,
       settledAt: new Date().toISOString(),
       settledBy: 'auto',
-      legsResolved: legResults.map((r) => ({ matchId: r.leg.matchId, market: r.leg.market, outcome: r.leg.outcome, won: r.won, scoreHome: r.res.scoreHome, scoreAway: r.res.scoreAway })),
+      legsResolved: legResults.map((r) => ({
+        matchId: r.leg.matchId,
+        market: r.leg.market,
+        outcome: r.leg.outcome,
+        won: r.won,
+        scoreHome: r.res.scoreHome,
+        scoreAway: r.res.scoreAway,
+      })),
       ...(status === 'won' ? { wonNotAcknowledged: true } : {}),
     };
     betsStore.set(bet.id, updated);
@@ -200,11 +224,18 @@ export function settleNow() {
       const nextUser = updateUser(user.id, { balance: Number((user.balance + credit).toFixed(2)) });
       pushTx(user.id, {
         kind: status === 'won' ? 'bet_won' : 'bet_void_refund',
-        amount: credit, status: 'completed',
-        balanceAfter: nextUser.balance, ref: bet.id,
+        amount: credit,
+        status: 'completed',
+        balanceAfter: nextUser.balance,
+        ref: bet.id,
       });
       logActivity(user.id, { kind: `bet_${status}`, betId: bet.id, credit });
-      emitToUser(user.id, 'wallet:update', { balance: nextUser.balance, delta: credit, reason: `bet:${status}`, ref: bet.id });
+      emitToUser(user.id, 'wallet:update', {
+        balance: nextUser.balance,
+        delta: credit,
+        reason: `bet:${status}`,
+        ref: bet.id,
+      });
     }
     // Push the leg results out as score updates for any clients watching the fixture
     for (const r of legResults) {
@@ -227,7 +258,7 @@ export function settleNow() {
       meta: { stake: bet.stake, credit, legs: legResults.length, userId: bet.userId },
     });
 
-    if (status === 'won')  settledWins++;
+    if (status === 'won') settledWins++;
     if (status === 'lost') settledLoss++;
     if (status === 'void') settledVoid++;
   }
@@ -237,7 +268,11 @@ export function settleNow() {
 export function startSettlementLoop() {
   if (timer) return;
   // first sweep on boot
-  try { settleNow(); } catch (e) { log.error('settle initial', e?.message); }
+  try {
+    settleNow();
+  } catch (e) {
+    log.error('settle initial', e?.message);
+  }
   timer = setInterval(() => {
     try {
       const r = settleNow();

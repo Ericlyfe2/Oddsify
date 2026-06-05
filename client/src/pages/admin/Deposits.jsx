@@ -19,16 +19,24 @@ function playChime() {
     const ctx = new Ctx();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
+    o.connect(g);
+    g.connect(ctx.destination);
     o.type = 'sine';
     o.frequency.setValueAtTime(880, ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.18);
     g.gain.setValueAtTime(0.0001, ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
-    o.start(); o.stop(ctx.currentTime + 0.42);
-    setTimeout(() => { try { ctx.close(); } catch {} }, 600);
-  } catch { /* autoplay blocked / no audio context */ }
+    o.start();
+    o.stop(ctx.currentTime + 0.42);
+    setTimeout(() => {
+      try {
+        ctx.close();
+      } catch {}
+    }, 600);
+  } catch {
+    /* autoplay blocked / no audio context */
+  }
 }
 
 export default function DepositsPage() {
@@ -62,12 +70,15 @@ export default function DepositsPage() {
     let alive = true;
     // First call seeds; subsequent polls don't.
     let first = true;
-    const tick = () => load(first ? { seed: true } : {}).then(() => {
-      first = false;
-      if (alive) setTimeout(tick, REFRESH_MS);
-    });
+    const tick = () =>
+      load(first ? { seed: true } : {}).then(() => {
+        first = false;
+        if (alive) setTimeout(tick, REFRESH_MS);
+      });
     tick();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [load]);
 
   // Live admin notifications when a user submits a new deposit. The server
@@ -87,7 +98,7 @@ export default function DepositsPage() {
       const amount = payload?.amount;
       const userId = payload?.userId;
       const title = 'New deposit request';
-      const body  = `GHS ${moneyFmt(amount)} from user ${userId || ''}`.trim();
+      const body = `GHS ${moneyFmt(amount)} from user ${userId || ''}`.trim();
 
       show(`New deposit request — GHS ${moneyFmt(amount)}`, 'info');
       osNotify({ title, body, tag: `admin-deposit-${txId || Date.now()}` });
@@ -97,7 +108,9 @@ export default function DepositsPage() {
       load();
     });
 
-    return () => { off?.(); };
+    return () => {
+      off?.();
+    };
   }, [load, show]);
 
   const handleApprove = async (id) => {
@@ -160,12 +173,24 @@ export default function DepositsPage() {
         </div>
         <div className="adm-stat">
           <div className="lbl">Oldest pending</div>
-          <div className="val" style={{ fontSize: 14 }}>{oldest ? ago(oldest) : '—'}</div>
+          <div className="val" style={{ fontSize: 14 }}>
+            {oldest ? ago(oldest) : '—'}
+          </div>
         </div>
       </div>
 
       {err && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#ef4444' }}>
+        <div
+          style={{
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: 8,
+            padding: '10px 14px',
+            marginBottom: 16,
+            fontSize: 13,
+            color: '#ef4444',
+          }}
+        >
           {err}
         </div>
       )}

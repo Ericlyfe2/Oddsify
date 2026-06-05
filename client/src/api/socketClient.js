@@ -9,11 +9,14 @@ import { io } from 'socket.io-client';
 import { getAccess } from './betApi.js';
 
 const devUrl = 'http://127.0.0.1:4000';
-const URL = import.meta.env.VITE_API_BASE || (
-  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+const URL =
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? devUrl
-    : (typeof window !== 'undefined' ? window.location.origin : devUrl)
-);
+    : typeof window !== 'undefined'
+      ? window.location.origin
+      : devUrl);
 
 let socket = null;
 let connectAttempted = false;
@@ -37,8 +40,12 @@ export function getSocket() {
 export function refreshAuth() {
   if (!socket) return;
   // Re-handshake with the new token by closing + reopening.
-  try { socket.auth = { token: getAccess() || undefined }; socket.disconnect().connect(); }
-  catch { /* ignore */ }
+  try {
+    socket.auth = { token: getAccess() || undefined };
+    socket.disconnect().connect();
+  } catch {
+    /* ignore */
+  }
 }
 
 export function subscribeFixtures(ids = []) {

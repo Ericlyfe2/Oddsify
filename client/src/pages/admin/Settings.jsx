@@ -13,8 +13,12 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    adminHealth().then(setHealth).catch(() => {});
-    adminGetSettings().then(setSettings).catch(() => {});
+    adminHealth()
+      .then(setHealth)
+      .catch(() => {});
+    adminGetSettings()
+      .then(setSettings)
+      .catch(() => {});
   }, []);
 
   if (!settings) return <Spinner label="Loading settings…" />;
@@ -63,13 +67,13 @@ export default function SettingsPage() {
         {/* Feature toggles */}
         <Card title="Feature toggles" subtitle="Enable or disable platform features">
           {[
-            ['maintenance',      'Maintenance mode',      settings.maintenance,      'Blocks all user traffic'],
-            ['signupsOpen',      'New registrations',     settings.signupsOpen,      'Allow new users to sign up'],
-            ['featureJackpot',   'Jackpot',               settings.featureJackpot,   'Jackpot betting'],
-            ['featureCasino',    'Casino',                settings.featureCasino,    'Casino games'],
-            ['featureVirtuals',  'Virtuals',              settings.featureVirtuals,  'Virtual sports'],
-            ['featurePromotions','Promotions',            settings.featurePromotions,'Promotions page'],
-            ['featureLiveBetting','Live betting',         settings.featureLiveBetting,'Live in-play betting'],
+            ['maintenance', 'Maintenance mode', settings.maintenance, 'Blocks all user traffic'],
+            ['signupsOpen', 'New registrations', settings.signupsOpen, 'Allow new users to sign up'],
+            ['featureJackpot', 'Jackpot', settings.featureJackpot, 'Jackpot betting'],
+            ['featureCasino', 'Casino', settings.featureCasino, 'Casino games'],
+            ['featureVirtuals', 'Virtuals', settings.featureVirtuals, 'Virtual sports'],
+            ['featurePromotions', 'Promotions', settings.featurePromotions, 'Promotions page'],
+            ['featureLiveBetting', 'Live betting', settings.featureLiveBetting, 'Live in-play betting'],
           ].map(([key, label, val, desc]) => (
             <div key={key} className="adm-toggle-row">
               <div>
@@ -77,15 +81,13 @@ export default function SettingsPage() {
                 <span className="adm-toggle-desc">{desc}</span>
               </div>
               {isSuper ? (
-                <button
-                  type="button"
-                  className={`adm-toggle ${val ? 'on' : 'off'}`}
-                  onClick={() => toggle(key)}
-                >
+                <button type="button" className={`adm-toggle ${val ? 'on' : 'off'}`} onClick={() => toggle(key)}>
                   {val ? 'ON' : 'OFF'}
                 </button>
               ) : (
-                <Badge tone={val ? 'success' : 'default'} dot>{val ? 'On' : 'Off'}</Badge>
+                <Badge tone={val ? 'success' : 'default'} dot>
+                  {val ? 'On' : 'Off'}
+                </Badge>
               )}
             </div>
           ))}
@@ -95,11 +97,11 @@ export default function SettingsPage() {
         <Card title="Financial limits" subtitle="Betting and wallet thresholds">
           <div className="adm-kv">
             {[
-              ['minDeposit',      'Min deposit',     'GHS', settings.minDeposit],
-              ['minWithdraw',     'Min withdraw',    'GHS', settings.minWithdraw],
-              ['maxSingleStake',  'Max single stake','GHS', settings.maxSingleStake],
-              ['maxMultipleStake','Max multi stake', 'GHS', settings.maxMultipleStake],
-              ['maxSystemStake',  'Max system stake','GHS', settings.maxSystemStake],
+              ['minDeposit', 'Min deposit', 'GHS', settings.minDeposit],
+              ['minWithdraw', 'Min withdraw', 'GHS', settings.minWithdraw],
+              ['maxSingleStake', 'Max single stake', 'GHS', settings.maxSingleStake],
+              ['maxMultipleStake', 'Max multi stake', 'GHS', settings.maxMultipleStake],
+              ['maxSystemStake', 'Max system stake', 'GHS', settings.maxSystemStake],
             ].map(([key, label, prefix, val]) => (
               <div key={key} className="adm-kv-row">
                 <dt>{label}</dt>
@@ -120,8 +122,8 @@ export default function SettingsPage() {
               </div>
             ))}
             {[
-              ['bonusRate',       'Bonus rate',       '', `${(settings.bonusRate * 100).toFixed(0)}%`],
-              ['referralBonus',   'Referral bonus',   'GHS', settings.referralBonus],
+              ['bonusRate', 'Bonus rate', '', `${(settings.bonusRate * 100).toFixed(0)}%`],
+              ['referralBonus', 'Referral bonus', 'GHS', settings.referralBonus],
             ].map(([key, label, prefix, val]) => (
               <div key={key} className="adm-kv-row">
                 <dt>{label}</dt>
@@ -139,7 +141,9 @@ export default function SettingsPage() {
                       step={key === 'bonusRate' ? 1 : 5}
                       min={0}
                     />
-                  ) : `${prefix} ${key === 'bonusRate' ? `${(val * 100).toFixed(0)}%` : val?.toLocaleString?.() ?? val}`}
+                  ) : (
+                    `${prefix} ${key === 'bonusRate' ? `${(val * 100).toFixed(0)}%` : (val?.toLocaleString?.() ?? val)}`
+                  )}
                 </dd>
               </div>
             ))}
@@ -160,7 +164,9 @@ export default function SettingsPage() {
                     onBlur={setStr('contactEmail')}
                     onKeyDown={(e) => e.key === 'Enter' && setStr('contactEmail')(e)}
                   />
-                ) : settings.contactEmail}
+                ) : (
+                  settings.contactEmail
+                )}
               </dd>
             </div>
           </div>
@@ -182,13 +188,38 @@ export default function SettingsPage() {
         {/* Runtime */}
         <Card title="Runtime">
           <dl className="adm-kv">
-            <div className="adm-kv-row"><dt>API uptime</dt><dd>{health?.uptimeSec ?? '—'}s</dd></div>
-            <div className="adm-kv-row"><dt>Memory</dt><dd>{health?.memoryMb ?? '—'} MB</dd></div>
-            <div className="adm-kv-row"><dt>Node</dt><dd>{health?.nodeVersion || '—'}</dd></div>
-            <div className="adm-kv-row"><dt>PID</dt><dd>{health?.pid ?? '—'}</dd></div>
-            <div className="adm-kv-row"><dt>SMTP</dt><dd>{health?.smtp ? <Badge tone="success">Configured</Badge> : <Badge tone="warn">Console mode</Badge>}</dd></div>
-            <div className="adm-kv-row"><dt>Google OAuth</dt><dd>{health?.google ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}</dd></div>
-            <div className="adm-kv-row"><dt>Odds feed</dt><dd>{health?.oddsApi?.enabled ? <Badge tone="success">Live</Badge> : <Badge tone="warn">Cached</Badge>}</dd></div>
+            <div className="adm-kv-row">
+              <dt>API uptime</dt>
+              <dd>{health?.uptimeSec ?? '—'}s</dd>
+            </div>
+            <div className="adm-kv-row">
+              <dt>Memory</dt>
+              <dd>{health?.memoryMb ?? '—'} MB</dd>
+            </div>
+            <div className="adm-kv-row">
+              <dt>Node</dt>
+              <dd>{health?.nodeVersion || '—'}</dd>
+            </div>
+            <div className="adm-kv-row">
+              <dt>PID</dt>
+              <dd>{health?.pid ?? '—'}</dd>
+            </div>
+            <div className="adm-kv-row">
+              <dt>SMTP</dt>
+              <dd>
+                {health?.smtp ? <Badge tone="success">Configured</Badge> : <Badge tone="warn">Console mode</Badge>}
+              </dd>
+            </div>
+            <div className="adm-kv-row">
+              <dt>Google OAuth</dt>
+              <dd>{health?.google ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}</dd>
+            </div>
+            <div className="adm-kv-row">
+              <dt>Odds feed</dt>
+              <dd>
+                {health?.oddsApi?.enabled ? <Badge tone="success">Live</Badge> : <Badge tone="warn">Cached</Badge>}
+              </dd>
+            </div>
           </dl>
         </Card>
       </div>

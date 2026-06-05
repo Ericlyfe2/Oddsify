@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 const NETWORKS = [
-  { key: 'mtn',      label: 'MTN',          tag: 'MTN', bg: '#ffcc00', fg: '#000' },
-  { key: 'telecel',  label: 'Telecel',      tag: 'TLC', bg: '#e60000', fg: '#fff' },
-  { key: 'at',       label: 'AirtelTigo',   tag: 'AT',  bg: '#0055ff', fg: '#fff' },
+  { key: 'mtn', label: 'MTN', tag: 'MTN', bg: '#ffcc00', fg: '#000' },
+  { key: 'telecel', label: 'Telecel', tag: 'TLC', bg: '#e60000', fg: '#fff' },
+  { key: 'at', label: 'AirtelTigo', tag: 'AT', bg: '#0055ff', fg: '#fff' },
 ];
 
 const STEPS = {
@@ -70,8 +70,12 @@ function CopyButton({ value, label }) {
         border: '1px solid var(--line)',
         background: copied ? 'var(--accent)' : 'var(--surface-2)',
         color: copied ? '#000000' : 'var(--text)',
-        fontWeight: 700, fontSize: 12, cursor: 'pointer',
-        display: 'inline-flex', alignItems: 'center', gap: 6,
+        fontWeight: 700,
+        fontSize: 12,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
         transition: 'background 120ms ease, color 120ms ease',
       }}
     >
@@ -91,9 +95,12 @@ export default function PaybillInstructions({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
       {/* Network chips */}
-      <div role="tablist" aria-label="Network" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+      <div
+        role="tablist"
+        aria-label="Network"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}
+      >
         {NETWORKS.map((n) => {
           const selected = n.key === network;
           return (
@@ -104,18 +111,35 @@ export default function PaybillInstructions({
               aria-selected={selected}
               onClick={() => setNetwork(n.key)}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '10px 0', borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '10px 0',
+                borderRadius: 8,
                 background: selected ? 'var(--surface)' : 'var(--surface-2)',
                 border: selected ? '1px solid var(--accent)' : '1px solid var(--line)',
-                color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                color: 'var(--text)',
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: 'pointer',
               }}
             >
-              <span style={{
-                width: 24, height: 24, borderRadius: 4, background: n.bg, color: n.fg,
-                fontSize: 9, fontWeight: 900, display: 'inline-flex',
-                alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-              }}>
+              <span
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                  background: n.bg,
+                  color: n.fg,
+                  fontSize: 9,
+                  fontWeight: 900,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+              >
                 {n.tag}
               </span>
               {n.label}
@@ -125,18 +149,50 @@ export default function PaybillInstructions({
       </div>
 
       {/* Paybill ID + Reference */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 10,
+          padding: 14,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Paybill ID</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '0.05em' }}>{paybillId}</div>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 700,
+              }}
+            >
+              Paybill ID
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '0.05em' }}>
+              {paybillId}
+            </div>
           </div>
           <CopyButton value={paybillId} label="Paybill ID" />
         </div>
         <div style={{ height: 1, background: 'var(--line)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Pay ID (Account Reference)</div>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 700,
+              }}
+            >
+              Pay ID (Account Reference)
+            </div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', wordBreak: 'break-all' }}>
               {accountRef || '—'}
             </div>
@@ -148,15 +204,23 @@ export default function PaybillInstructions({
       {/* Step-by-step */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <span style={{
-            width: 22, height: 22, borderRadius: 4, background: active.bg, color: active.fg,
-            fontSize: 9, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 4,
+              background: active.bg,
+              color: active.fg,
+              fontSize: 9,
+              fontWeight: 900,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             {active.tag}
           </span>
-          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>
-            {active.label} — Step by step
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{active.label} — Step by step</div>
         </div>
         <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.7 }}>
           {steps.map((s, i) => (
@@ -168,9 +232,15 @@ export default function PaybillInstructions({
       {/* Footer note */}
       <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>
         {context === 'withdraw' ? (
-          <>Funds requested via paybill route are paid out to the mobile number registered on your account. Use the <strong>Mobile Money</strong> tab for instant withdrawals.</>
+          <>
+            Funds requested via paybill route are paid out to the mobile number registered on your account. Use the{' '}
+            <strong>Mobile Money</strong> tab for instant withdrawals.
+          </>
         ) : (
-          <>Your account is credited automatically once the paybill payment is confirmed. This usually takes under a minute.</>
+          <>
+            Your account is credited automatically once the paybill payment is confirmed. This usually takes under a
+            minute.
+          </>
         )}
       </div>
     </div>

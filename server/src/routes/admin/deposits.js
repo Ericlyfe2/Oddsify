@@ -31,8 +31,10 @@ router.get('/pending', requireAdmin, requireRole('finance_admin'), (req, res) =>
   res.json({ pending });
 });
 
-router.post('/:id/approve',
-  requireAdmin, requireRole('finance_admin'),
+router.post(
+  '/:id/approve',
+  requireAdmin,
+  requireRole('finance_admin'),
   asyncHandler(async (req, res) => {
     const txId = req.params.id;
     const all = txStore.all() || {};
@@ -40,7 +42,11 @@ router.post('/:id/approve',
     let foundUserId = null;
     for (const [userId, txs] of Object.entries(all)) {
       for (const tx of txs) {
-        if (tx.id === txId) { foundTx = tx; foundUserId = userId; break; }
+        if (tx.id === txId) {
+          foundTx = tx;
+          foundUserId = userId;
+          break;
+        }
       }
       if (foundTx) break;
     }
@@ -105,8 +111,14 @@ router.post('/:id/approve',
     const userTxs = txStore.get(foundUserId) || [];
     const updatedTxs = userTxs.map((t) =>
       t.id === txId
-        ? { ...t, status: 'completed', balanceAfter: updated.balance, approvedAt: new Date().toISOString(), approvedBy: req.admin?.email || req.admin?.id }
-        : t
+        ? {
+            ...t,
+            status: 'completed',
+            balanceAfter: updated.balance,
+            approvedAt: new Date().toISOString(),
+            approvedBy: req.admin?.email || req.admin?.id,
+          }
+        : t,
     );
     txStore.set(foundUserId, updatedTxs);
 
@@ -120,7 +132,10 @@ router.post('/:id/approve',
     if (autoVerified) {
       logActivity(foundUserId, { kind: 'auto_verified', trigger: 'deposit_approval', singleDeposit: amount });
       recordAudit({
-        actorId: null, action: 'user.auto_verified', target: foundUserId, targetType: 'user',
+        actorId: null,
+        action: 'user.auto_verified',
+        target: foundUserId,
+        targetType: 'user',
         severity: 'info',
         meta: { singleDeposit: amount, threshold: 1000, trigger: 'deposit_approval' },
       });
@@ -130,33 +145,65 @@ router.post('/:id/approve',
 
     if (autoPromoted) {
       logActivity(foundUserId, {
-        kind: 'stage_auto_promoted', from: promotedFrom, to: promotedTo,
-        trigger: 'deposit_approval', singleDeposit: amount, totalDeposited: newTotal,
+        kind: 'stage_auto_promoted',
+        from: promotedFrom,
+        to: promotedTo,
+        trigger: 'deposit_approval',
+        singleDeposit: amount,
+        totalDeposited: newTotal,
       });
       recordAudit({
-        actorId: null, action: 'user.stage.auto_promote', target: foundUserId, targetType: 'user',
+        actorId: null,
+        action: 'user.stage.auto_promote',
+        target: foundUserId,
+        targetType: 'user',
         severity: promotedTo === 3 ? 'warning' : 'info',
-        meta: { from: promotedFrom, to: promotedTo, singleDeposit: amount, totalDeposited: newTotal, threshold: STAGE_PROMOTE_THRESHOLD, trigger: 'deposit_approval', ...(promotedTo === 3 ? { autoBlocked: true } : {}) },
+        meta: {
+          from: promotedFrom,
+          to: promotedTo,
+          singleDeposit: amount,
+          totalDeposited: newTotal,
+          threshold: STAGE_PROMOTE_THRESHOLD,
+          trigger: 'deposit_approval',
+          ...(promotedTo === 3 ? { autoBlocked: true } : {}),
+        },
       });
       emitToUser(foundUserId, 'stage:promoted', { stage: promotedTo });
     }
 
     if (autoUnblocked) {
-      logActivity(foundUserId, { kind: 'stage3_auto_unblocked', trigger: 'deposit_approval', singleDeposit: amount, threshold: STAGE3_UNBLOCK_THRESHOLD });
+      logActivity(foundUserId, {
+        kind: 'stage3_auto_unblocked',
+        trigger: 'deposit_approval',
+        singleDeposit: amount,
+        threshold: STAGE3_UNBLOCK_THRESHOLD,
+      });
       recordAudit({
-        actorId: null, action: 'user.unblocked', target: foundUserId, targetType: 'user', severity: 'info',
+        actorId: null,
+        action: 'user.unblocked',
+        target: foundUserId,
+        targetType: 'user',
+        severity: 'info',
         meta: { trigger: 'deposit_approval', singleDeposit: amount, threshold: STAGE3_UNBLOCK_THRESHOLD },
       });
       emitToUser(foundUserId, 'account:unblocked', { trigger: 'deposit_approval' });
     }
 
-    audit(req, { action: 'deposit.approve', target: foundUserId, targetType: 'user', severity: 'info', meta: { amount, transactionId: txId } });
+    audit(req, {
+      action: 'deposit.approve',
+      target: foundUserId,
+      targetType: 'user',
+      severity: 'info',
+      meta: { amount, transactionId: txId },
+    });
     res.json({ ok: true, transaction: updatedTxs.find((t) => t.id === txId) });
-  })
+  }),
 );
 
-router.post('/:id/reject',
-  requireAdmin, requireRole('finance_admin'),
+router.post(
+  '/:id/reject',
+  requireAdmin,
+  requireRole('finance_admin'),
   validate(z.object({ reason: z.string().max(500).optional() })),
   asyncHandler(async (req, res) => {
     const txId = req.params.id;
@@ -165,7 +212,11 @@ router.post('/:id/reject',
     let foundUserId = null;
     for (const [userId, txs] of Object.entries(all)) {
       for (const tx of txs) {
-        if (tx.id === txId) { foundTx = tx; foundUserId = userId; break; }
+        if (tx.id === txId) {
+          foundTx = tx;
+          foundUserId = userId;
+          break;
+        }
       }
       if (foundTx) break;
     }
@@ -177,21 +228,43 @@ router.post('/:id/reject',
     const userTxs = txStore.get(foundUserId) || [];
     const updatedTxs = userTxs.map((t) =>
       t.id === txId
-        ? { ...t, status: 'rejected', rejectedAt: new Date().toISOString(), rejectedBy: req.admin?.email || req.admin?.id, rejectReason: req.body?.reason || null }
-        : t
+        ? {
+            ...t,
+            status: 'rejected',
+            rejectedAt: new Date().toISOString(),
+            rejectedBy: req.admin?.email || req.admin?.id,
+            rejectReason: req.body?.reason || null,
+          }
+        : t,
     );
     txStore.set(foundUserId, updatedTxs);
 
-    logActivity(foundUserId, { kind: 'deposit_rejected', amount: foundTx.amount, by: req.admin?.email, reason: req.body?.reason });
+    logActivity(foundUserId, {
+      kind: 'deposit_rejected',
+      amount: foundTx.amount,
+      by: req.admin?.email,
+      reason: req.body?.reason,
+    });
     emitToUser(foundUserId, 'deposit:rejected', {
       transaction: updatedTxs.find((t) => t.id === txId),
       reason: req.body?.reason,
     });
-    emitAdmin('deposit:rejected', { userId: foundUserId, amount: foundTx.amount, transactionId: txId, rejectedBy: req.admin?.email });
+    emitAdmin('deposit:rejected', {
+      userId: foundUserId,
+      amount: foundTx.amount,
+      transactionId: txId,
+      rejectedBy: req.admin?.email,
+    });
 
-    audit(req, { action: 'deposit.reject', target: foundUserId, targetType: 'user', severity: 'warning', meta: { amount: foundTx.amount, transactionId: txId, reason: req.body?.reason } });
+    audit(req, {
+      action: 'deposit.reject',
+      target: foundUserId,
+      targetType: 'user',
+      severity: 'warning',
+      meta: { amount: foundTx.amount, transactionId: txId, reason: req.body?.reason },
+    });
     res.json({ ok: true });
-  })
+  }),
 );
 
 export default router;

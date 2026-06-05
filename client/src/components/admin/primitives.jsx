@@ -61,10 +61,24 @@ export function Drawer({ open, title, onClose, children, footer, width }) {
       <aside className="adm-drawer" style={width ? { width } : undefined} onClick={(e) => e.stopPropagation()}>
         <header className="adm-drawer-head">
           <h3 style={{ flex: 1 }}>{title}</h3>
-          <button className="adm-icon-btn" onClick={onClose} aria-label="Close"><IconClose /></button>
+          <button className="adm-icon-btn" onClick={onClose} aria-label="Close">
+            <IconClose />
+          </button>
         </header>
         <div className="adm-drawer-body">{children}</div>
-        {footer && <div style={{ padding: 16, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>{footer}</div>}
+        {footer && (
+          <div
+            style={{
+              padding: 16,
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              gap: 8,
+              justifyContent: 'flex-end',
+            }}
+          >
+            {footer}
+          </div>
+        )}
       </aside>
     </div>
   );
@@ -111,14 +125,20 @@ export function Empty({ title = 'Nothing here yet', subtitle, action }) {
 }
 
 export function Spinner({ label = 'Loading…' }) {
-  return <span className="adm-loading"><span className="adm-spinner" /> {label}</span>;
+  return (
+    <span className="adm-loading">
+      <span className="adm-spinner" /> {label}
+    </span>
+  );
 }
 
 export function SkeletonRow({ cols = 6 }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i}><div className="adm-skel" style={{ height: 14, width: `${50 + (i * 7) % 40}%` }} /></td>
+        <td key={i}>
+          <div className="adm-skel" style={{ height: 14, width: `${50 + ((i * 7) % 40)}%` }} />
+        </td>
       ))}
     </tr>
   );

@@ -46,9 +46,7 @@ function normaliseFixture(r, providerId) {
   const isLive = r.status?.ongoing === true;
   const finished = r.status?.finished === true;
   const cancelled = r.status?.cancelled === true;
-  const minute = r.status?.liveTime?.short
-    ? r.status.liveTime.short.replace(/\s*[‎]?\s*’\s*$/, "'")
-    : null;
+  const minute = r.status?.liveTime?.short ? r.status.liveTime.short.replace(/\s*[‎]?\s*’\s*$/, "'") : null;
   const half = r.status?.liveTime?.basePeriod === 45 ? '1H' : '2H';
 
   return {

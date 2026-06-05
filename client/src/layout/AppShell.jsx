@@ -24,10 +24,13 @@ export { useAccount, useToast } from '../providers/AccountProvider.jsx';
 export default function AppShell() {
   return (
     <SlipProvider>
-      <div className="odd-shell" style={{
-        background: 'var(--bg)',
-        minHeight: '100vh',
-      }}>
+      <div
+        className="odd-shell"
+        style={{
+          background: 'var(--bg)',
+          minHeight: '100vh',
+        }}
+      >
         <Outlet />
       </div>
       <OddBetSlipFAB />

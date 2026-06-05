@@ -56,10 +56,7 @@ async function ensureSchema() {
 }
 
 async function loadFromPg(name) {
-  const { rows } = await getPool().query(
-    'SELECT key, data FROM kv_store WHERE store_name = $1',
-    [name]
-  );
+  const { rows } = await getPool().query('SELECT key, data FROM kv_store WHERE store_name = $1', [name]);
   const out = {};
   for (const r of rows) out[r.key] = r.data;
   return out;
@@ -71,7 +68,7 @@ async function upsertPg(name, key, data) {
        VALUES ($1, $2, $3, NOW())
      ON CONFLICT (store_name, key)
      DO UPDATE SET data = EXCLUDED.data, updated_at = NOW();`,
-    [name, key, data]
+    [name, key, data],
   );
 }
 
@@ -128,10 +125,12 @@ export function createStore(name, fallback = {}) {
   const flushPg = async () => {
     if (!state.dirty) return;
     state.dirty = false;
-    const keys    = [...state.dirtyKeys];   state.dirtyKeys.clear();
-    const deletes = [...state.deletedKeys]; state.deletedKeys.clear();
+    const keys = [...state.dirtyKeys];
+    state.dirtyKeys.clear();
+    const deletes = [...state.deletedKeys];
+    state.deletedKeys.clear();
     try {
-      for (const k of keys)    await upsertPg(name, k, state.data[k]);
+      for (const k of keys) await upsertPg(name, k, state.data[k]);
       for (const k of deletes) await deletePg(name, k);
     } catch (e) {
       // Put the keys back so a later flush retries them.
@@ -149,7 +148,10 @@ export function createStore(name, fallback = {}) {
   };
 
   const flush = () => {
-    if (state.timer) { clearTimeout(state.timer); state.timer = null; }
+    if (state.timer) {
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
     if (useDb) {
       // Return the promise so SIGTERM can await it.
       state.pendingFlush = flushPg();
@@ -171,29 +173,53 @@ export function createStore(name, fallback = {}) {
       }
     }
     if (state.timer) return;
-    state.timer = setTimeout(() => {
-      state.timer = null;
-      flush();
-    }, useDb ? 200 : 50);
+    state.timer = setTimeout(
+      () => {
+        state.timer = null;
+        flush();
+      },
+      useDb ? 200 : 50,
+    );
   };
 
   const api = {
-    all() { ensureLoaded(); return state.data; },
-    get(k) { ensureLoaded(); return state.data[k]; },
-    set(k, v) { ensureLoaded(); state.data[k] = v; markDirty(k); return v; },
-    delete(k) { ensureLoaded(); delete state.data[k]; markDirty(k, true); },
+    all() {
+      ensureLoaded();
+      return state.data;
+    },
+    get(k) {
+      ensureLoaded();
+      return state.data[k];
+    },
+    set(k, v) {
+      ensureLoaded();
+      state.data[k] = v;
+      markDirty(k);
+      return v;
+    },
+    delete(k) {
+      ensureLoaded();
+      delete state.data[k];
+      markDirty(k, true);
+    },
     update(k, fn) {
       ensureLoaded();
       state.data[k] = fn(state.data[k]);
       markDirty(k);
       return state.data[k];
     },
-    list() { ensureLoaded(); return Object.values(state.data); },
+    list() {
+      ensureLoaded();
+      return Object.values(state.data);
+    },
     flush,
 
     // Internal: called by initStores() to populate the in-memory cache.
     async _load() {
-      if (!useDb) { state.loaded = true; return; }
+      if (!useDb) {
+        state.loaded = true;
+        return;
+      }
       const fromPg = await loadFromPg(name);
       state.data = fromPg;
       state.loaded = true;
@@ -223,10 +249,20 @@ export async function initStores() {
 
 async function flushAll() {
   for (const s of stores.values()) {
-    try { await s.flush(); } catch { /* logged inside */ }
+    try {
+      await s.flush();
+    } catch {
+      /* logged inside */
+    }
   }
   if (pool) await pool.end().catch(() => {});
 }
-process.on('SIGINT',  () => { flushAll().finally(() => process.exit(0)); });
-process.on('SIGTERM', () => { flushAll().finally(() => process.exit(0)); });
-process.on('beforeExit', () => { flushAll(); });
+process.on('SIGINT', () => {
+  flushAll().finally(() => process.exit(0));
+});
+process.on('SIGTERM', () => {
+  flushAll().finally(() => process.exit(0));
+});
+process.on('beforeExit', () => {
+  flushAll();
+});

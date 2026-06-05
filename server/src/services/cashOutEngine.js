@@ -17,9 +17,9 @@ import { emitToUser as defaultEmit } from './realtime.js';
 
 let _emit = defaultEmit;
 
-const openBetsByFixture = new Map();   // fixtureKey -> Set<betId>
-const betsById          = new Map();   // betId -> bet receipt (shallow copy with live fields)
-const lastOfferByBet    = new Map();   // betId -> { cashOut, ts }
+const openBetsByFixture = new Map(); // fixtureKey -> Set<betId>
+const betsById = new Map(); // betId -> bet receipt (shallow copy with live fields)
+const lastOfferByBet = new Map(); // betId -> { cashOut, ts }
 
 const DEDUP_THRESHOLD = 0.005; // 0.5%
 
@@ -59,7 +59,10 @@ export function unregisterBet(betId) {
   if (!bet) return;
   for (const leg of bet.legs || []) {
     const set = openBetsByFixture.get(leg.matchId);
-    if (set) { set.delete(betId); if (set.size === 0) openBetsByFixture.delete(leg.matchId); }
+    if (set) {
+      set.delete(betId);
+      if (set.size === 0) openBetsByFixture.delete(leg.matchId);
+    }
   }
   betsById.delete(betId);
   lastOfferByBet.delete(betId);
@@ -83,7 +86,10 @@ export function computeOffer(bet, oddsLookup, houseMargin) {
   let probProduct = 1;
   for (const leg of bet.legs || []) {
     if (leg.finished && leg.won === false) return 0;
-    if (leg.finished && leg.won === true)  { probProduct *= 1; continue; }
+    if (leg.finished && leg.won === true) {
+      probProduct *= 1;
+      continue;
+    }
     const current = oddsLookup(leg.matchId, leg.market, leg.outcome);
     if (!current || current < 1.0001) return 0; // no market or impossible price
     probProduct *= 1 / current;
@@ -104,7 +110,10 @@ export function onLiveChange(fixtureKey, oddsLookup, houseMargin) {
   if (!bets || bets.size === 0) return;
   for (const betId of bets) {
     const bet = betsById.get(betId);
-    if (!bet || bet.status !== 'open') { unregisterBet(betId); continue; }
+    if (!bet || bet.status !== 'open') {
+      unregisterBet(betId);
+      continue;
+    }
     const offer = computeOffer(bet, oddsLookup, houseMargin);
     if (offer === null) continue; // system bets etc.
     const last = lastOfferByBet.get(betId);
@@ -118,7 +127,12 @@ export function onLiveChange(fixtureKey, oddsLookup, houseMargin) {
     };
     lastOfferByBet.set(betId, { cashOut: payload.cashOut, ts: payload.ts });
     _emit(bet.userId, 'cashout:offer', payload);
-    if (_onOffer) try { _onOffer(bet, payload); } catch { /* never break the loop */ }
+    if (_onOffer)
+      try {
+        _onOffer(bet, payload);
+      } catch {
+        /* never break the loop */
+      }
   }
 }
 
@@ -131,16 +145,33 @@ export function onLegSettled(fixtureKey, won) {
   if (!bets || bets.size === 0) return;
   for (const betId of bets) {
     const bet = betsById.get(betId);
-    if (!bet || bet.status !== 'open') { unregisterBet(betId); continue; }
+    if (!bet || bet.status !== 'open') {
+      unregisterBet(betId);
+      continue;
+    }
     // Mark the legs on this fixture as finished/won in our cached copy.
     for (const leg of bet.legs) {
-      if (leg.matchId === fixtureKey) { leg.finished = true; leg.won = !!won; }
+      if (leg.matchId === fixtureKey) {
+        leg.finished = true;
+        leg.won = !!won;
+      }
     }
     if (!won) {
-      const payload = { betId, cashOut: 0, potentialWin: Number((bet.stake * bet.totalOdds).toFixed(2)), ts: Date.now(), reason: 'leg_lost' };
+      const payload = {
+        betId,
+        cashOut: 0,
+        potentialWin: Number((bet.stake * bet.totalOdds).toFixed(2)),
+        ts: Date.now(),
+        reason: 'leg_lost',
+      };
       lastOfferByBet.set(betId, { cashOut: 0, ts: payload.ts });
       _emit(bet.userId, 'cashout:offer', payload);
-      if (_onOffer) try { _onOffer(bet, payload); } catch { /* never break the loop */ }
+      if (_onOffer)
+        try {
+          _onOffer(bet, payload);
+        } catch {
+          /* never break the loop */
+        }
     }
   }
 }
@@ -158,4 +189,6 @@ export function sweep() {
 
 let _onOffer = null;
 /** Register a side-effect callback invoked every time cashout:offer is emitted. */
-export function onOffer(handler) { _onOffer = handler; }
+export function onOffer(handler) {
+  _onOffer = handler;
+}

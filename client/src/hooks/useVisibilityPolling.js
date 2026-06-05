@@ -8,10 +8,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 export function useVisibilityPolling(fetcher, intervalMs, deps = []) {
-  const [data, setData]       = useState(null);
-  const [error, setError]     = useState(null);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const timerRef              = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,7 +19,10 @@ export function useVisibilityPolling(fetcher, intervalMs, deps = []) {
     async function fetchNow() {
       try {
         const v = await fetcher();
-        if (!cancelled) { setData(v); setError(null); }
+        if (!cancelled) {
+          setData(v);
+          setError(null);
+        }
       } catch (e) {
         if (!cancelled) setError(e);
       } finally {
@@ -34,12 +37,17 @@ export function useVisibilityPolling(fetcher, intervalMs, deps = []) {
     }
 
     function stop() {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
 
     function onVis() {
-      if (document.visibilityState === 'visible') { fetchNow(); start(); }
-      else stop();
+      if (document.visibilityState === 'visible') {
+        fetchNow();
+        start();
+      } else stop();
     }
 
     if (document.visibilityState === 'visible') start();
@@ -50,7 +58,7 @@ export function useVisibilityPolling(fetcher, intervalMs, deps = []) {
       stop();
       document.removeEventListener('visibilitychange', onVis);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   return { data, error, loading };

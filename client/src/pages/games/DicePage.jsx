@@ -9,10 +9,10 @@ const MAX_BET = 15000;
 const RIG_LOSS_RATE = 0.7;
 const CHIPS = [
   { v: 0.2, color: '#1a1a1a' },
-  { v: 1,   color: '#c81e1e' },
-  { v: 5,   color: '#0ea5e9' },
-  { v: 10,  color: '#a855f7' },
-  { v: 50,  color: '#15803d' },
+  { v: 1, color: '#c81e1e' },
+  { v: 5, color: '#0ea5e9' },
+  { v: 10, color: '#a855f7' },
+  { v: 50, color: '#15803d' },
   { v: 100, color: '#f97316' },
 ];
 
@@ -35,7 +35,7 @@ export default function DicePage() {
   // Classic dice math: win chance = roll-under-X / 100. Multiplier = 99 / chance.
   // (1% house edge — standard for provably-fair dice.)
   const { chance, multiplier, payout } = useMemo(() => {
-    const c = mode === 'over' ? (99 - target) : (target);
+    const c = mode === 'over' ? 99 - target : target;
     const chancePct = Math.max(0.01, Math.min(98, c));
     const mult = chancePct > 0 ? 99 / chancePct : 0;
     return {
@@ -51,14 +51,21 @@ export default function DicePage() {
 
   const handleBetInput = (e) => {
     const raw = e.target.value.replace(/[^0-9.]/g, '');
-    if (!raw) { setBet(0); return; }
+    if (!raw) {
+      setBet(0);
+      return;
+    }
     setBet(Math.min(MAX_BET, Number(raw)));
   };
 
   const onChip = (v) => setBet(Math.min(MAX_BET, Number((bet + v).toFixed(2))));
 
   const onRoll = () => {
-    if (!account) { toast('Sign in to play.'); navigate('/login?next=/casino/dice'); return; }
+    if (!account) {
+      toast('Sign in to play.');
+      navigate('/login?next=/casino/dice');
+      return;
+    }
     if (!validBet || rolling) return;
     adjustBalance(-bet);
     setResult(null);
@@ -96,27 +103,66 @@ export default function DicePage() {
       <div className="gp-frame">
         <div className="gp-head">
           <button type="button" className="gp-back" onClick={() => navigate('/casino')} aria-label="Back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
           </button>
           <div className="gp-title">Dice</div>
           <button type="button" className="gp-menu" aria-label="Menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
         </div>
 
         <div className="gp-balance-row">
-          <svg className="gp-wallet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+          <svg
+            className="gp-wallet-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+          </svg>
           <span>GHS {fmt(balance)}</span>
-          <button type="button" className="gp-add-money" onClick={openDeposit}>+ Add Money</button>
+          <button type="button" className="gp-add-money" onClick={openDeposit}>
+            + Add Money
+          </button>
         </div>
 
         <div className="gp-stage dice-stage">
-          <div className={`dice-die${rolling ? ' rolling' : ''}`}>
-            {rolling ? '?' : (roll != null ? roll : '—')}
-          </div>
+          <div className={`dice-die${rolling ? ' rolling' : ''}`}>{rolling ? '?' : roll != null ? roll : '—'}</div>
           <div className="dice-toggle">
-            <button type="button" className={mode === 'under' ? 'active' : ''} onClick={() => setMode('under')}>Roll Under</button>
-            <button type="button" className={mode === 'over'  ? 'active' : ''} onClick={() => setMode('over')}>Roll Over</button>
+            <button type="button" className={mode === 'under' ? 'active' : ''} onClick={() => setMode('under')}>
+              Roll Under
+            </button>
+            <button type="button" className={mode === 'over' ? 'active' : ''} onClick={() => setMode('over')}>
+              Roll Over
+            </button>
           </div>
           <div>
             <div className="dice-target-num">{target}</div>
@@ -134,11 +180,17 @@ export default function DicePage() {
             </div>
           </div>
           <div className="gp-stat">
-            <div>Multiplier<strong>{multiplier.toFixed(2)}x</strong></div>
-            <div>Win Chance<strong>{chance.toFixed(2)}%</strong></div>
-            <div>Payout<strong>{fmt(payout)}</strong></div>
+            <div>
+              Multiplier<strong>{multiplier.toFixed(2)}x</strong>
+            </div>
+            <div>
+              Win Chance<strong>{chance.toFixed(2)}%</strong>
+            </div>
+            <div>
+              Payout<strong>{fmt(payout)}</strong>
+            </div>
           </div>
-          {result === 'win'  && <div className="gp-result win">🎉 You won {fmt(payout)} GHS</div>}
+          {result === 'win' && <div className="gp-result win">🎉 You won {fmt(payout)} GHS</div>}
           {result === 'lose' && <div className="gp-result lose">Roll didn't land — try again</div>}
         </div>
 
@@ -155,9 +207,7 @@ export default function DicePage() {
           />
         </div>
 
-        {overBalance && (
-          <div className="gp-warn">Bet Amount seems higher than Wallet Balance.</div>
-        )}
+        {overBalance && <div className="gp-warn">Bet Amount seems higher than Wallet Balance.</div>}
 
         <div className="gp-slider" style={{ padding: '0 8px' }}>
           <span>{MIN_BET}</span>
@@ -190,12 +240,7 @@ export default function DicePage() {
         <div className="gp-minmax">Min: {MIN_BET} · Max: 15K</div>
 
         <div className="gp-actions single">
-          <button
-            type="button"
-            className="gp-action gold"
-            disabled={!validBet || rolling}
-            onClick={onRoll}
-          >
+          <button type="button" className="gp-action gold" disabled={!validBet || rolling} onClick={onRoll}>
             {rolling ? 'Rolling…' : 'Roll Dice'}
           </button>
         </div>

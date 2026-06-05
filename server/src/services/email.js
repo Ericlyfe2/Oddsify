@@ -26,9 +26,9 @@ export async function sendMail({ to, subject, text, html }) {
 
 export async function sendOtp(to, code, purpose = 'verify') {
   const subjectMap = {
-    verify:        'Your Oddsify verification code',
-    'reset':       'Reset your Oddsify password',
-    'login':       'Oddsify login verification',
+    verify: 'Your Oddsify verification code',
+    reset: 'Reset your Oddsify password',
+    login: 'Oddsify login verification',
   };
   const subject = subjectMap[purpose] || 'Your Oddsify code';
   const text = `Your Oddsify code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`;

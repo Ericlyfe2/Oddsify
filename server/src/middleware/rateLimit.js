@@ -7,11 +7,22 @@ const standardOpts = {
   message: { error: 'Too many requests — please try again shortly.' },
 };
 
-const emailKey = (req) =>
-  `${ipKeyGenerator(req.ip)}|${(req.body?.email || '').toLowerCase()}`;
+const emailKey = (req) => `${ipKeyGenerator(req.ip)}|${(req.body?.email || '').toLowerCase()}`;
 
-// Login is the only rate-limited endpoint (user + admin login share it).
-// Keyed by IP + submitted email so a single account/IP can't brute-force.
+// Global rate limiter applied to all /api routes.
+// 100 req/min per IP keeps abuse in check without breaking UX.
+// Login is separately rate-limited below with a tighter window.
+export const apiLimiter = rateLimit({
+  ...standardOpts,
+  windowMs: 60 * 1000,
+  limit: RATE_LIMITS.globalMax,
+  message: { error: 'Too many requests. Slow down.' },
+  skip: (req) => req.path === '/api/health',
+});
+
+// Login is rate-limited with per-email keying so a single account/IP
+// can't brute-force the password.
+// Used for both user and admin login.
 export const loginLimiter = rateLimit({
   ...standardOpts,
   windowMs: 15 * 60 * 1000,

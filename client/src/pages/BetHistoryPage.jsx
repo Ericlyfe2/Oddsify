@@ -15,8 +15,13 @@ import { useNavigate } from 'react-router-dom';
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import {
-  T, fmtCedi,
-  OddPageHeader, OddSegmented, OddStatusChip, OddIcon,
+  T,
+  fmtCedi,
+  useTokens,
+  OddPageHeader,
+  OddSegmented,
+  OddStatusChip,
+  OddIcon,
 } from '../components/odd/primitives.jsx';
 
 const STATUS_KIND = {
@@ -44,6 +49,7 @@ function legResult(leg) {
 }
 
 export default function BetHistoryPage() {
+  const T = useTokens();
   const navigate = useNavigate();
   const { account, refresh } = useAccount();
   const { toast } = useToast();
@@ -61,7 +67,7 @@ export default function BetHistoryPage() {
       setBets(items);
       // Auto-expand the first open bet so the user lands on leg detail,
       // matching the prototype's default state.
-      const firstOpen = items.find(b => b.status === 'open');
+      const firstOpen = items.find((b) => b.status === 'open');
       if (firstOpen) setExpanded(firstOpen.id);
     } catch {
       setBets([]);
@@ -69,21 +75,28 @@ export default function BetHistoryPage() {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { if (account) load(); }, [account, load]);
+  useEffect(() => {
+    if (account) load();
+  }, [account, load]);
 
   // Surface open-bet count on the window so the bottom nav badge (legacy
   // path) and any future consumer can read it without re-fetching.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.__oddsifyOpenCount = bets.filter(b => b.status === 'open').length;
+      window.__oddsifyOpenCount = bets.filter((b) => b.status === 'open').length;
     }
   }, [bets]);
 
-  const openBets = useMemo(() => bets.filter(b => b.status === 'open'), [bets]);
-  const history  = useMemo(() => bets.filter(b => b.status !== 'open'), [bets]);
+  const openBets = useMemo(() => bets.filter((b) => b.status === 'open'), [bets]);
+  const history = useMemo(() => bets.filter((b) => b.status !== 'open'), [bets]);
 
   const copy = (text) => {
-    try { navigator.clipboard?.writeText(text); toast(`Copied code ${text}`); } catch { /* ignore */ }
+    try {
+      navigator.clipboard?.writeText(text);
+      toast(`Copied code ${text}`);
+    } catch {
+      /* ignore */
+    }
   };
 
   const onCashOut = async (bet) => {
@@ -108,35 +121,54 @@ export default function BetHistoryPage() {
 
   return (
     <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
-      <OddPageHeader title="My Bets" subtitle="Open bets & history"
+      <OddPageHeader
+        title="My Bets"
+        subtitle="Open bets & history"
         right={
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 12px 8px 10px', borderRadius: 999,
-            background: T.greenBright, color: T.goldDark,
-            fontWeight: 700, fontSize: 13,
-            fontVariantNumeric: 'tabular-nums',
-          }}>GHS {fmtCedi(account.balance)}</div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 12px 8px 10px',
+              borderRadius: 999,
+              background: T.greenBright,
+              color: T.goldDark,
+              fontWeight: 700,
+              fontSize: 13,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            GHS {fmtCedi(account.balance)}
+          </div>
         }
       />
 
       <div style={{ padding: '14px 16px 8px' }}>
-        <OddSegmented full
+        <OddSegmented
+          full
           options={[
             { value: 'open', label: `Open Bets · ${openBets.length}` },
             { value: 'hist', label: 'Bet History' },
           ]}
-          value={tab} onChange={setTab}
+          value={tab}
+          onChange={setTab}
         />
       </div>
 
       {loading ? (
         <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
-          {[0, 1].map(i => (
-            <div key={i} style={{
-              height: 220, borderRadius: 16, background: T.surface,
-              border: `1px solid ${T.line}`, opacity: 0.6 + i * 0.2,
-            }} />
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              style={{
+                height: 220,
+                borderRadius: 16,
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                opacity: 0.6 + i * 0.2,
+              }}
+            />
           ))}
         </div>
       ) : tab === 'open' ? (
@@ -144,8 +176,10 @@ export default function BetHistoryPage() {
           <EmptyState icon="ticket" title="No open bets" hint="Tap odds on a match to build a slip." />
         ) : (
           <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
-            {openBets.map(bet => (
-              <OpenBetCard key={bet.id} bet={bet}
+            {openBets.map((bet) => (
+              <OpenBetCard
+                key={bet.id}
+                bet={bet}
                 open={expanded === bet.id}
                 onToggle={() => setExpanded(expanded === bet.id ? null : bet.id)}
                 onCopy={() => copy(bet.code || bet.id)}
@@ -155,14 +189,14 @@ export default function BetHistoryPage() {
             ))}
           </div>
         )
+      ) : history.length === 0 ? (
+        <EmptyState icon="ticket" title="No bet history yet" hint="Settled bets will appear here." />
       ) : (
-        history.length === 0 ? (
-          <EmptyState icon="ticket" title="No bet history yet" hint="Settled bets will appear here." />
-        ) : (
-          <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 10 }}>
-            {history.map(h => <HistoryRow key={h.id} bet={h} />)}
-          </div>
-        )
+        <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 10 }}>
+          {history.map((h) => (
+            <HistoryRow key={h.id} bet={h} />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -171,14 +205,28 @@ export default function BetHistoryPage() {
 function Stat({ label, value, dark = false, accent }) {
   return (
     <div>
-      <div style={{
-        fontSize: 9, fontWeight: 700, letterSpacing: 0.6,
-        color: dark ? 'rgba(255,255,255,0.5)' : T.inkSoft, marginBottom: 2,
-      }}>{label}</div>
-      <div style={{
-        fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-        color: accent || (dark ? '#fff' : T.ink), letterSpacing: -0.2,
-      }}>{value}</div>
+      <div
+        style={{
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: 0.6,
+          color: dark ? 'rgba(255,255,255,0.5)' : T.inkSoft,
+          marginBottom: 2,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          fontVariantNumeric: 'tabular-nums',
+          color: accent || (dark ? '#fff' : T.ink),
+          letterSpacing: -0.2,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -192,24 +240,38 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
   const cashOutValue = Number(bet.cashOutValue || 0);
 
   return (
-    <div style={{
-      background: T.surface, borderRadius: 16,
-      border: `1px solid ${T.line}`, overflow: 'hidden',
-    }}>
-      <div style={{
-        background: open ? T.greenDeep : 'transparent',
-        color: open ? '#fff' : T.ink,
-        padding: '14px 14px 12px', transition: 'background 180ms',
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 10,
-        }}>
+    <div
+      style={{
+        background: T.surface,
+        borderRadius: 16,
+        border: `1px solid ${T.line}`,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          background: open ? T.greenDeep : 'transparent',
+          color: open ? '#fff' : T.ink,
+          padding: '14px 14px 12px',
+          transition: 'background 180ms',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 10,
+          }}
+        >
           <OddStatusChip kind="open" label={`OPEN · ${bet.type || (legs.length > 1 ? 'Multiple' : 'Single')}`} />
-          <span style={{
-            fontSize: 11, opacity: open ? 0.6 : 0.5,
-            color: open ? '#fff' : T.inkSoft,
-          }}>
+          <span
+            style={{
+              fontSize: 11,
+              opacity: open ? 0.6 : 0.5,
+              color: open ? '#fff' : T.inkSoft,
+            }}
+          >
             {legs.length} selection{legs.length === 1 ? '' : 's'} · {placedAt(bet.placedAt || bet.createdAt)}
           </span>
         </div>
@@ -219,76 +281,139 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
           <Stat label="POTENTIAL" value={`GHS ${fmtCedi(potential)}`} dark={open} accent={T.greenBright} />
         </div>
 
-        <div style={{
-          marginTop: 12, padding: '10px 12px', borderRadius: 10,
-          background: open ? 'rgba(255,255,255,0.07)' : T.surfaceAlt,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+        <div
+          style={{
+            marginTop: 12,
+            padding: '10px 12px',
+            borderRadius: 10,
+            background: open ? 'rgba(255,255,255,0.07)' : T.surfaceAlt,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <div>
-            <div style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 0.6, opacity: 0.6,
-            }}>BOOKING CODE</div>
-            <div style={{
-              fontSize: 18, fontWeight: 700,
-              fontVariantNumeric: 'tabular-nums', letterSpacing: 0.8,
-            }}>{code}</div>
+            <div
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: 0.6,
+                opacity: 0.6,
+              }}
+            >
+              BOOKING CODE
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                letterSpacing: 0.8,
+              }}
+            >
+              {code}
+            </div>
           </div>
-          <button type="button" onClick={onCopy} style={{
-            padding: '6px 10px', borderRadius: 8,
-            background: open ? T.greenBright : T.greenDeep,
-            color: open ? T.goldDark : '#fff',
-            fontSize: 11, fontWeight: 700,
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            border: 0, cursor: 'pointer',
-          }}>
+          <button
+            type="button"
+            onClick={onCopy}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: open ? T.greenBright : T.greenDeep,
+              color: open ? T.goldDark : '#fff',
+              fontSize: 11,
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              border: 0,
+              cursor: 'pointer',
+            }}
+          >
             <OddIcon name="check" size={12} color={open ? T.goldDark : '#fff'} />
             Copy
           </button>
         </div>
 
         {cashOutValue > 0 && (
-          <button type="button" onClick={onCashOut} disabled={cashingOut} style={{
-            marginTop: 10, width: '100%',
-            padding: '12px 14px', borderRadius: 12,
-            background: open ? 'rgba(247, 201, 72, 0.2)' : T.gold,
-            color: open ? T.gold : T.greenDeep,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            fontWeight: 700, fontSize: 13,
-            border: open ? `1px solid ${T.gold}` : 0,
-            cursor: cashingOut ? 'wait' : 'pointer',
-            opacity: cashingOut ? 0.7 : 1,
-          }}>
+          <button
+            type="button"
+            onClick={onCashOut}
+            disabled={cashingOut}
+            style={{
+              marginTop: 10,
+              width: '100%',
+              padding: '12px 14px',
+              borderRadius: 12,
+              background: open ? 'rgba(247, 201, 72, 0.2)' : T.gold,
+              color: open ? T.gold : T.greenDeep,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontWeight: 700,
+              fontSize: 13,
+              border: open ? `1px solid ${T.gold}` : 0,
+              cursor: cashingOut ? 'wait' : 'pointer',
+              opacity: cashingOut ? 0.7 : 1,
+            }}
+          >
             <span>{cashingOut ? 'Cashing out…' : 'Cash Out'}</span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>GHS {fmtCedi(cashOutValue)}</span>
           </button>
         )}
       </div>
 
-      <button type="button" onClick={onToggle} style={{
-        width: '100%', padding: '10px 14px',
-        background: T.surface, borderTop: `1px solid ${T.line}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        fontSize: 12, fontWeight: 600, color: T.inkSoft,
-        border: 0, cursor: 'pointer',
-      }}>
-        <span>{open ? 'Hide' : 'Show'} {legs.length} leg{legs.length === 1 ? '' : 's'}</span>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={{
+          width: '100%',
+          padding: '10px 14px',
+          background: T.surface,
+          borderTop: `1px solid ${T.line}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 12,
+          fontWeight: 600,
+          color: T.inkSoft,
+          border: 0,
+          cursor: 'pointer',
+        }}
+      >
+        <span>
+          {open ? 'Hide' : 'Show'} {legs.length} leg{legs.length === 1 ? '' : 's'}
+        </span>
         <OddIcon name={open ? 'chevU' : 'chevD'} size={14} color={T.inkSoft} />
       </button>
       {open && (
         <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column' }}>
           {legs.map((leg, i) => (
-            <div key={i} style={{
-              padding: '12px 0',
-              borderBottom: i < legs.length - 1 ? `1px dashed ${T.line}` : 'none',
-            }}>
-              <div style={{
-                display: 'flex', justifyContent: 'space-between',
-                gap: 8, alignItems: 'flex-start',
-              }}>
+            <div
+              key={i}
+              style={{
+                padding: '12px 0',
+                borderBottom: i < legs.length - 1 ? `1px dashed ${T.line}` : 'none',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  alignItems: 'flex-start',
+                }}
+              >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 13, fontWeight: 700, color: T.ink, letterSpacing: -0.1,
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: T.ink,
+                      letterSpacing: -0.1,
+                    }}
+                  >
                     {leg.home} <span style={{ color: T.inkDim, fontWeight: 500 }}>vs</span> {leg.away}
                   </div>
                   <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
@@ -298,18 +423,25 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
                     </span>
                   </div>
                 </div>
-                <div style={{
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'flex-end', gap: 4,
-                }}>
-                  <span style={{
-                    fontSize: 13, fontWeight: 700, color: T.ink,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>{Number(leg.odds || 0).toFixed(2)}</span>
-                  <OddStatusChip
-                    kind={STATUS_KIND[legResult(leg)] || 'pending'}
-                    label={legResult(leg).toUpperCase()}
-                  />
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: T.ink,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {Number(leg.odds || 0).toFixed(2)}
+                  </span>
+                  <OddStatusChip kind={STATUS_KIND[legResult(leg)] || 'pending'} label={legResult(leg).toUpperCase()} />
                 </div>
               </div>
             </div>
@@ -325,37 +457,55 @@ function HistoryRow({ bet }) {
   const win = Number(bet.payout || bet.winAmount || bet.win || 0);
   const odds = Number(bet.totalOdds || bet.odds || 0);
   return (
-    <div style={{
-      background: T.surface, borderRadius: 14,
-      border: `1px solid ${T.line}`,
-      padding: '12px 14px',
-      display: 'flex', alignItems: 'center', gap: 12,
-    }}>
-      <div style={{
-        width: 4, alignSelf: 'stretch', borderRadius: 2,
-        background: isWon ? T.greenBright : T.danger,
-      }} />
+    <div
+      style={{
+        background: T.surface,
+        borderRadius: 14,
+        border: `1px solid ${T.line}`,
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      <div
+        style={{
+          width: 4,
+          alignSelf: 'stretch',
+          borderRadius: 2,
+          background: isWon ? T.greenBright : T.danger,
+        }}
+      />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <span style={{
-            fontSize: 14, fontWeight: 700, color: T.ink,
-            fontVariantNumeric: 'tabular-nums',
-          }}>#{bet.code || bet.id?.slice(-8) || '—'}</span>
-          <OddStatusChip kind={STATUS_KIND[bet.status] || bet.status}
-            label={(bet.status || '').toUpperCase()} />
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: T.ink,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            #{bet.code || bet.id?.slice(-8) || '—'}
+          </span>
+          <OddStatusChip kind={STATUS_KIND[bet.status] || bet.status} label={(bet.status || '').toUpperCase()} />
         </div>
         <div style={{ fontSize: 11, color: T.inkSoft }}>
           {placedAt(bet.placedAt || bet.createdAt)} · stake GHS {fmtCedi(bet.stake)} · {odds.toFixed(2)}x
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div style={{
-          fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-          color: isWon ? T.greenBright : T.inkDim,
-        }}>{isWon ? '+' : ''}GHS {fmtCedi(win)}</div>
-        <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>
-          {isWon ? 'Payout' : 'No return'}
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            fontVariantNumeric: 'tabular-nums',
+            color: isWon ? T.greenBright : T.inkDim,
+          }}
+        >
+          {isWon ? '+' : ''}GHS {fmtCedi(win)}
         </div>
+        <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>{isWon ? 'Payout' : 'No return'}</div>
       </div>
     </div>
   );
@@ -364,12 +514,21 @@ function HistoryRow({ bet }) {
 function EmptyState({ icon, title, hint }) {
   return (
     <div style={{ padding: '40px 24px', textAlign: 'center' }}>
-      <div style={{
-        width: 60, height: 60, borderRadius: 999, background: T.surface,
-        border: `1px solid ${T.line}`,
-        margin: '0 auto 12px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}><OddIcon name={icon} size={26} color={T.inkDim} /></div>
+      <div
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: 999,
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          margin: '0 auto 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <OddIcon name={icon} size={26} color={T.inkDim} />
+      </div>
       <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{title}</div>
       <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 4 }}>{hint}</div>
     </div>
@@ -382,15 +541,24 @@ function SignedOutState({ navigate }) {
       <OddPageHeader title="My Bets" subtitle="Sign in to view your slips" />
       <div style={{ padding: '40px 24px', textAlign: 'center' }}>
         <OddIcon name="lock" size={32} color={T.inkDim} />
-        <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>
-          Sign in to see your bets
-        </div>
-        <button type="button" onClick={() => navigate('/login?next=/my-bets')}
+        <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>Sign in to see your bets</div>
+        <button
+          type="button"
+          onClick={() => navigate('/login?next=/my-bets')}
           style={{
-            marginTop: 16, padding: '12px 24px', borderRadius: 999,
-            background: T.greenBright, color: T.goldDark,
-            fontWeight: 700, fontSize: 13, border: 0, cursor: 'pointer',
-          }}>Sign in</button>
+            marginTop: 16,
+            padding: '12px 24px',
+            borderRadius: 999,
+            background: T.greenBright,
+            color: T.goldDark,
+            fontWeight: 700,
+            fontSize: 13,
+            border: 0,
+            cursor: 'pointer',
+          }}
+        >
+          Sign in
+        </button>
       </div>
     </div>
   );

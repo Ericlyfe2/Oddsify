@@ -9,14 +9,20 @@ import {
 } from '../src/services/cashOutEngine.js';
 
 const emits = [];
-function fakeEmitToUser(userId, event, payload) { emits.push({ userId, event, payload }); }
+function fakeEmitToUser(userId, event, payload) {
+  emits.push({ userId, event, payload });
+}
 function fakeOddsLookup(map) {
   return (fixtureKey, market, outcome) => map[`${fixtureKey}:${market}:${outcome}`] ?? null;
 }
 
 test('computeOffer returns stake × totalOdds × prob × (1 - margin)', () => {
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'multiple', stake: 10, totalOdds: 6,
+    id: 'b1',
+    userId: 'u1',
+    mode: 'multiple',
+    stake: 10,
+    totalOdds: 6,
     status: 'open',
     legs: [
       { matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false },
@@ -33,7 +39,11 @@ test('computeOffer returns stake × totalOdds × prob × (1 - margin)', () => {
 
 test('computeOffer returns 0 when any leg is lost', () => {
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'multiple', stake: 10, totalOdds: 6,
+    id: 'b1',
+    userId: 'u1',
+    mode: 'multiple',
+    stake: 10,
+    totalOdds: 6,
     status: 'open',
     legs: [
       { matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: true, won: false },
@@ -46,7 +56,11 @@ test('computeOffer returns 0 when any leg is lost', () => {
 
 test('computeOffer treats a finished+won leg as factor 1', () => {
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'multiple', stake: 10, totalOdds: 6,
+    id: 'b1',
+    userId: 'u1',
+    mode: 'multiple',
+    stake: 10,
+    totalOdds: 6,
     status: 'open',
     legs: [
       { matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: true, won: true },
@@ -60,11 +74,13 @@ test('computeOffer treats a finished+won leg as factor 1', () => {
 
 test('computeOffer clamps to stake × totalOdds × 0.99 (no free money)', () => {
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'multiple', stake: 10, totalOdds: 6,
+    id: 'b1',
+    userId: 'u1',
+    mode: 'multiple',
+    stake: 10,
+    totalOdds: 6,
     status: 'open',
-    legs: [
-      { matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false },
-    ],
+    legs: [{ matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false }],
   };
   // Pathological case: live odds collapse to 1.0 (certain) AND margin is 0.
   const lookup = fakeOddsLookup({ 'f1:1X2:1': 1.0 });
@@ -74,7 +90,11 @@ test('computeOffer clamps to stake × totalOdds × 0.99 (no free money)', () => 
 
 test('computeOffer returns null for system bets (v1: not supported)', () => {
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'system', stake: 10, totalOdds: 6,
+    id: 'b1',
+    userId: 'u1',
+    mode: 'system',
+    stake: 10,
+    totalOdds: 6,
     status: 'open',
     legs: [{ matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false }],
   };
@@ -86,7 +106,12 @@ test('onLiveChange emits cashout:offer for each open bet on the fixture', () => 
   __resetForTests({ emitToUser: fakeEmitToUser });
   emits.length = 0;
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'single', stake: 10, totalOdds: 2, status: 'open',
+    id: 'b1',
+    userId: 'u1',
+    mode: 'single',
+    stake: 10,
+    totalOdds: 2,
+    status: 'open',
     legs: [{ matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false }],
   };
   registerBet(bet);
@@ -100,11 +125,16 @@ test('onLiveChange dedups when offer change is below threshold', () => {
   __resetForTests({ emitToUser: fakeEmitToUser });
   emits.length = 0;
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'single', stake: 10, totalOdds: 2, status: 'open',
+    id: 'b1',
+    userId: 'u1',
+    mode: 'single',
+    stake: 10,
+    totalOdds: 2,
+    status: 'open',
     legs: [{ matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false }],
   };
   registerBet(bet);
-  const lookup1 = fakeOddsLookup({ 'f1:1X2:1': 1.500 });
+  const lookup1 = fakeOddsLookup({ 'f1:1X2:1': 1.5 });
   const lookup2 = fakeOddsLookup({ 'f1:1X2:1': 1.501 }); // sub-threshold change
   onLiveChange('f1', lookup1, 0.05);
   onLiveChange('f1', lookup2, 0.05);
@@ -115,7 +145,12 @@ test('unregisterBet removes the bet from the fixture index', () => {
   __resetForTests({ emitToUser: fakeEmitToUser });
   emits.length = 0;
   const bet = {
-    id: 'b1', userId: 'u1', mode: 'single', stake: 10, totalOdds: 2, status: 'open',
+    id: 'b1',
+    userId: 'u1',
+    mode: 'single',
+    stake: 10,
+    totalOdds: 2,
+    status: 'open',
     legs: [{ matchId: 'f1', market: '1X2', outcome: '1', odds: 2, finished: false }],
   };
   registerBet(bet);

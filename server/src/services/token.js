@@ -6,11 +6,10 @@ import { createStore } from '../db/store.js';
 const refreshStore = createStore('refresh_tokens', {});
 
 export function signAccessToken(account) {
-  return jwt.sign(
-    { sub: account.id, email: account.email, role: account.role || 'user', scope: 'user' },
-    JWT.secret,
-    { expiresIn: JWT.accessTtl, issuer: JWT.issuer }
-  );
+  return jwt.sign({ sub: account.id, email: account.email, role: account.role || 'user', scope: 'user' }, JWT.secret, {
+    expiresIn: JWT.accessTtl,
+    issuer: JWT.issuer,
+  });
 }
 
 /** Admin tokens carry scope:'admin' + adminRole so user-scoped tokens cannot hit /api/admin. */
@@ -24,7 +23,7 @@ export function signAdminAccessToken(admin) {
       adminRole: admin.adminRole || 'support',
     },
     JWT.secret,
-    { expiresIn: JWT.accessTtl, issuer: JWT.issuer }
+    { expiresIn: JWT.accessTtl, issuer: JWT.issuer },
   );
 }
 
@@ -34,7 +33,7 @@ export function verifyAccessToken(token) {
 
 /** Refresh tokens are opaque random strings stored server-side so we can revoke them. */
 export function issueRefreshToken(accountId, meta = {}) {
-  const id    = crypto.randomBytes(16).toString('hex');
+  const id = crypto.randomBytes(16).toString('hex');
   const token = `${id}.${crypto.randomBytes(24).toString('hex')}`;
   const ttlMs = parseTtl(JWT.refreshTtl);
   const record = {

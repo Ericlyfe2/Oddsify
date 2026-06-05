@@ -11,19 +11,34 @@
 import { Fragment, useEffect, useMemo, useState, useRef } from 'react';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
 import {
-  adminListUsers, adminGetUser, adminUserBets, adminUserTx, adminUserLogins,
-  adminUserStatus, adminUserKyc, adminUserWallet, adminUserTags, adminUserNotes,
-  adminUserReset, adminImpersonate, adminDeleteUser, adminBulkDeleteUsers,
+  adminListUsers,
+  adminGetUser,
+  adminUserBets,
+  adminUserTx,
+  adminUserLogins,
+  adminUserStatus,
+  adminUserKyc,
+  adminUserWallet,
+  adminUserTags,
+  adminUserNotes,
+  adminUserReset,
+  adminImpersonate,
+  adminDeleteUser,
+  adminBulkDeleteUsers,
   adminDeleteAllUsers,
-  adminCreateUser, adminUserCredentials,
-  adminUserStage, adminUserBlocked,
+  adminCreateUser,
+  adminUserCredentials,
+  adminUserStage,
+  adminUserBlocked,
 } from '../../api/adminApi.js';
 
 function toBookingCode(id = '') {
-  const s = String(id).replace(/[^a-z0-9]/gi, '').toUpperCase();
+  const s = String(id)
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase();
   if (!s) return 'XX00000';
   const letters = (s.match(/[A-Z]/g) || ['X', 'X']).slice(0, 2).join('').padEnd(2, 'X');
-  const digits  = (s.match(/[0-9]/g) || ['0']).slice(-5).join('').padStart(5, '0');
+  const digits = (s.match(/[0-9]/g) || ['0']).slice(-5).join('').padStart(5, '0');
   return letters + digits;
 }
 
@@ -40,14 +55,43 @@ const stageOf = (u) => {
   if (!Number.isFinite(n)) return 0;
   return Math.min(4, Math.max(0, n));
 };
-import { Card, Badge, Drawer, Modal, Empty, SkeletonRow, moneyFmt, numFmt, ago, dateShort } from '../../components/admin/primitives.jsx';
 import {
-  IconSearch, IconDownload, IconRefresh, IconBan, IconCheck, IconKey, IconUsers, IconActivity, IconCash,
+  Card,
+  Badge,
+  Drawer,
+  Modal,
+  Empty,
+  SkeletonRow,
+  moneyFmt,
+  numFmt,
+  ago,
+  dateShort,
+} from '../../components/admin/primitives.jsx';
+import {
+  IconSearch,
+  IconDownload,
+  IconRefresh,
+  IconBan,
+  IconCheck,
+  IconKey,
+  IconUsers,
+  IconActivity,
+  IconCash,
 } from '../../components/admin/Icons.jsx';
 
 function IconTrash({ size = 14 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <polyline points="3 6 5 6 21 6" />
       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
       <path d="M10 11v6M14 11v6" />
@@ -61,8 +105,8 @@ const KYC_TONES = { verified: 'success', pending: 'warn', rejected: 'danger', un
 export default function UsersPage() {
   const { hasRole, showToast } = useAdmin();
   const [filters, setFilters] = useState({ q: '', status: 'all', kyc: '', sort: 'createdAt', dir: 'desc' });
-  const [page, setPage]   = useState({ offset: 0, limit: 50 });
-  const [data, setData]   = useState(null);
+  const [page, setPage] = useState({ offset: 0, limit: 50 });
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [drawerTab, setDrawerTab] = useState('profile');
@@ -78,14 +122,20 @@ export default function UsersPage() {
     setLoading(true);
     try {
       const res = await adminListUsers({
-        q: filters.q, status: filters.status, kyc: filters.kyc,
-        sort: filters.sort, dir: filters.dir,
-        offset: page.offset, limit: page.limit,
+        q: filters.q,
+        status: filters.status,
+        kyc: filters.kyc,
+        sort: filters.sort,
+        dir: filters.dir,
+        offset: page.offset,
+        limit: page.limit,
       });
       setData(res);
     } catch (e) {
       showToast(e.message || 'Failed to load users', 'error');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -104,7 +154,8 @@ export default function UsersPage() {
     e.stopPropagation();
     setPicked((cur) => {
       const next = new Set(cur);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -118,9 +169,13 @@ export default function UsersPage() {
 
   async function deleteUser(u) {
     const updated = data?.users?.filter((x) => x.id !== u.id) || [];
-    setData((d) => d ? { ...d, users: updated, total: Math.max(0, d.total - 1) } : d);
+    setData((d) => (d ? { ...d, users: updated, total: Math.max(0, d.total - 1) } : d));
     setSelected(null);
-    setPicked((cur) => { const n = new Set(cur); n.delete(u.id); return n; });
+    setPicked((cur) => {
+      const n = new Set(cur);
+      n.delete(u.id);
+      return n;
+    });
     showToast(`Deleted ${u.email}.`);
   }
 
@@ -129,7 +184,9 @@ export default function UsersPage() {
     if (!ids.length) return;
     try {
       const r = await adminBulkDeleteUsers(ids, reason);
-      showToast(`Deleted ${r.deleted.length} account${r.deleted.length === 1 ? '' : 's'}${r.skipped.length ? ` · ${r.skipped.length} skipped` : ''}.`);
+      showToast(
+        `Deleted ${r.deleted.length} account${r.deleted.length === 1 ? '' : 's'}${r.skipped.length ? ` · ${r.skipped.length} skipped` : ''}.`,
+      );
       setPicked(new Set());
       setBulkOpen(false);
       load();
@@ -142,7 +199,9 @@ export default function UsersPage() {
     setDeleteAllBusy(true);
     try {
       const r = await adminDeleteAllUsers();
-      showToast(`Deleted all ${r.deletedCount} user account${r.deletedCount === 1 ? '' : 's'} (${r.removedBets} bets).`);
+      showToast(
+        `Deleted all ${r.deletedCount} user account${r.deletedCount === 1 ? '' : 's'} (${r.removedBets} bets).`,
+      );
       setDeleteAllOpen(false);
       setPicked(new Set());
       load();
@@ -174,17 +233,23 @@ export default function UsersPage() {
           <p>Search, audit, and manage every player on the platform. Actions are recorded in the audit log.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="adm-btn" onClick={load}><IconRefresh size={14} /> Refresh</button>
-          <button className="adm-btn" onClick={exportCsv}><IconDownload size={14} /> Export CSV</button>
+          <button className="adm-btn" onClick={load}>
+            <IconRefresh size={14} /> Refresh
+          </button>
+          <button className="adm-btn" onClick={exportCsv}>
+            <IconDownload size={14} /> Export CSV
+          </button>
           {isSuper && (
-            <button className="adm-btn primary" onClick={() => setCreateOpen(true)}><IconUsers size={14} /> Add user</button>
+            <button className="adm-btn primary" onClick={() => setCreateOpen(true)}>
+              <IconUsers size={14} /> Add user
+            </button>
           )}
           {isSuper && (
             <>
               <span style={{ width: 1, height: 28, background: 'var(--border)', display: 'inline-block' }} />
               <button className="adm-btn danger" onClick={() => setDeleteAllOpen(true)} disabled={deleteAllBusy}>
-                {deleteAllBusy ? <span className="adm-spinner" /> : <IconTrash size={14} />}
-                {' '}{deleteAllBusy ? 'Deleting…' : 'Delete All Users'}
+                {deleteAllBusy ? <span className="adm-spinner" /> : <IconTrash size={14} />}{' '}
+                {deleteAllBusy ? 'Deleting…' : 'Delete All Users'}
               </button>
             </>
           )}
@@ -202,8 +267,12 @@ export default function UsersPage() {
         <div className="adm-table-toolbar">
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', minWidth: 280 }}>
             <IconSearch size={14} style={{ position: 'absolute', left: 12, color: 'var(--text-mute)' }} />
-            <input style={{ paddingLeft: 34 }} placeholder="Search email, name or id…"
-                   value={filters.q} onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))} />
+            <input
+              style={{ paddingLeft: 34 }}
+              placeholder="Search email, name or id…"
+              value={filters.q}
+              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+            />
           </div>
           <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}>
             <option value="all">All status</option>
@@ -218,10 +287,13 @@ export default function UsersPage() {
             <option value="unverified">Unverified</option>
             <option value="rejected">Rejected</option>
           </select>
-          <select value={`${filters.sort}:${filters.dir}`} onChange={(e) => {
-            const [sort, dir] = e.target.value.split(':');
-            setFilters((f) => ({ ...f, sort, dir }));
-          }}>
+          <select
+            value={`${filters.sort}:${filters.dir}`}
+            onChange={(e) => {
+              const [sort, dir] = e.target.value.split(':');
+              setFilters((f) => ({ ...f, sort, dir }));
+            }}
+          >
             <option value="createdAt:desc">Newest first</option>
             <option value="createdAt:asc">Oldest first</option>
             <option value="balance:desc">Highest balance</option>
@@ -234,16 +306,22 @@ export default function UsersPage() {
           </div>
         </div>
         {picked.size > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 14px',
-            background: 'linear-gradient(135deg, rgba(214,58,44,.10), rgba(214,58,44,.04))',
-            borderBottom: '1px solid var(--border)',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              background: 'linear-gradient(135deg, rgba(214,58,44,.10), rgba(214,58,44,.04))',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
             <strong style={{ fontSize: 13 }}>{picked.size} selected</strong>
             <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>Choose a bulk action</span>
             <div className="grow" />
-            <button className="adm-btn ghost" onClick={() => setPicked(new Set())}>Clear</button>
+            <button className="adm-btn ghost" onClick={() => setPicked(new Set())}>
+              Clear
+            </button>
             {isSuper && (
               <button className="adm-btn danger" onClick={() => setBulkOpen(true)}>
                 <IconTrash size={14} /> Delete selected
@@ -279,49 +357,77 @@ export default function UsersPage() {
             <tbody>
               {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={isSuper ? 9 : 8} />)}
               {!loading && data?.users?.length === 0 && (
-                <tr><td colSpan={isSuper ? 9 : 8}><Empty title="No users match" subtitle="Try adjusting your filters." /></td></tr>
-              )}
-              {!loading && data?.users?.map((u) => (
-                <tr key={u.id} onClick={() => openUser(u)} className={selected?.id === u.id ? 'selected' : ''}>
-                  {isSuper && (
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${u.email}`}
-                        checked={picked.has(u.id)}
-                        onChange={(e) => togglePick(u.id, e)}
-                      />
-                    </td>
-                  )}
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 9,
-                        display: 'grid', placeItems: 'center',
-                        background: 'var(--grad-brand)', color: '#fff',
-                        fontWeight: 700, fontSize: 13,
-                      }}>{(u.displayName || u.email).charAt(0).toUpperCase()}</div>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{u.displayName || u.email}</div>
-                        <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>{u.email}</div>
-                      </div>
-                    </div>
+                <tr>
+                  <td colSpan={isSuper ? 9 : 8}>
+                    <Empty title="No users match" subtitle="Try adjusting your filters." />
                   </td>
-                  <td>
-                    {u.suspended
-                      ? <Badge tone="danger">Suspended</Badge>
-                      : u.emailVerified
-                        ? <Badge tone="success" dot>Active</Badge>
-                        : <Badge tone="warn">Unverified</Badge>}
-                  </td>
-                  <td><Badge tone={KYC_TONES[u.kycStatus] || 'default'}>{u.kycStatus || 'unverified'}</Badge></td>
-                  <td className="num"><strong>{moneyFmt(u.balance, u.currency)}</strong></td>
-                  <td className="num">{u.stats?.bets ?? 0}</td>
-                  <td className="num">{moneyFmt(u.stats?.depositTotal)}</td>
-                  <td>{(u.tags || []).slice(0, 2).map((t) => <span key={t} style={{ marginRight: 4 }}><Badge tone="brand">{t}</Badge></span>)}</td>
-                  <td title={dateShort(u.createdAt)}>{ago(u.createdAt)}</td>
                 </tr>
-              ))}
+              )}
+              {!loading &&
+                data?.users?.map((u) => (
+                  <tr key={u.id} onClick={() => openUser(u)} className={selected?.id === u.id ? 'selected' : ''}>
+                    {isSuper && (
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${u.email}`}
+                          checked={picked.has(u.id)}
+                          onChange={(e) => togglePick(u.id, e)}
+                        />
+                      </td>
+                    )}
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 9,
+                            display: 'grid',
+                            placeItems: 'center',
+                            background: 'var(--grad-brand)',
+                            color: '#fff',
+                            fontWeight: 700,
+                            fontSize: 13,
+                          }}
+                        >
+                          {(u.displayName || u.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{u.displayName || u.email}</div>
+                          <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>{u.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {u.suspended ? (
+                        <Badge tone="danger">Suspended</Badge>
+                      ) : u.emailVerified ? (
+                        <Badge tone="success" dot>
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge tone="warn">Unverified</Badge>
+                      )}
+                    </td>
+                    <td>
+                      <Badge tone={KYC_TONES[u.kycStatus] || 'default'}>{u.kycStatus || 'unverified'}</Badge>
+                    </td>
+                    <td className="num">
+                      <strong>{moneyFmt(u.balance, u.currency)}</strong>
+                    </td>
+                    <td className="num">{u.stats?.bets ?? 0}</td>
+                    <td className="num">{moneyFmt(u.stats?.depositTotal)}</td>
+                    <td>
+                      {(u.tags || []).slice(0, 2).map((t) => (
+                        <span key={t} style={{ marginRight: 4 }}>
+                          <Badge tone="brand">{t}</Badge>
+                        </span>
+                      ))}
+                    </td>
+                    <td title={dateShort(u.createdAt)}>{ago(u.createdAt)}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
@@ -335,19 +441,14 @@ export default function UsersPage() {
         onClose={() => setSelected(null)}
         onUpdate={(updated) => {
           setSelected(updated);
-          setData((d) => d ? { ...d, users: d.users.map((u) => u.id === updated.id ? updated : u) } : d);
+          setData((d) => (d ? { ...d, users: d.users.map((u) => (u.id === updated.id ? updated : u)) } : d));
         }}
         onDeleted={deleteUser}
         hasRole={hasRole}
         showToast={showToast}
       />
 
-      <BulkDeleteModal
-        open={bulkOpen}
-        count={picked.size}
-        onClose={() => setBulkOpen(false)}
-        onConfirm={bulkDelete}
-      />
+      <BulkDeleteModal open={bulkOpen} count={picked.size} onClose={() => setBulkOpen(false)} onConfirm={bulkDelete} />
 
       <DeleteAllModal
         open={deleteAllOpen}
@@ -373,7 +474,9 @@ export default function UsersPage() {
 
 function DeleteAllModal({ open, busy, count, onClose, onConfirm }) {
   const [confirmText, setConfirmText] = useState('');
-  useEffect(() => { if (open) setConfirmText(''); }, [open]);
+  useEffect(() => {
+    if (open) setConfirmText('');
+  }, [open]);
   const phrase = `delete all ${count}`;
   const ready = confirmText.trim().toLowerCase() === phrase;
   return (
@@ -385,7 +488,10 @@ function DeleteAllModal({ open, busy, count, onClose, onConfirm }) {
       footer={null}
     >
       <form
-        onSubmit={(e) => { e.preventDefault(); if (ready && !busy) onConfirm(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ready && !busy) onConfirm();
+        }}
         style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
       >
         <div
@@ -394,16 +500,30 @@ function DeleteAllModal({ open, busy, count, onClose, onConfirm }) {
             borderRadius: 10,
             background: 'rgba(214,58,44,.10)',
             border: '1px solid rgba(214,58,44,.30)',
-            fontSize: 13, lineHeight: 1.5,
+            fontSize: 13,
+            lineHeight: 1.5,
           }}
         >
           <strong style={{ color: 'var(--danger)' }}>⚠️ Irreversible operation</strong>
           <br />
-          All {count} player account{count === 1 ? '' : 's'} will be permanently wiped from the database — profiles, passwords, balances, bets, transactions, verification records, notifications, tags, notes, and settings. Admins are preserved. This action is recorded in the audit trail.
+          All {count} player account{count === 1 ? '' : 's'} will be permanently wiped from the database — profiles,
+          passwords, balances, bets, transactions, verification records, notifications, tags, notes, and settings.
+          Admins are preserved. This action is recorded in the audit trail.
         </div>
         <div className="adm-field">
           <label>
-            Type <code style={{ fontFamily: 'var(--ff-mono)', background: 'var(--surface-soft, rgba(255,255,255,.05))', padding: '1px 6px', borderRadius: 4 }}>{phrase}</code> to confirm
+            Type{' '}
+            <code
+              style={{
+                fontFamily: 'var(--ff-mono)',
+                background: 'var(--surface-soft, rgba(255,255,255,.05))',
+                padding: '1px 6px',
+                borderRadius: 4,
+              }}
+            >
+              {phrase}
+            </code>{' '}
+            to confirm
           </label>
           <input
             className="adm-input"
@@ -415,10 +535,12 @@ function DeleteAllModal({ open, busy, count, onClose, onConfirm }) {
           />
         </div>
         <div className="adm-modal-actions">
-          <button type="button" className="adm-btn ghost" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" className="adm-btn ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
           <button type="submit" className="adm-btn danger" disabled={!ready || busy}>
-            {busy ? <span className="adm-spinner" /> : <IconTrash size={14} />}
-            {' '}{busy ? `Deleting ${count} account${count === 1 ? '' : 's'}…` : `Permanently delete all ${count}`}
+            {busy ? <span className="adm-spinner" /> : <IconTrash size={14} />}{' '}
+            {busy ? `Deleting ${count} account${count === 1 ? '' : 's'}…` : `Permanently delete all ${count}`}
           </button>
         </div>
       </form>
@@ -429,7 +551,9 @@ function DeleteAllModal({ open, busy, count, onClose, onConfirm }) {
 function CreateUserModal({ open, onClose, onCreated, showToast }) {
   const [form, setForm] = useState({ email: '', password: '', displayName: '', country: 'GH', balance: '' });
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) setForm({ email: '', password: '', displayName: '', country: 'GH', balance: '' }); }, [open]);
+  useEffect(() => {
+    if (open) setForm({ email: '', password: '', displayName: '', country: 'GH', balance: '' });
+  }, [open]);
 
   async function submit(e) {
     e.preventDefault();
@@ -445,46 +569,79 @@ function CreateUserModal({ open, onClose, onCreated, showToast }) {
       onCreated(user);
     } catch (err) {
       showToast(err.message || 'Could not create user.', 'error');
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <Modal open={open} onClose={onClose}
-           title="Add user"
-           description="Create a real account. The user can sign in immediately with the credentials below.">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Add user"
+      description="Create a real account. The user can sign in immediately with the credentials below."
+    >
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="adm-field">
           <label>Email or phone</label>
-          <input className="adm-input" required value={form.email}
-                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                 placeholder="you@example.com or 233241234567" autoFocus />
+          <input
+            className="adm-input"
+            required
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            placeholder="you@example.com or 233241234567"
+            autoFocus
+          />
         </div>
         <div className="adm-field">
           <label>Initial password</label>
-          <input className="adm-input" type="text" required minLength={8} value={form.password}
-                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                 placeholder="At least 8 chars, mixed case + a digit" />
+          <input
+            className="adm-input"
+            type="text"
+            required
+            minLength={8}
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            placeholder="At least 8 chars, mixed case + a digit"
+          />
         </div>
         <div className="adm-field">
           <label>Display name (optional)</label>
-          <input className="adm-input" value={form.displayName}
-                 onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))} />
+          <input
+            className="adm-input"
+            value={form.displayName}
+            onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
+          />
         </div>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
           <div className="adm-field">
             <label>Country (ISO-2)</label>
-            <input className="adm-input" maxLength={2} value={form.country}
-                   onChange={(e) => setForm((f) => ({ ...f, country: e.target.value.toUpperCase() }))} />
+            <input
+              className="adm-input"
+              maxLength={2}
+              value={form.country}
+              onChange={(e) => setForm((f) => ({ ...f, country: e.target.value.toUpperCase() }))}
+            />
           </div>
           <div className="adm-field">
             <label>Opening balance (GHS)</label>
-            <input className="adm-input" type="number" min="0" step="0.01" value={form.balance}
-                   onChange={(e) => setForm((f) => ({ ...f, balance: e.target.value }))} />
+            <input
+              className="adm-input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.balance}
+              onChange={(e) => setForm((f) => ({ ...f, balance: e.target.value }))}
+            />
           </div>
         </div>
         <div className="adm-modal-actions">
-          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="adm-btn primary" disabled={busy}>{busy ? 'Creating…' : 'Create user'}</button>
+          <button type="button" className="adm-btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="adm-btn primary" disabled={busy}>
+            {busy ? 'Creating…' : 'Create user'}
+          </button>
         </div>
       </form>
     </Modal>
@@ -494,7 +651,12 @@ function CreateUserModal({ open, onClose, onCreated, showToast }) {
 function BulkDeleteModal({ open, count, onClose, onConfirm }) {
   const [reason, setReason] = useState('');
   const [confirmText, setConfirmText] = useState('');
-  useEffect(() => { if (open) { setReason(''); setConfirmText(''); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setReason('');
+      setConfirmText('');
+    }
+  }, [open]);
   const phrase = `delete ${count}`;
   const ready = confirmText.trim().toLowerCase() === phrase;
   return (
@@ -506,7 +668,10 @@ function BulkDeleteModal({ open, count, onClose, onConfirm }) {
       footer={null}
     >
       <form
-        onSubmit={(e) => { e.preventDefault(); if (ready) onConfirm(reason || 'bulk delete'); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ready) onConfirm(reason || 'bulk delete');
+        }}
         style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
       >
         <div className="adm-field">
@@ -521,7 +686,20 @@ function BulkDeleteModal({ open, count, onClose, onConfirm }) {
           />
         </div>
         <div className="adm-field">
-          <label>Type <code style={{ fontFamily: 'var(--ff-mono)', background: 'var(--surface-soft, rgba(255,255,255,.05))', padding: '1px 6px', borderRadius: 4 }}>{phrase}</code> to confirm</label>
+          <label>
+            Type{' '}
+            <code
+              style={{
+                fontFamily: 'var(--ff-mono)',
+                background: 'var(--surface-soft, rgba(255,255,255,.05))',
+                padding: '1px 6px',
+                borderRadius: 4,
+              }}
+            >
+              {phrase}
+            </code>{' '}
+            to confirm
+          </label>
           <input
             className="adm-input"
             value={confirmText}
@@ -530,7 +708,9 @@ function BulkDeleteModal({ open, count, onClose, onConfirm }) {
           />
         </div>
         <div className="adm-modal-actions">
-          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="adm-btn ghost" onClick={onClose}>
+            Cancel
+          </button>
           <button type="submit" className="adm-btn danger" disabled={!ready}>
             <IconTrash size={14} /> Permanently delete
           </button>
@@ -552,10 +732,10 @@ function StatTile({ label, value }) {
 /* ------------------- Drawer ------------------- */
 
 function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, hasRole, showToast }) {
-  const [detail, setDetail]   = useState(null);
-  const [bets, setBets]       = useState([]);
-  const [tx, setTx]           = useState([]);
-  const [logins, setLogins]   = useState([]);
+  const [detail, setDetail] = useState(null);
+  const [bets, setBets] = useState([]);
+  const [tx, setTx] = useState([]);
+  const [logins, setLogins] = useState([]);
   const [walletOpen, setWalletOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [credentials, setCredentials] = useState(null);
@@ -563,7 +743,12 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
 
   useEffect(() => {
     if (!open || !user) return;
-    setDetail(null); setBets([]); setTx([]); setLogins([]); setCredentials(null); setOpenBet(null);
+    setDetail(null);
+    setBets([]);
+    setTx([]);
+    setLogins([]);
+    setCredentials(null);
+    setOpenBet(null);
     (async () => {
       try {
         const [d, b, t, l] = await Promise.all([
@@ -588,14 +773,19 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       setDetail(updated);
       onUpdate(updated);
       showToast(`User ${action}d.`);
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function doKyc(status) {
     try {
       const { user: updated } = await adminUserKyc(user.id, status);
-      setDetail(updated); onUpdate(updated);
+      setDetail(updated);
+      onUpdate(updated);
       showToast(`KYC set to ${status}.`);
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function doStage(direction) {
     const current = stageOf(detail || user);
@@ -603,46 +793,65 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
     if (target === current) return;
     try {
       const { user: updated } = await adminUserStage(user.id, target);
-      setDetail(updated); onUpdate(updated);
-      showToast(direction === 'up'
-        ? `Verified — promoted to Stage ${target} (${STAGE_LABELS[target]}).`
-        : `Moved back to Stage ${target} (${STAGE_LABELS[target]}).`);
-    } catch (e) { showToast(e.message, 'error'); }
+      setDetail(updated);
+      onUpdate(updated);
+      showToast(
+        direction === 'up'
+          ? `Verified — promoted to Stage ${target} (${STAGE_LABELS[target]}).`
+          : `Moved back to Stage ${target} (${STAGE_LABELS[target]}).`,
+      );
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function doBlocked(blocked) {
     try {
       const { user: updated } = await adminUserBlocked(user.id, blocked);
-      setDetail(updated); onUpdate(updated);
+      setDetail(updated);
+      onUpdate(updated);
       showToast(blocked ? 'Account blocked.' : 'Account unblocked.');
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function saveTags(tags) {
     try {
       const { user: updated } = await adminUserTags(user.id, tags);
-      setDetail(updated); onUpdate(updated);
+      setDetail(updated);
+      onUpdate(updated);
       showToast('Tags saved.');
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function saveNotes(notes) {
     try {
       const { user: updated } = await adminUserNotes(user.id, notes);
-      setDetail(updated); onUpdate(updated);
-    } catch (e) { showToast(e.message, 'error'); }
+      setDetail(updated);
+      onUpdate(updated);
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function adjustWallet(delta, reason) {
     try {
       const { user: updated } = await adminUserWallet(user.id, delta, reason);
-      setDetail(updated); onUpdate(updated);
+      setDetail(updated);
+      onUpdate(updated);
       showToast(`Wallet adjusted by ${moneyFmt(delta)}.`);
       setWalletOpen(false);
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function resetPassword() {
-    if (!confirm('Reset this user\'s password? Their sessions will be revoked.')) return;
+    if (!confirm("Reset this user's password? Their sessions will be revoked.")) return;
     try {
       const r = await adminUserReset(user.id);
       prompt('Temporary password (share securely with the user):', r.tempPassword);
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function impersonateUser() {
     try {
@@ -650,20 +859,26 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       const loginUrl = `${window.location.origin}/login?token=${r.token}&redirect=/`;
       window.open(loginUrl, '_blank');
       showToast('User login link opened in new tab.');
-    } catch (e) { showToast(e.message, 'error'); }
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
   }
   async function confirmDelete(reason) {
     try {
       await adminDeleteUser(user.id, reason);
       onDeleted?.(user);
       setDeleteOpen(false);
-    } catch (e) { showToast(e.message || 'Delete failed', 'error'); }
+    } catch (e) {
+      showToast(e.message || 'Delete failed', 'error');
+    }
   }
   async function viewCredentials() {
     try {
       const c = await adminUserCredentials(user.id);
       setCredentials(c);
-    } catch (e) { showToast(e.message || 'Could not load credentials.', 'error'); }
+    } catch (e) {
+      showToast(e.message || 'Could not load credentials.', 'error');
+    }
   }
 
   if (!open || !user) return null;
@@ -673,37 +888,71 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       open={open}
       onClose={onClose}
       title={detail?.displayName || user.displayName || user.email}
-      footer={hasRole('moderator') ? (
-        <>
-          {user.suspended
-            ? <button className="adm-btn success" onClick={() => doStatus('unsuspend')}><IconCheck size={14} /> Unsuspend</button>
-            : <button className="adm-btn warn"    onClick={() => doStatus('suspend')}><IconBan size={14} /> Suspend</button>}
-          {(detail?.emailVerified ?? user.emailVerified)
-            ? <button className="adm-btn ghost" onClick={() => doStatus('unverify')}><IconBan size={14} /> Revoke verification</button>
-            : <button className="adm-btn success" onClick={() => doStatus('verify')}><IconCheck size={14} /> Verify user</button>}
-          {(detail?.verified ?? user.verified)
-            ? <button className="adm-btn ghost" onClick={() => doStatus('verified_unverify')}><IconBan size={14} /> Revoke deposit verification</button>
-            : <button className="adm-btn success" onClick={() => doStatus('verified_user')}><IconCheck size={14} /> Verify deposits</button>}
-          {hasRole('finance_admin') && (
-            <button className="adm-btn" onClick={() => setWalletOpen(true)}><IconCash size={14} /> Adjust wallet</button>
-          )}
-          <button className="adm-btn ghost" onClick={resetPassword}><IconKey size={14} /> Reset password</button>
-          {hasRole() && (
-            <>
-              <button className="adm-btn" onClick={viewCredentials}><IconKey size={14} /> View credentials</button>
-              <button className="adm-btn" onClick={impersonateUser}><IconUsers size={14} /> Login as user</button>
-              <button className="adm-btn danger" onClick={() => setDeleteOpen(true)}>
-                <IconTrash size={14} /> Delete account
+      footer={
+        hasRole('moderator') ? (
+          <>
+            {user.suspended ? (
+              <button className="adm-btn success" onClick={() => doStatus('unsuspend')}>
+                <IconCheck size={14} /> Unsuspend
               </button>
-            </>
-          )}
-        </>
-      ) : null}
+            ) : (
+              <button className="adm-btn warn" onClick={() => doStatus('suspend')}>
+                <IconBan size={14} /> Suspend
+              </button>
+            )}
+            {(detail?.emailVerified ?? user.emailVerified) ? (
+              <button className="adm-btn ghost" onClick={() => doStatus('unverify')}>
+                <IconBan size={14} /> Revoke verification
+              </button>
+            ) : (
+              <button className="adm-btn success" onClick={() => doStatus('verify')}>
+                <IconCheck size={14} /> Verify user
+              </button>
+            )}
+            {(detail?.verified ?? user.verified) ? (
+              <button className="adm-btn ghost" onClick={() => doStatus('verified_unverify')}>
+                <IconBan size={14} /> Revoke deposit verification
+              </button>
+            ) : (
+              <button className="adm-btn success" onClick={() => doStatus('verified_user')}>
+                <IconCheck size={14} /> Verify deposits
+              </button>
+            )}
+            {hasRole('finance_admin') && (
+              <button className="adm-btn" onClick={() => setWalletOpen(true)}>
+                <IconCash size={14} /> Adjust wallet
+              </button>
+            )}
+            <button className="adm-btn ghost" onClick={resetPassword}>
+              <IconKey size={14} /> Reset password
+            </button>
+            {hasRole() && (
+              <>
+                <button className="adm-btn" onClick={viewCredentials}>
+                  <IconKey size={14} /> View credentials
+                </button>
+                <button className="adm-btn" onClick={impersonateUser}>
+                  <IconUsers size={14} /> Login as user
+                </button>
+                <button className="adm-btn danger" onClick={() => setDeleteOpen(true)}>
+                  <IconTrash size={14} /> Delete account
+                </button>
+              </>
+            )}
+          </>
+        ) : null
+      }
     >
       <div className="adm-drawer-tabs" style={{ marginLeft: -22, marginRight: -22, padding: '0 22px' }}>
         {['profile', 'bets', 'transactions', 'activity'].map((t) => (
           <button key={t} className={`adm-drawer-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'profile' ? 'Profile' : t === 'bets' ? `Bets (${bets.length})` : t === 'transactions' ? `Tx (${tx.length})` : `Activity (${logins.length})`}
+            {t === 'profile'
+              ? 'Profile'
+              : t === 'bets'
+                ? `Bets (${bets.length})`
+                : t === 'transactions'
+                  ? `Tx (${tx.length})`
+                  : `Activity (${logins.length})`}
           </button>
         ))}
       </div>
@@ -721,10 +970,22 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
         />
       )}
 
-      {tab === 'bets' && (
-        bets.length === 0 ? <Empty title="No bets" /> : (
+      {tab === 'bets' &&
+        (bets.length === 0 ? (
+          <Empty title="No bets" />
+        ) : (
           <table className="adm-table">
-            <thead><tr><th>Code</th><th>Status</th><th>Mode</th><th className="num">Stake</th><th className="num">Win</th><th>Placed</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Status</th>
+                <th>Mode</th>
+                <th className="num">Stake</th>
+                <th className="num">Win</th>
+                <th>Placed</th>
+                <th></th>
+              </tr>
+            </thead>
             <tbody>
               {bets.map((b) => {
                 const code = b.bookingCode || toBookingCode(b.id);
@@ -733,13 +994,24 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
                   <Fragment key={b.id}>
                     <tr style={{ cursor: 'pointer' }} onClick={() => setOpenBet(isOpen ? null : b)}>
                       <td style={{ fontFamily: 'var(--ff-mono)', fontSize: 13, fontWeight: 700 }}>{code}</td>
-                      <td><span className={`bet-status ${b.status}`}>{b.status}{b.deleted ? ' (deleted)' : ''}</span></td>
+                      <td>
+                        <span className={`bet-status ${b.status}`}>
+                          {b.status}
+                          {b.deleted ? ' (deleted)' : ''}
+                        </span>
+                      </td>
                       <td>{b.mode}</td>
                       <td className="num">{moneyFmt(b.stake)}</td>
                       <td className="num">{moneyFmt(b.potentialWin)}</td>
                       <td>{ago(b.placedAt)}</td>
                       <td className="row-actions" style={{ textAlign: 'right' }}>
-                        <button className="adm-btn sm" onClick={(e) => { e.stopPropagation(); setOpenBet(isOpen ? null : b); }}>
+                        <button
+                          className="adm-btn sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenBet(isOpen ? null : b);
+                          }}
+                        >
                           {isOpen ? 'Hide' : 'Slip'}
                         </button>
                       </td>
@@ -756,47 +1028,76 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
               })}
             </tbody>
           </table>
-        )
-      )}
+        ))}
 
-      {tab === 'transactions' && (
-        tx.length === 0 ? <Empty title="No transactions" /> : (
+      {tab === 'transactions' &&
+        (tx.length === 0 ? (
+          <Empty title="No transactions" />
+        ) : (
           <table className="adm-table">
-            <thead><tr><th>Kind</th><th>Method</th><th className="num">Amount</th><th>Status</th><th>When</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Kind</th>
+                <th>Method</th>
+                <th className="num">Amount</th>
+                <th>Status</th>
+                <th>When</th>
+              </tr>
+            </thead>
             <tbody>
               {tx.map((t) => (
                 <tr key={t.id}>
                   <td>{t.kind?.replace(/_/g, ' ')}</td>
                   <td>{t.method || '—'}</td>
-                  <td className="num"><strong style={{ color: t.amount > 0 ? 'var(--accent)' : 'var(--danger)' }}>{moneyFmt(t.amount)}</strong></td>
-                  <td><Badge tone={t.status === 'completed' ? 'success' : t.status === 'pending' ? 'warn' : 'default'}>{t.status}</Badge></td>
+                  <td className="num">
+                    <strong style={{ color: t.amount > 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                      {moneyFmt(t.amount)}
+                    </strong>
+                  </td>
+                  <td>
+                    <Badge tone={t.status === 'completed' ? 'success' : t.status === 'pending' ? 'warn' : 'default'}>
+                      {t.status}
+                    </Badge>
+                  </td>
                   <td>{ago(t.at)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )
-      )}
+        ))}
 
-      {tab === 'activity' && (
-        logins.length === 0 ? <Empty title="No login events" /> : (
+      {tab === 'activity' &&
+        (logins.length === 0 ? (
+          <Empty title="No login events" />
+        ) : (
           <div className="adm-list-feed">
             {logins.map((e, i) => (
               <div key={i} className="row">
                 <span className={`dot ${e.kind?.includes('failed') ? 'danger' : ''}`} />
                 <div>
                   <div style={{ fontWeight: 600 }}>{e.kind?.replace(/_/g, ' ')}</div>
-                  <div className="meta">{e.ip} {e.userAgent ? `· ${e.userAgent.slice(0, 40)}…` : ''}</div>
+                  <div className="meta">
+                    {e.ip} {e.userAgent ? `· ${e.userAgent.slice(0, 40)}…` : ''}
+                  </div>
                 </div>
                 <div className="meta">{ago(e.at)}</div>
               </div>
             ))}
           </div>
-        )
-      )}
+        ))}
 
-      <WalletModal open={walletOpen} onClose={() => setWalletOpen(false)} user={detail || user} onSubmit={adjustWallet} />
-      <DeleteUserModal open={deleteOpen} onClose={() => setDeleteOpen(false)} user={detail || user} onConfirm={confirmDelete} />
+      <WalletModal
+        open={walletOpen}
+        onClose={() => setWalletOpen(false)}
+        user={detail || user}
+        onSubmit={adjustWallet}
+      />
+      <DeleteUserModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        user={detail || user}
+        onConfirm={confirmDelete}
+      />
       <CredentialsModal open={!!credentials} onClose={() => setCredentials(null)} data={credentials} />
     </Drawer>
   );
@@ -809,22 +1110,55 @@ function BetSlipPreview({ bet }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: 'var(--ff-mono)', fontWeight: 800, fontSize: 16 }}>{code}</span>
         <Badge tone="brand">{bet.mode}</Badge>
-        <Badge tone={bet.status === 'won' ? 'success' : bet.status === 'lost' ? 'danger' : bet.status === 'void' ? 'warn' : 'info'} dot>{bet.status}</Badge>
+        <Badge
+          tone={
+            bet.status === 'won'
+              ? 'success'
+              : bet.status === 'lost'
+                ? 'danger'
+                : bet.status === 'void'
+                  ? 'warn'
+                  : 'info'
+          }
+          dot
+        >
+          {bet.status}
+        </Badge>
         {bet.deleted && <Badge tone="danger">Deleted</Badge>}
         <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', fontSize: 12 }}>{dateShort(bet.placedAt)}</span>
       </div>
       <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 13 }}>
-        <span>Stake <strong>{moneyFmt(bet.stake)}</strong></span>
-        <span>Total odds <strong>{(bet.totalOdds || 0).toFixed(2)}×</strong></span>
-        <span>Potential <strong>{moneyFmt(bet.potentialWin)}</strong></span>
-        {typeof bet.bonusRate === 'number' && <span>Bonus <strong>{(bet.bonusRate * 100).toFixed(0)}%</strong></span>}
+        <span>
+          Stake <strong>{moneyFmt(bet.stake)}</strong>
+        </span>
+        <span>
+          Total odds <strong>{(bet.totalOdds || 0).toFixed(2)}×</strong>
+        </span>
+        <span>
+          Potential <strong>{moneyFmt(bet.potentialWin)}</strong>
+        </span>
+        {typeof bet.bonusRate === 'number' && (
+          <span>
+            Bonus <strong>{(bet.bonusRate * 100).toFixed(0)}%</strong>
+          </span>
+        )}
       </div>
       <table className="adm-table" style={{ margin: 0 }}>
-        <thead><tr><th>Match</th><th>Market</th><th>Pick</th><th className="num">Odds</th><th>Sport</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Match</th>
+            <th>Market</th>
+            <th>Pick</th>
+            <th className="num">Odds</th>
+            <th>Sport</th>
+          </tr>
+        </thead>
         <tbody>
           {(bet.legs || []).map((l, i) => (
             <tr key={i}>
-              <td>{l.home} <span style={{ color: 'var(--text-dim)' }}>vs</span> {l.away}</td>
+              <td>
+                {l.home} <span style={{ color: 'var(--text-dim)' }}>vs</span> {l.away}
+              </td>
               <td>{l.marketName || l.market}</td>
               <td>{l.outcome}</td>
               <td className="num">{Number(l.odds || 0).toFixed(2)}</td>
@@ -835,9 +1169,26 @@ function BetSlipPreview({ bet }) {
       </table>
       {(bet.settledBy || bet.cancelledBy || bet.deletedBy) && (
         <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          {bet.settledBy  && <>Settled by <strong>{bet.settledBy}</strong> · {dateShort(bet.settledAt)}{bet.settleReason ? ` · ${bet.settleReason}` : ''}<br /></>}
-          {bet.cancelledBy && <>Cancelled by <strong>{bet.cancelledBy}</strong> · {dateShort(bet.cancelledAt)}{bet.cancelReason ? ` · ${bet.cancelReason}` : ''}<br /></>}
-          {bet.deletedBy   && <>Deleted by <strong>{bet.deletedBy}</strong> · {dateShort(bet.deletedAt)}{bet.deleteReason ? ` · ${bet.deleteReason}` : ''}</>}
+          {bet.settledBy && (
+            <>
+              Settled by <strong>{bet.settledBy}</strong> · {dateShort(bet.settledAt)}
+              {bet.settleReason ? ` · ${bet.settleReason}` : ''}
+              <br />
+            </>
+          )}
+          {bet.cancelledBy && (
+            <>
+              Cancelled by <strong>{bet.cancelledBy}</strong> · {dateShort(bet.cancelledAt)}
+              {bet.cancelReason ? ` · ${bet.cancelReason}` : ''}
+              <br />
+            </>
+          )}
+          {bet.deletedBy && (
+            <>
+              Deleted by <strong>{bet.deletedBy}</strong> · {dateShort(bet.deletedAt)}
+              {bet.deleteReason ? ` · ${bet.deleteReason}` : ''}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -846,28 +1197,46 @@ function BetSlipPreview({ bet }) {
 
 function CredentialsModal({ open, onClose, data }) {
   return (
-    <Modal open={open} onClose={onClose}
-           title="Stored credentials"
-           description="Plaintext passwords are never recoverable — only a one-way bcrypt hash is stored. The fingerprint below confirms the hash exists without exposing it.">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Stored credentials"
+      description="Plaintext passwords are never recoverable — only a one-way bcrypt hash is stored. The fingerprint below confirms the hash exists without exposing it."
+    >
       {!data ? null : (
         <dl className="adm-kv">
-          <dt>Account</dt><dd>{data.email}</dd>
-          <dt>User ID</dt><dd style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{data.id}</dd>
-          <dt>Has password</dt><dd>{data.hasPassword ? <Badge tone="success">Yes</Badge> : <Badge tone="warn">No</Badge>}</dd>
-          <dt>Password algorithm</dt><dd>{data.passwordAlgo || '—'}</dd>
-          <dt>Hash fingerprint</dt><dd style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{data.passwordHashFingerprint || '—'}</dd>
-          <dt>Email verified</dt><dd>{data.emailVerified ? <Badge tone="success">Verified</Badge> : <Badge tone="warn">Unverified</Badge>}</dd>
-          <dt>Google linked</dt><dd>{data.googleLinked ? <Badge tone="info">Linked</Badge> : '—'}</dd>
-          <dt>2FA</dt><dd>{data.twoFactorEnabled ? <Badge tone="success">Enabled</Badge> : <Badge>Off</Badge>}</dd>
-          <dt>KYC</dt><dd>{data.kycStatus}</dd>
-          <dt>Country</dt><dd>{data.country || '—'}</dd>
-          <dt>Suspended</dt><dd>{data.suspended ? <Badge tone="danger">Yes</Badge> : 'No'}</dd>
-          <dt>Created</dt><dd>{dateShort(data.createdAt)}</dd>
-          <dt>Last update</dt><dd>{dateShort(data.updatedAt)}</dd>
+          <dt>Account</dt>
+          <dd>{data.email}</dd>
+          <dt>User ID</dt>
+          <dd style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{data.id}</dd>
+          <dt>Has password</dt>
+          <dd>{data.hasPassword ? <Badge tone="success">Yes</Badge> : <Badge tone="warn">No</Badge>}</dd>
+          <dt>Password algorithm</dt>
+          <dd>{data.passwordAlgo || '—'}</dd>
+          <dt>Hash fingerprint</dt>
+          <dd style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{data.passwordHashFingerprint || '—'}</dd>
+          <dt>Email verified</dt>
+          <dd>{data.emailVerified ? <Badge tone="success">Verified</Badge> : <Badge tone="warn">Unverified</Badge>}</dd>
+          <dt>Google linked</dt>
+          <dd>{data.googleLinked ? <Badge tone="info">Linked</Badge> : '—'}</dd>
+          <dt>2FA</dt>
+          <dd>{data.twoFactorEnabled ? <Badge tone="success">Enabled</Badge> : <Badge>Off</Badge>}</dd>
+          <dt>KYC</dt>
+          <dd>{data.kycStatus}</dd>
+          <dt>Country</dt>
+          <dd>{data.country || '—'}</dd>
+          <dt>Suspended</dt>
+          <dd>{data.suspended ? <Badge tone="danger">Yes</Badge> : 'No'}</dd>
+          <dt>Created</dt>
+          <dd>{dateShort(data.createdAt)}</dd>
+          <dt>Last update</dt>
+          <dd>{dateShort(data.updatedAt)}</dd>
         </dl>
       )}
       <div className="adm-modal-actions">
-        <button type="button" className="adm-btn primary" onClick={onClose}>Close</button>
+        <button type="button" className="adm-btn primary" onClick={onClose}>
+          Close
+        </button>
       </div>
     </Modal>
   );
@@ -876,7 +1245,12 @@ function CredentialsModal({ open, onClose, data }) {
 function DeleteUserModal({ open, onClose, user, onConfirm }) {
   const [reason, setReason] = useState('');
   const [confirmText, setConfirmText] = useState('');
-  useEffect(() => { if (open) { setReason(''); setConfirmText(''); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setReason('');
+      setConfirmText('');
+    }
+  }, [open]);
   if (!user) return null;
   const ready = confirmText.trim().toLowerCase() === user.email.toLowerCase();
   const hasFunds = (user.balance || 0) > 0;
@@ -889,18 +1263,25 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
       footer={null}
     >
       <form
-        onSubmit={(e) => { e.preventDefault(); if (ready) onConfirm(reason || 'admin delete'); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ready) onConfirm(reason || 'admin delete');
+        }}
         style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
       >
         {hasFunds && (
-          <div style={{
-            padding: '10px 12px',
-            background: 'rgba(214,58,44,.08)',
-            border: '1px solid rgba(214,58,44,.25)',
-            borderRadius: 8,
-            fontSize: 13, lineHeight: 1.45,
-          }}>
-            ⚠️ Wallet still holds <strong>{moneyFmt(user.balance, user.currency)}</strong>. Settle or refund before deleting if those funds were ever real.
+          <div
+            style={{
+              padding: '10px 12px',
+              background: 'rgba(214,58,44,.08)',
+              border: '1px solid rgba(214,58,44,.25)',
+              borderRadius: 8,
+              fontSize: 13,
+              lineHeight: 1.45,
+            }}
+          >
+            ⚠️ Wallet still holds <strong>{moneyFmt(user.balance, user.currency)}</strong>. Settle or refund before
+            deleting if those funds were ever real.
           </div>
         )}
         <div className="adm-field">
@@ -916,7 +1297,18 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
         </div>
         <div className="adm-field">
           <label>
-            Type <code style={{ fontFamily: 'var(--ff-mono)', background: 'var(--surface-soft, rgba(255,255,255,.05))', padding: '1px 6px', borderRadius: 4 }}>{user.email}</code> to confirm
+            Type{' '}
+            <code
+              style={{
+                fontFamily: 'var(--ff-mono)',
+                background: 'var(--surface-soft, rgba(255,255,255,.05))',
+                padding: '1px 6px',
+                borderRadius: 4,
+              }}
+            >
+              {user.email}
+            </code>{' '}
+            to confirm
           </label>
           <input
             className="adm-input"
@@ -926,7 +1318,9 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
           />
         </div>
         <div className="adm-modal-actions">
-          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
+          <button type="button" className="adm-btn ghost" onClick={onClose}>
+            Cancel
+          </button>
           <button type="submit" className="adm-btn danger" disabled={!ready}>
             <IconTrash size={14} /> Delete forever
           </button>
@@ -939,7 +1333,7 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
 function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onTags, onNotes }) {
   const [tagInput, setTagInput] = useState('');
   const [notes, setNotes] = useState(user.notes || '');
-  const lastLogin  = logins.find((e) => e.kind === 'login_success' || e.kind === 'login_google');
+  const lastLogin = logins.find((e) => e.kind === 'login_success' || e.kind === 'login_google');
   const lastLogout = logins.find((e) => e.kind === 'logout');
   const current = stageOf(user);
   const canMutateStage = hasRole('moderator', 'support');
@@ -949,31 +1343,55 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
       <Card flush>
         <div style={{ padding: 16 }}>
           <dl className="adm-kv">
-            <dt>Email / Login</dt><dd>{user.email}</dd>
-            <dt>User ID</dt><dd style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{user.id}</dd>
-            <dt>Balance</dt><dd><strong>{moneyFmt(user.balance, user.currency)}</strong></dd>
-            <dt>Account created</dt><dd>{user.createdAt ? `${dateShort(user.createdAt)} · ${ago(user.createdAt)}` : '—'}</dd>
-            <dt>Last login</dt><dd>{lastLogin ? `${dateShort(lastLogin.at)} · ${ago(lastLogin.at)}${lastLogin.ip ? ` · ${lastLogin.ip}` : ''}` : '—'}</dd>
-            <dt>Last logout</dt><dd>{lastLogout ? `${dateShort(lastLogout.at)} · ${ago(lastLogout.at)}${lastLogout.ip ? ` · ${lastLogout.ip}` : ''}` : '—'}</dd>
-            <dt>Last update</dt><dd>{dateShort(user.updatedAt)}</dd>
+            <dt>Email / Login</dt>
+            <dd>{user.email}</dd>
+            <dt>User ID</dt>
+            <dd style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{user.id}</dd>
+            <dt>Balance</dt>
+            <dd>
+              <strong>{moneyFmt(user.balance, user.currency)}</strong>
+            </dd>
+            <dt>Account created</dt>
+            <dd>{user.createdAt ? `${dateShort(user.createdAt)} · ${ago(user.createdAt)}` : '—'}</dd>
+            <dt>Last login</dt>
+            <dd>
+              {lastLogin
+                ? `${dateShort(lastLogin.at)} · ${ago(lastLogin.at)}${lastLogin.ip ? ` · ${lastLogin.ip}` : ''}`
+                : '—'}
+            </dd>
+            <dt>Last logout</dt>
+            <dd>
+              {lastLogout
+                ? `${dateShort(lastLogout.at)} · ${ago(lastLogout.at)}${lastLogout.ip ? ` · ${lastLogout.ip}` : ''}`
+                : '—'}
+            </dd>
+            <dt>Last update</dt>
+            <dd>{dateShort(user.updatedAt)}</dd>
             <dt>Deposit verification</dt>
             <dd>
-              {user.verified
-                ? <><Badge tone="success">Verified</Badge>{user.verifiedAt ? ` · ${dateShort(user.verifiedAt)}` : ''}{user.verifiedBy ? ` · by ${user.verifiedBy}` : ''}</>
-                : <Badge tone="warn">Unverified</Badge>}
+              {user.verified ? (
+                <>
+                  <Badge tone="success">Verified</Badge>
+                  {user.verifiedAt ? ` · ${dateShort(user.verifiedAt)}` : ''}
+                  {user.verifiedBy ? ` · by ${user.verifiedBy}` : ''}
+                </>
+              ) : (
+                <Badge tone="warn">Unverified</Badge>
+              )}
             </dd>
-            <dt>2FA</dt><dd>{user.twoFactorEnabled ? <Badge tone="success">Enabled</Badge> : <Badge>Off</Badge>}</dd>
+            <dt>2FA</dt>
+            <dd>{user.twoFactorEnabled ? <Badge tone="success">Enabled</Badge> : <Badge>Off</Badge>}</dd>
           </dl>
         </div>
       </Card>
 
       <Card title="Lifetime stats">
         <div className="adm-grid c3" style={{ gap: 12 }}>
-          <Mini label="Stake"   v={moneyFmt(user.stats?.stakeTotal)} />
+          <Mini label="Stake" v={moneyFmt(user.stats?.stakeTotal)} />
           <Mini label="Payouts" v={moneyFmt(user.stats?.payoutTotal)} />
-          <Mini label="Bets"    v={numFmt(user.stats?.bets)} />
-          <Mini label="Won"     v={numFmt(user.stats?.betsWon)} />
-          <Mini label="Lost"    v={numFmt(user.stats?.betsLost)} />
+          <Mini label="Bets" v={numFmt(user.stats?.bets)} />
+          <Mini label="Won" v={numFmt(user.stats?.betsWon)} />
+          <Mini label="Lost" v={numFmt(user.stats?.betsLost)} />
           <Mini label="Deposits" v={moneyFmt(user.stats?.depositTotal)} />
         </div>
       </Card>
@@ -984,9 +1402,13 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
         pill={
           <span
             style={{
-              padding: '4px 10px', borderRadius: 999,
-              background: STAGE_GRADIENTS[current], color: '#0a0d14',
-              fontWeight: 800, fontSize: 11, letterSpacing: 0.02,
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: STAGE_GRADIENTS[current],
+              color: '#0a0d14',
+              fontWeight: 800,
+              fontSize: 11,
+              letterSpacing: 0.02,
             }}
           >
             Stage {current} · {STAGE_LABELS[current]}
@@ -1008,11 +1430,17 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
             <div
               style={{
                 flex: '1 1 220px',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '11px 16px', borderRadius: 10,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '11px 16px',
+                borderRadius: 10,
                 background: 'linear-gradient(135deg, rgba(255, 209, 102, 0.18), rgba(255, 138, 61, 0.08))',
                 border: '1px solid rgba(255, 209, 102, 0.40)',
-                color: '#ffd166', fontWeight: 700, fontSize: 13,
+                color: '#ffd166',
+                fontWeight: 700,
+                fontSize: 13,
               }}
             >
               <IconCheck size={14} /> VIP · Free withdrawals · No popups
@@ -1043,7 +1471,7 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
         )}
 
         {/* Account block state — only relevant at Stage 3 (Stage 4 is always unlocked) */}
-        {(current === 3) && (
+        {current === 3 && (
           <div
             style={{
               marginTop: 14,
@@ -1055,19 +1483,37 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
               border: `1px solid ${blocked ? 'rgba(255,93,108,.35)' : 'rgba(24,240,161,.30)'}`,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
               <div>
                 <div style={{ fontWeight: 800, fontSize: 13, color: blocked ? 'var(--danger)' : 'var(--accent)' }}>
                   {blocked ? '🔒 Account locked' : '🔓 Account unlocked'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 3 }}>
-                  {blocked
-                    ? <>Withdrawal popup shows “account blocked”. Promotion to Stage 3 locks automatically.{user.blockedAt ? <> · {ago(user.blockedAt)} by <strong>{user.blockedBy || 'admin'}</strong></> : null}</>
-                    : 'Player can withdraw normally at Stage 3.'}
+                  {blocked ? (
+                    <>
+                      Withdrawal popup shows “account blocked”. Promotion to Stage 3 locks automatically.
+                      {user.blockedAt ? (
+                        <>
+                          {' '}
+                          · {ago(user.blockedAt)} by <strong>{user.blockedBy || 'admin'}</strong>
+                        </>
+                      ) : null}
+                    </>
+                  ) : (
+                    'Player can withdraw normally at Stage 3.'
+                  )}
                 </div>
               </div>
-              {canMutateStage && (
-                blocked ? (
+              {canMutateStage &&
+                (blocked ? (
                   <button type="button" className="adm-btn success" onClick={() => onBlocked(false)}>
                     <IconCheck size={14} /> Unblock account
                   </button>
@@ -1075,8 +1521,7 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
                   <button type="button" className="adm-btn warn" onClick={() => onBlocked(true)}>
                     <IconBan size={14} /> Block account
                   </button>
-                )
-              )}
+                ))}
             </div>
           </div>
         )}
@@ -1085,10 +1530,12 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
       <Card title="KYC" subtitle="Identity verification status">
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {['unverified', 'pending', 'verified', 'rejected'].map((s) => (
-            <button key={s}
+            <button
+              key={s}
               className={`adm-btn ${user.kycStatus === s ? 'primary' : ''}`}
               disabled={!hasRole('moderator', 'support')}
-              onClick={() => onKyc(s)}>
+              onClick={() => onKyc(s)}
+            >
               {s}
             </button>
           ))}
@@ -1098,31 +1545,58 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
       <Card title="Tags" subtitle="Use for cohorts, watchlists, promo eligibility">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
           {(user.tags || []).map((t) => (
-            <span key={t} onClick={() => hasRole('moderator', 'support') && onTags((user.tags || []).filter((x) => x !== t))}
-                  style={{ cursor: hasRole('moderator', 'support') ? 'pointer' : 'default' }}>
+            <span
+              key={t}
+              onClick={() => hasRole('moderator', 'support') && onTags((user.tags || []).filter((x) => x !== t))}
+              style={{ cursor: hasRole('moderator', 'support') ? 'pointer' : 'default' }}
+            >
               <Badge tone="brand">{t} ×</Badge>
             </span>
           ))}
         </div>
         {hasRole('moderator', 'support') && (
           <div style={{ display: 'flex', gap: 6 }}>
-            <input className="adm-input" placeholder="Add tag…" value={tagInput} onChange={(e) => setTagInput(e.target.value)}
-                   onKeyDown={(e) => {
-                     if (e.key === 'Enter' && tagInput.trim()) {
-                       onTags([...(user.tags || []), tagInput.trim()]); setTagInput('');
-                     }
-                   }} />
-            <button className="adm-btn" onClick={() => { if (tagInput.trim()) { onTags([...(user.tags || []), tagInput.trim()]); setTagInput(''); } }}>Add</button>
+            <input
+              className="adm-input"
+              placeholder="Add tag…"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && tagInput.trim()) {
+                  onTags([...(user.tags || []), tagInput.trim()]);
+                  setTagInput('');
+                }
+              }}
+            />
+            <button
+              className="adm-btn"
+              onClick={() => {
+                if (tagInput.trim()) {
+                  onTags([...(user.tags || []), tagInput.trim()]);
+                  setTagInput('');
+                }
+              }}
+            >
+              Add
+            </button>
           </div>
         )}
       </Card>
 
       <Card title="Internal notes" subtitle="Visible to admins only">
-        <textarea className="adm-textarea" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
-                  disabled={!hasRole('moderator', 'support')} placeholder="VIP since 2024, prefers MoMo. Watch for late-night patterns." />
+        <textarea
+          className="adm-textarea"
+          rows={4}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          disabled={!hasRole('moderator', 'support')}
+          placeholder="VIP since 2024, prefers MoMo. Watch for late-night patterns."
+        />
         {hasRole('moderator', 'support') && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-            <button className="adm-btn primary" onClick={() => onNotes(notes)}>Save notes</button>
+            <button className="adm-btn primary" onClick={() => onNotes(notes)}>
+              Save notes
+            </button>
           </div>
         )}
       </Card>
@@ -1132,12 +1606,17 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
 
 function Mini({ label, v }) {
   return (
-    <div style={{
-      padding: 12, borderRadius: 12,
-      background: 'var(--surface-soft)',
-      border: '1px solid var(--border)',
-    }}>
-      <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.12em' }}>{label}</div>
+    <div
+      style={{
+        padding: 12,
+        borderRadius: 12,
+        background: 'var(--surface-soft)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.12em' }}>
+        {label}
+      </div>
       <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{v}</div>
     </div>
   );
@@ -1147,7 +1626,13 @@ function WalletModal({ open, onClose, user, onSubmit }) {
   const [delta, setDelta] = useState('');
   const [reason, setReason] = useState('');
   const [direction, setDirection] = useState('credit');
-  useEffect(() => { if (open) { setDelta(''); setReason(''); setDirection('credit'); } }, [open]);
+  useEffect(() => {
+    if (open) {
+      setDelta('');
+      setReason('');
+      setDirection('credit');
+    }
+  }, [open]);
 
   function submit(e) {
     e.preventDefault();
@@ -1156,27 +1641,59 @@ function WalletModal({ open, onClose, user, onSubmit }) {
     onSubmit(direction === 'credit' ? n : -n, reason || 'Manual adjustment');
   }
   return (
-    <Modal open={open} onClose={onClose}
-           title="Adjust wallet"
-           description={`Current balance: ${moneyFmt(user?.balance, user?.currency)}`}
-           footer={null}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Adjust wallet"
+      description={`Current balance: ${moneyFmt(user?.balance, user?.currency)}`}
+      footer={null}
+    >
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          {[['credit', 'Credit'], ['debit', 'Debit']].map(([k, label]) => (
-            <button key={k} type="button" className={`adm-btn ${direction === k ? 'primary' : ''}`} onClick={() => setDirection(k)}>{label}</button>
+          {[
+            ['credit', 'Credit'],
+            ['debit', 'Debit'],
+          ].map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              className={`adm-btn ${direction === k ? 'primary' : ''}`}
+              onClick={() => setDirection(k)}
+            >
+              {label}
+            </button>
           ))}
         </div>
         <div className="adm-field">
           <label>Amount (GHS)</label>
-          <input className="adm-input" type="number" min="0.01" step="0.01" value={delta} onChange={(e) => setDelta(e.target.value)} autoFocus required />
+          <input
+            className="adm-input"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={delta}
+            onChange={(e) => setDelta(e.target.value)}
+            autoFocus
+            required
+          />
         </div>
         <div className="adm-field">
           <label>Reason (required, recorded in audit log)</label>
-          <input className="adm-input" value={reason} onChange={(e) => setReason(e.target.value)} required minLength={2} />
+          <input
+            className="adm-input"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            required
+            minLength={2}
+          />
         </div>
         <div className="adm-modal-actions">
-          <button type="button" className="adm-btn ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="adm-btn primary">Apply adjustment</button>
+          <button type="button" className="adm-btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="adm-btn primary">
+            Apply adjustment
+          </button>
         </div>
       </form>
     </Modal>

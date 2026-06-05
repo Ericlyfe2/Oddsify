@@ -20,12 +20,12 @@ const SRC = resolve(PUBLIC, 'favicon.svg');
 const svg = readFileSync(SRC);
 
 const SIZES = [
-  { name: 'favicon-16.png',          size: 16  },
-  { name: 'favicon-32.png',          size: 32  },
-  { name: 'favicon-48.png',          size: 48  },
-  { name: 'apple-touch-icon-180.png',size: 180 },
-  { name: 'icon-192.png',            size: 192 },
-  { name: 'icon-512.png',            size: 512 },
+  { name: 'favicon-16.png', size: 16 },
+  { name: 'favicon-32.png', size: 32 },
+  { name: 'favicon-48.png', size: 48 },
+  { name: 'apple-touch-icon-180.png', size: 180 },
+  { name: 'icon-192.png', size: 192 },
+  { name: 'icon-512.png', size: 512 },
 ];
 
 async function renderSquare(size) {
@@ -62,4 +62,7 @@ async function main() {
   console.log(`wrote maskable-icon-512.png (${maskable.length} bytes)`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

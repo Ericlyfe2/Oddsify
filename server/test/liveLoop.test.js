@@ -9,7 +9,14 @@ import assert from 'node:assert/strict';
 import { emitScoreUpdate } from '../src/services/realtime.js';
 
 test('emitScoreUpdate is a no-op before attachRealtime', () => {
-  assert.doesNotThrow(() => emitScoreUpdate({
-    fixtureId: 'f1', scoreHome: 1, scoreAway: 0, minute: '34', eventKind: 'goal_home', team: 'home',
-  }));
+  assert.doesNotThrow(() =>
+    emitScoreUpdate({
+      fixtureId: 'f1',
+      scoreHome: 1,
+      scoreAway: 0,
+      minute: '34',
+      eventKind: 'goal_home',
+      team: 'home',
+    }),
+  );
 });

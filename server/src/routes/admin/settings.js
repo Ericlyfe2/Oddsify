@@ -31,14 +31,16 @@ router.get('/', requireAdmin, (_req, res) => {
   res.json({ settings: getSettings() });
 });
 
-router.put('/',
-  requireAdmin, requireRole(),
+router.put(
+  '/',
+  requireAdmin,
+  requireRole(),
   validate(settingsSchema),
   asyncHandler(async (req, res) => {
     const updated = updateSettings(req.body);
     audit(req, { action: 'settings.update', target: 'platform', meta: { keys: Object.keys(req.body) } });
     res.json({ ok: true, settings: updated });
-  })
+  }),
 );
 
 export default router;

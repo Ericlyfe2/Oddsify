@@ -8,7 +8,9 @@ const router = Router();
 
 // Ghana mobile or full international format. Allow an empty string so the
 // user can clear the field; we'll normalise to null below.
-const phoneSchema = z.string().trim()
+const phoneSchema = z
+  .string()
+  .trim()
   .max(20, 'Phone too long')
   .refine(
     (v) => v === '' || /^\+?\d[\d\s-]{8,18}$/.test(v),
@@ -24,12 +26,14 @@ const profileSchema = z.object({
   phone: phoneSchema.optional(),
   favouriteSports: z.array(z.string()).max(10).optional(),
   favouriteLeagues: z.array(z.string()).max(20).optional(),
-  responsibleGaming: z.object({
-    dailyDepositLimit:   z.number().nonnegative().optional(),
-    weeklyDepositLimit:  z.number().nonnegative().optional(),
-    monthlyDepositLimit: z.number().nonnegative().optional(),
-    selfExcludedUntil:   z.string().nullable().optional(),
-  }).optional(),
+  responsibleGaming: z
+    .object({
+      dailyDepositLimit: z.number().nonnegative().optional(),
+      weeklyDepositLimit: z.number().nonnegative().optional(),
+      monthlyDepositLimit: z.number().nonnegative().optional(),
+      selfExcludedUntil: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
 router.get('/', requireAuth, (req, res) => {

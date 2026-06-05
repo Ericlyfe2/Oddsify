@@ -33,7 +33,9 @@ router.post('/refresh', requireAdmin, async (_req, res, next) => {
   try {
     const r = await aggregateOnce();
     res.json({ ok: true, ...r });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 router.post('/:id/test', requireAdmin, async (req, res, next) => {
@@ -42,7 +44,9 @@ router.post('/:id/test', requireAdmin, async (req, res, next) => {
   try {
     const sample = await p.fetchOdds('football').catch(() => p.fetchFixtures('football').catch(() => []));
     res.json({ ok: true, count: sample?.length || 0, sample: sample?.slice(0, 3) || [], health: p.health() });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 export default router;

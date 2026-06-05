@@ -26,7 +26,15 @@ function DiceArt() {
       <g transform="translate(150 30) rotate(-12)" filter="url(#d-shadow)">
         <rect x="0" y="0" width="120" height="120" rx="22" fill="url(#d-face2)" />
         <rect x="0" y="0" width="120" height="120" rx="22" fill="none" stroke="#b45309" strokeWidth="2" opacity="0.4" />
-        {[ [30,30],[90,30],[30,60],[60,60],[90,60],[30,90],[90,90] ].map(([cx, cy], i) => (
+        {[
+          [30, 30],
+          [90, 30],
+          [30, 60],
+          [60, 60],
+          [90, 60],
+          [30, 90],
+          [90, 90],
+        ].map(([cx, cy], i) => (
           <circle key={i} cx={cx} cy={cy} r="9" fill="#7c2d12" />
         ))}
       </g>
@@ -34,7 +42,13 @@ function DiceArt() {
       <g transform="translate(40 70) rotate(8)" filter="url(#d-shadow)">
         <rect x="0" y="0" width="130" height="130" rx="24" fill="url(#d-face1)" />
         <rect x="0" y="0" width="130" height="130" rx="24" fill="none" stroke="#94a3b8" strokeWidth="2" opacity="0.5" />
-        {[ [32,32],[98,32],[65,65],[32,98],[98,98] ].map(([cx, cy], i) => (
+        {[
+          [32, 32],
+          [98, 32],
+          [65, 65],
+          [32, 98],
+          [98, 98],
+        ].map(([cx, cy], i) => (
           <circle key={i} cx={cx} cy={cy} r="10" fill="#dc2626" />
         ))}
       </g>
@@ -61,22 +75,40 @@ function Spin2WinArt() {
         <circle r="92" fill="url(#s-felt)" />
         {/* Color segments (12 wedges alternating red/black with one green) */}
         {Array.from({ length: 12 }).map((_, i) => {
-          const start = (i * 30) - 90;
+          const start = i * 30 - 90;
           const end = start + 30;
           const a0 = (start * Math.PI) / 180;
           const a1 = (end * Math.PI) / 180;
           const r = 88;
-          const x0 = Math.cos(a0) * r, y0 = Math.sin(a0) * r;
-          const x1 = Math.cos(a1) * r, y1 = Math.sin(a1) * r;
+          const x0 = Math.cos(a0) * r,
+            y0 = Math.sin(a0) * r;
+          const x1 = Math.cos(a1) * r,
+            y1 = Math.sin(a1) * r;
           const color = i === 0 ? '#15803d' : i % 2 === 0 ? '#c81e1e' : '#1a1a1a';
           return (
-            <path key={i} d={`M0 0 L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`} fill={color} stroke="#ffd166" strokeWidth="1" opacity="0.92" />
+            <path
+              key={i}
+              d={`M0 0 L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`}
+              fill={color}
+              stroke="#ffd166"
+              strokeWidth="1"
+              opacity="0.92"
+            />
           );
         })}
         {/* Hub */}
         <circle r="34" fill="#0b1410" stroke="#ffd166" strokeWidth="2" />
         <circle r="20" fill="#1f2937" />
-        <text textAnchor="middle" y="6" fill="#ffd166" fontSize="14" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">2W</text>
+        <text
+          textAnchor="middle"
+          y="6"
+          fill="#ffd166"
+          fontSize="14"
+          fontWeight="900"
+          fontFamily="Bricolage Grotesque, sans-serif"
+        >
+          2W
+        </text>
         {/* Ball */}
         <circle cx="0" cy="-78" r="8" fill="#fff" />
         <circle cx="0" cy="-78" r="3" fill="#cbd5e1" />
@@ -105,18 +137,68 @@ function RedBlackArt() {
       {/* Black card (back) */}
       <g transform="translate(170 30) rotate(14)" filter="url(#rb-shadow)">
         <rect x="0" y="0" width="110" height="160" rx="14" fill="url(#rb-blk)" stroke="#ffd166" strokeWidth="2" />
-        <text x="14" y="32" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">A</text>
-        <text x="14" y="52" fill="#fff" fontSize="18">♠</text>
-        <text x="55" y="100" fill="#fff" fontSize="56" fontWeight="900" textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif">♠</text>
-        <text x="96" y="148" fill="#fff" fontSize="22" fontWeight="900" textAnchor="end" fontFamily="Bricolage Grotesque, sans-serif" transform="rotate(180 96 148)">A</text>
+        <text x="14" y="32" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">
+          A
+        </text>
+        <text x="14" y="52" fill="#fff" fontSize="18">
+          ♠
+        </text>
+        <text
+          x="55"
+          y="100"
+          fill="#fff"
+          fontSize="56"
+          fontWeight="900"
+          textAnchor="middle"
+          fontFamily="Bricolage Grotesque, sans-serif"
+        >
+          ♠
+        </text>
+        <text
+          x="96"
+          y="148"
+          fill="#fff"
+          fontSize="22"
+          fontWeight="900"
+          textAnchor="end"
+          fontFamily="Bricolage Grotesque, sans-serif"
+          transform="rotate(180 96 148)"
+        >
+          A
+        </text>
       </g>
       {/* Red card (front) */}
       <g transform="translate(50 50) rotate(-10)" filter="url(#rb-shadow)">
         <rect x="0" y="0" width="110" height="160" rx="14" fill="url(#rb-red)" stroke="#ffd166" strokeWidth="2" />
-        <text x="14" y="32" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">A</text>
-        <text x="14" y="52" fill="#fff" fontSize="18">♥</text>
-        <text x="55" y="100" fill="#fff" fontSize="56" fontWeight="900" textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif">♥</text>
-        <text x="96" y="148" fill="#fff" fontSize="22" fontWeight="900" textAnchor="end" fontFamily="Bricolage Grotesque, sans-serif" transform="rotate(180 96 148)">A</text>
+        <text x="14" y="32" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">
+          A
+        </text>
+        <text x="14" y="52" fill="#fff" fontSize="18">
+          ♥
+        </text>
+        <text
+          x="55"
+          y="100"
+          fill="#fff"
+          fontSize="56"
+          fontWeight="900"
+          textAnchor="middle"
+          fontFamily="Bricolage Grotesque, sans-serif"
+        >
+          ♥
+        </text>
+        <text
+          x="96"
+          y="148"
+          fill="#fff"
+          fontSize="22"
+          fontWeight="900"
+          textAnchor="end"
+          fontFamily="Bricolage Grotesque, sans-serif"
+          transform="rotate(180 96 148)"
+        >
+          A
+        </text>
       </g>
     </svg>
   );
@@ -129,14 +211,14 @@ const CARD_TINT = { dice: '#0c4a2a', spin2win: '#3b0d0d', 'red-black': '#0c2a4a'
 function generateWinners() {
   const names = ['Kwame A.', 'Ama O.', 'Yaw B.', 'Akua M.', 'Kojo S.', 'Adwoa P.', 'Kofi N.', 'Esi T.'];
   const games = [
-    { id: 'dice',     name: 'Dice'      },
-    { id: 'spin2win', name: 'Spin2Win'  },
-    { id: 'red-black',name: 'Red Black' },
+    { id: 'dice', name: 'Dice' },
+    { id: 'spin2win', name: 'Spin2Win' },
+    { id: 'red-black', name: 'Red Black' },
   ];
   const pool = Array.from({ length: 4 }).map(() => {
     const n = names[Math.floor(Math.random() * names.length)];
     const g = games[Math.floor(Math.random() * games.length)];
-    const amt = (Math.random() * 1800 + 80);
+    const amt = Math.random() * 1800 + 80;
     return { name: n, game: g.name, amount: amt, key: `${n}-${g.id}-${Math.random()}` };
   });
   return pool;
@@ -166,7 +248,11 @@ export default function CasinoPage() {
   const rest = useMemo(() => (games || []).filter((g) => g !== featured), [games, featured]);
 
   const launch = (g) => {
-    if (!account) { toast('Sign in to play casino games.'); navigate(`/login?next=${encodeURIComponent(g.route || '/casino')}`); return; }
+    if (!account) {
+      toast('Sign in to play casino games.');
+      navigate(`/login?next=${encodeURIComponent(g.route || '/casino')}`);
+      return;
+    }
     if (g.route) navigate(g.route);
     else toast(`${g.title} is coming soon.`);
   };
@@ -185,10 +271,14 @@ export default function CasinoPage() {
         {/* Hero */}
         <header className="cv-hero">
           <span className="cv-eyebrow">Oddsify Originals · Instant Play</span>
-          <h1 className="cv-title">The <em>Casino</em> floor,<br />in your pocket.</h1>
+          <h1 className="cv-title">
+            The <em>Casino</em> floor,
+            <br />
+            in your pocket.
+          </h1>
           <p className="cv-lede">
-            Three flagship games engineered for fast rounds and big swings — pick your card,
-            roll the dice, or stack chips on the Spin2Win grid. Real wallet, instant payouts.
+            Three flagship games engineered for fast rounds and big swings — pick your card, roll the dice, or stack
+            chips on the Spin2Win grid. Real wallet, instant payouts.
           </p>
         </header>
 
@@ -216,14 +306,30 @@ export default function CasinoPage() {
               <span className="cv-featured-tag">🔥 Featured · RTP {featured.rtp.toFixed(1)}%</span>
               <h2>{featured.title}</h2>
               <p>{featured.tagline || 'High volatility. Fast rounds. Pure adrenaline.'}</p>
-              <button type="button" className="cv-play" onClick={(e) => { e.stopPropagation(); launch(featured); }}>
+              <button
+                type="button"
+                className="cv-play"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  launch(featured);
+                }}
+              >
                 Play now
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
               </button>
             </div>
-            <div className="cv-featured-art">
-              {FeaturedArt && <FeaturedArt />}
-            </div>
+            <div className="cv-featured-art">{FeaturedArt && <FeaturedArt />}</div>
           </section>
         )}
 
@@ -233,28 +339,35 @@ export default function CasinoPage() {
           <span className="cv-count">{games ? `${games.length} live` : ''}</span>
         </div>
         <div className="cv-grid">
-          {isLoading && Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="cv-skel" style={{ height: 240 }} />
-          ))}
-          {!isLoading && rest.map((g) => {
-            const Art = ART[g.id];
-            return (
-              <article key={g.id} className="cv-card" onClick={() => launch(g)}>
-                {g.hot && <span className="cv-hot">Hot</span>}
-                <span className="cv-rtp">RTP {g.rtp.toFixed(1)}%</span>
-                <div className="cv-card-art" style={{ '--card-tint': CARD_TINT[g.id] || '#0c4a2a' }}>
-                  {Art && <Art />}
-                </div>
-                <div className="cv-card-meta">
-                  <h4>{g.title}</h4>
-                  <p className="cv-tagline">{g.tagline || `${g.provider} · ${g.category}`}</p>
-                </div>
-                <button type="button" className="cv-card-cta" onClick={(e) => { e.stopPropagation(); launch(g); }}>
-                  Play now
-                </button>
-              </article>
-            );
-          })}
+          {isLoading &&
+            Array.from({ length: 2 }).map((_, i) => <div key={i} className="cv-skel" style={{ height: 240 }} />)}
+          {!isLoading &&
+            rest.map((g) => {
+              const Art = ART[g.id];
+              return (
+                <article key={g.id} className="cv-card" onClick={() => launch(g)}>
+                  {g.hot && <span className="cv-hot">Hot</span>}
+                  <span className="cv-rtp">RTP {g.rtp.toFixed(1)}%</span>
+                  <div className="cv-card-art" style={{ '--card-tint': CARD_TINT[g.id] || '#0c4a2a' }}>
+                    {Art && <Art />}
+                  </div>
+                  <div className="cv-card-meta">
+                    <h4>{g.title}</h4>
+                    <p className="cv-tagline">{g.tagline || `${g.provider} · ${g.category}`}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="cv-card-cta"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      launch(g);
+                    }}
+                  >
+                    Play now
+                  </button>
+                </article>
+              );
+            })}
         </div>
 
         {/* Live winners */}

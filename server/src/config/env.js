@@ -11,15 +11,15 @@ export const isProd = env.NODE_ENV === 'production';
 export const PORT = Number(env.PORT) || 4000;
 
 export const JWT = {
-  secret:    env.JWT_SECRET || 'dev-only-secret-change-me',
+  secret: env.JWT_SECRET || 'dev-only-secret-change-me',
   // Long-lived "always logged in" session by default. The refresh token is
   // rotated on every /api/auth/refresh call (see services/token.js), so an
   // active user effectively never has to re-authenticate. Override via env
   // (e.g. JWT_REFRESH_TTL=30d) if you need shorter sessions for staff or
   // shared devices.
-  accessTtl: env.JWT_ACCESS_TTL  || '7d',
-  refreshTtl:env.JWT_REFRESH_TTL || '3650d',
-  issuer:    'oddsify',
+  accessTtl: env.JWT_ACCESS_TTL || '7d',
+  refreshTtl: env.JWT_REFRESH_TTL || '3650d',
+  issuer: 'oddsify',
 };
 
 export const SMTP = {
@@ -33,14 +33,15 @@ export const SMTP = {
 };
 
 export const GOOGLE = {
-  clientId:     env.GOOGLE_CLIENT_ID     || '',
+  clientId: env.GOOGLE_CLIENT_ID || '',
   clientSecret: env.GOOGLE_CLIENT_SECRET || '',
   enabled: !!env.GOOGLE_CLIENT_ID,
 };
 
 export const RATE_LIMITS = {
+  globalMax: Number(env.RATE_LIMIT_GLOBAL_MAX) || 100,
   loginMax: Number(env.RATE_LIMIT_LOGIN_MAX) || 5,
-  otpMax:   Number(env.RATE_LIMIT_OTP_MAX)   || 3,
+  otpMax: Number(env.RATE_LIMIT_OTP_MAX) || 3,
 };
 
 export const ODDS_API_KEY = env.ODDS_API_KEY || '';
@@ -50,7 +51,7 @@ export const ODDS_API_KEY = env.ODDS_API_KEY || '';
 // In development, localhost is always allowed.
 export const CORS_ORIGINS = (env.CORS_ORIGIN || '')
   .split(',')
-  .map(s => s.trim())
+  .map((s) => s.trim())
   .filter(Boolean);
 
 // Optional: name of a Vercel project whose preview URLs should also be
@@ -89,7 +90,9 @@ if (!LIVE_BETTING.apiFootballKey) {
   // APIFOOTBALL provides the richest live data (minute counter, red-card
   // counts) so we still call it out, but the loop will run with whatever
   // provider is available.
-  console.warn('[env] APIFOOTBALL_KEY not set — live track will run via other providers (no live minute/cards if they don\'t expose them).');
+  console.warn(
+    "[env] APIFOOTBALL_KEY not set — live track will run via other providers (no live minute/cards if they don't expose them).",
+  );
 }
 
 if (isProd && (!JWT.secret || JWT.secret === 'dev-only-secret-change-me' || JWT.secret.length < 32)) {
@@ -97,7 +100,9 @@ if (isProd && (!JWT.secret || JWT.secret === 'dev-only-secret-change-me' || JWT.
   process.exit(1);
 }
 if (isProd && CORS_ORIGINS.length === 0 && !CORS_ALLOW_VERCEL) {
-  console.error('[env] FATAL: set CORS_ORIGIN (comma-separated origins) or CORS_ALLOW_VERCEL (Vercel project name) in production.');
+  console.error(
+    '[env] FATAL: set CORS_ORIGIN (comma-separated origins) or CORS_ALLOW_VERCEL (Vercel project name) in production.',
+  );
   process.exit(1);
 }
 if (!isProd && JWT.secret === 'dev-only-secret-change-me') {
