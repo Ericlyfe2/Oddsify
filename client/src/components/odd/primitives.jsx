@@ -437,7 +437,7 @@ export function OddTopHeader({ user, onAuth, onSearch, onBalanceClick }) {
                 padding: '8px 18px',
                 borderRadius: 999,
                 background: 'var(--text)',
-                color: 'var(--green-deep)',
+                color: 'var(--bg)',
                 fontWeight: 700,
                 fontSize: 13,
                 border: 0,
