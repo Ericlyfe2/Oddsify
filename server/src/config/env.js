@@ -14,10 +14,11 @@ export const JWT = {
   secret: env.JWT_SECRET || 'dev-only-secret-change-me',
   // Long-lived "always logged in" session by default. The refresh token is
   // rotated on every /api/auth/refresh call (see services/token.js), so an
-  // active user effectively never has to re-authenticate. Override via env
-  // (e.g. JWT_REFRESH_TTL=30d) if you need shorter sessions for staff or
-  // shared devices.
-  accessTtl: env.JWT_ACCESS_TTL || '7d',
+  // active user effectively never has to re-authenticate. The 30-day access
+  // window also means a brief refresh-endpoint outage can't sign anyone out.
+  // Override via env (e.g. JWT_REFRESH_TTL=30d) if you need shorter sessions
+  // for staff or shared devices.
+  accessTtl: env.JWT_ACCESS_TTL || '30d',
   refreshTtl: env.JWT_REFRESH_TTL || '3650d',
   issuer: 'oddsify',
 };

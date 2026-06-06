@@ -11,6 +11,14 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      # "Always logged in" session pair. Access tokens are valid for 30 days;
+      # refresh tokens for 10 years and rotate on every /api/auth/refresh call,
+      # so an active user effectively never has to re-authenticate. Tighten
+      # only if you need shorter sessions for staff devices.
+      - key: JWT_ACCESS_TTL
+        value: "30d"
+      - key: JWT_REFRESH_TTL
+        value: "3650d"
       - key: CORS_ORIGIN
         value: https://oddsify-client.vercel.app
       # Also trust this Vercel project's preview deploys (oddsify-client-*.vercel.app)
