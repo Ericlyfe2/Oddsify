@@ -1,49 +1,55 @@
 /**
- * Ensure a baseline of admin accounts exists on boot.
+ * Ensure the baseline admin accounts exist on every boot.
  *
- * In production the seed runs ONLY when the user store has zero admins.
- * Passwords are generated from env vars or randomly for each account
- * and printed once to the log — change them via the admin UI immediately.
+ * Defaults match the demo credentials shown on the admin login screen
+ * (client/src/pages/admin/AdminLogin.jsx) so an operator can sign in
+ * with documented creds without having to set ADMIN_*_PASSWORD env vars.
+ *
+ * To override any account, set the matching ADMIN_*_PASSWORD env var
+ * (or ADMIN_EMAIL for the super admin address). The seed re-applies the
+ * resulting password hash on every boot so a forgotten or stale
+ * password in storage can't lock operators out — operator-driven
+ * password changes done through the UI are intentionally reverted on
+ * the next deploy.
+ *
+ * Also clears any persistent brute-force lockouts for the default
+ * admin emails so a restart immediately unblocks rate-limited operators.
  */
-import crypto from 'node:crypto';
 import { allUsers, createUser, findByEmail, updateUser } from './users.js';
 import { hashPassword } from '../services/password.js';
+import { createStore } from './store.js';
 import { log } from '../utils/logger.js';
 
 const env = process.env;
 
-function generatePassword() {
-  return crypto.randomBytes(24).toString('base64').replace(/[+/=]/g, '').slice(0, 20) + '!Aa1';
-}
-
 const DEFAULTS = [
   {
     email: (env.ADMIN_EMAIL || 'admin@oddsify.gh').toLowerCase(),
-    password: env.ADMIN_PASSWORD || generatePassword(),
+    password: env.ADMIN_PASSWORD || 'Admin@12345',
     displayName: 'Platform Owner',
     adminRole: 'super_admin',
   },
   {
     email: 'finance@oddsify.gh',
-    password: env.FINANCE_ADMIN_PASSWORD || generatePassword(),
+    password: env.FINANCE_ADMIN_PASSWORD || 'Finance@12345',
     displayName: 'Finance Lead',
     adminRole: 'finance_admin',
   },
   {
     email: 'odds@oddsify.gh',
-    password: env.ODDS_ADMIN_PASSWORD || generatePassword(),
+    password: env.ODDS_ADMIN_PASSWORD || 'Odds@12345',
     displayName: 'Trading Desk',
     adminRole: 'odds_manager',
   },
   {
     email: 'support@oddsify.gh',
-    password: env.SUPPORT_ADMIN_PASSWORD || generatePassword(),
+    password: env.SUPPORT_ADMIN_PASSWORD || 'Support@12345',
     displayName: 'Support Agent',
     adminRole: 'support',
   },
   {
     email: 'mod@oddsify.gh',
-    password: env.MOD_ADMIN_PASSWORD || generatePassword(),
+    password: env.MOD_ADMIN_PASSWORD || 'Moderator@12345',
     displayName: 'Risk Moderator',
     adminRole: 'moderator',
   },
@@ -55,21 +61,21 @@ function redact(pw) {
 }
 
 export async function seedAdmins() {
-  const existing = allUsers().filter((u) => u.role === 'admin');
-  if (existing.length > 0) return existing.length;
+  const bruteStore = createStore('admin_brute', {});
+  let upserted = 0;
 
-  let created = 0;
-  const seeded = [];
   for (const spec of DEFAULTS) {
     const passwordHash = await hashPassword(spec.password);
     const present = findByEmail(spec.email);
+
     if (present) {
       updateUser(present.id, {
         role: 'admin',
-        adminRole: spec.adminRole,
+        adminRole: present.adminRole || spec.adminRole,
         emailVerified: true,
+        suspended: false,
         passwordHash,
-        displayName: spec.displayName,
+        displayName: present.displayName || spec.displayName,
       });
     } else {
       createUser({
@@ -86,14 +92,21 @@ export async function seedAdmins() {
         twoFactorEnabled: false,
       });
     }
-    seeded.push({ email: spec.email, role: spec.adminRole, password: spec.password });
-    created++;
+
+    // Clear any persistent brute-force lockout for this admin so a
+    // server restart immediately unblocks a rate-limited operator.
+    bruteStore.delete(spec.email);
+
+    log.security(
+      `Admin ensured — email: ${spec.email} / role: ${spec.adminRole} / password: ${redact(spec.password)}`,
+    );
+    upserted++;
   }
 
-  for (const a of seeded) {
-    log.security(
-      `Admin account created — email: ${a.email} / role: ${a.role} / password: ${redact(a.password)}  (change immediately)`,
-    );
-  }
-  return created;
+  return upserted;
+}
+
+// Kept for backwards compatibility with anything that imported the helper.
+export function adminCount() {
+  return allUsers().filter((u) => u.role === 'admin').length;
 }
