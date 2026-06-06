@@ -10,6 +10,7 @@
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
+import { parseIdentifier } from '../../lib/phone.js';
 import {
   allUsers,
   getUserById,
@@ -410,13 +411,14 @@ router.post(
   requireRole(),
   validate(
     z.object({
-      email: z
-        .string()
-        .trim()
-        .toLowerCase()
-        .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')), {
-          message: 'Enter a valid email or phone.',
-        }),
+      email: z.string().transform((raw, ctx) => {
+        const parsed = parseIdentifier(raw);
+        if (parsed.error) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: parsed.error.message });
+          return z.NEVER;
+        }
+        return parsed.value;
+      }),
       password: z.string().min(8),
       displayName: z.string().trim().max(60).optional(),
       country: z

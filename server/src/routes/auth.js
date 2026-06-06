@@ -28,21 +28,27 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { badRequest, unauthorized, conflict, forbidden } from '../utils/httpError.js';
 import { GOOGLE } from '../config/env.js';
 import { log } from '../utils/logger.js';
+import { parseIdentifier, validatePhone, sanitizePhone } from '../lib/phone.js';
 
 const router = Router();
 
 /* ------------ Schemas ------------ */
-const emailLike = z
-  .string()
-  .transform((v) => v.replace(/\s+/g, '').toLowerCase())
-  .pipe(
-    z
-      .string()
-      .min(3, 'Enter a valid email or phone.')
-      .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')), {
-        message: 'Enter a valid email or phone.',
-      }),
-  );
+// "Phone or email" identifier. Runs the same parseIdentifier the client
+// uses, surfacing the spec's exact error messages when the input isn't a
+// valid email or E.164 phone. The transform normalizes to lowercase for
+// emails and sanitized-E.164 for phones, so we never store two formats
+// of the same number.
+const emailLike = z.string().transform((raw, ctx) => {
+  const parsed = parseIdentifier(raw);
+  if (parsed.error) {
+    if (parsed.error.code !== 'invalid_email' && parsed.error.code !== 'empty') {
+      log.warn(`phone validation failure (auth): ${parsed.error.code} — input masked`);
+    }
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: parsed.error.message });
+    return z.NEVER;
+  }
+  return parsed.value;
+});
 
 const country = z
   .string()
