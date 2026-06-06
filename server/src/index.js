@@ -44,9 +44,27 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+// API-only deploy: the SPA is served by Vercel, so the CSP we apply here
+// only governs the few admin/utility routes hosted on the Render origin
+// (/, /api/*). Restrict scripts to same-origin + Google Identity Services
+// for the social-login popup. Vite's dev needs are not relevant here —
+// the dev server uses its own policy and bypasses Helmet entirely.
 app.use(
   helmet({
-    contentSecurityPolicy: false, // SPA + Vite dev needs inline; revisit when serving prod build with hashed assets
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", 'https://accounts.google.com', 'https://apis.google.com'],
+        'connect-src': ["'self'", 'https://accounts.google.com'],
+        'frame-src': ["'self'", 'https://accounts.google.com'],
+        'img-src': ["'self'", 'data:', 'https:'],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // required by Google Identity Services popup
     crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow Google's button assets

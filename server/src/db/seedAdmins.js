@@ -17,12 +17,23 @@ import { log } from '../utils/logger.js';
 
 const env = process.env;
 
+const DEV_FALLBACK_PASSWORD = 'Admin@12345';
 const SUPER_ADMIN = {
   email: (env.ADMIN_EMAIL || 'admin@oddsify.gh').toLowerCase(),
-  password: env.ADMIN_PASSWORD || 'Admin@12345',
+  password: env.ADMIN_PASSWORD || DEV_FALLBACK_PASSWORD,
   displayName: 'Platform Owner',
   adminRole: 'super_admin',
 };
+
+// Refuse to boot in production with the well-known dev fallback. Anyone
+// reading the public repo could sign in as super_admin otherwise.
+if (env.NODE_ENV === 'production' && SUPER_ADMIN.password === DEV_FALLBACK_PASSWORD) {
+  // eslint-disable-next-line no-console
+  console.error(
+    '[FATAL] ADMIN_PASSWORD is unset in production and would default to the publicly-known dev value. Set ADMIN_PASSWORD in the Render dashboard before redeploying.',
+  );
+  process.exit(1);
+}
 
 function redact(pw) {
   if (!pw || pw.length < 6) return '****';

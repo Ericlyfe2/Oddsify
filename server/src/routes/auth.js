@@ -28,7 +28,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { badRequest, unauthorized, conflict, forbidden } from '../utils/httpError.js';
 import { GOOGLE } from '../config/env.js';
 import { log } from '../utils/logger.js';
-import { parseIdentifier, validatePhone, sanitizePhone } from '../lib/phone.js';
+import { parseIdentifier } from '../lib/phone.js';
 
 const router = Router();
 
