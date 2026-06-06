@@ -218,7 +218,17 @@ export default function LoginPage() {
           displayName: fullName || idValue,
           country,
         });
-        toast(`Welcome to Oddsify, ${data.account?.displayName || data.account?.email}!`);
+        // Surface the exact identifier that was stored on the server.
+        // The whole "I keep losing my account" problem is usually that
+        // a different format was typed on the next login (e.g. no '+',
+        // wrong case on email). Echoing it here makes the value the
+        // user has to remember explicit.
+        const storedId = data.account?.email || idValue;
+        toast(
+          `Account created. Sign in next time with ${storedId} — write it down.`,
+          'success',
+          { ttl: 12000 },
+        );
         routeAfterLogin(data);
       } else {
         const data = await login({
