@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -117,13 +118,30 @@ app.use('/api/admin/support', adminSupportRouter);
 
 app.use('/api', notFoundHandler);
 
+// Optional monolith mode: only serve the React SPA from this process when
+// `client/dist/index.html` actually exists. On Render the build command is
+// `npm install` (no client build), so this block stays inert and the catch-
+// all that used to ENOENT on every non-/api request is gone.
+//
+// To re-enable serving the SPA from the API, add `npm run build` to the
+// Render build command (or any equivalent build step) so client/dist is
+// populated before the server starts.
 if (isProd) {
   const dist = path.join(__dirname, '../../client/dist');
-  app.use(express.static(dist));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(dist, 'index.html'), (err) => err && next(err));
-  });
+  const indexHtml = path.join(dist, 'index.html');
+  if (fs.existsSync(indexHtml)) {
+    app.use(express.static(dist));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) return next();
+      res.sendFile(indexHtml, (err) => err && next(err));
+    });
+    log.info(`Serving SPA from ${dist}`);
+  } else {
+    log.info(`SPA bundle not present (${indexHtml}) — running as API-only.`);
+    app.get('/', (_req, res) => {
+      res.json({ ok: true, service: 'oddsify-api', mode: 'api-only' });
+    });
+  }
 }
 
 app.use(errorHandler);
