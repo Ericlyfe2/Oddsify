@@ -80,6 +80,7 @@ export function OddBetSlip() {
     totalOdds,
     busy,
     lastBet,
+    lastBooking,
     bookingCodeLookup,
     lookupLoading,
     removePick,
@@ -87,7 +88,9 @@ export function OddBetSlip() {
     closeSlip,
     openSlip,
     placeBet,
+    bookBet,
     clearLastBet,
+    clearLastBooking,
     lookupBookingCode,
     clearLookup,
   } = useSlip();
@@ -777,6 +780,25 @@ export function OddBetSlip() {
                 <div style={{ display: 'flex', gap: 8, padding: '12px 16px 16px' }}>
                   <button
                     type="button"
+                    disabled={busy || !entries.length}
+                    onClick={() => bookBet()}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: 14,
+                      background: 'transparent',
+                      color: T.ink,
+                      border: `1px solid ${T.lineStrong}`,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: busy ? 'wait' : 'pointer',
+                      opacity: busy ? 0.7 : 1,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {busy ? 'Booking…' : 'Book Bet'}
+                  </button>
+                  <button
+                    type="button"
                     disabled={busy}
                     onClick={() => placeBet({ stake, acceptOddsChanges: acceptChanges })}
                     style={{
@@ -806,6 +828,63 @@ export function OddBetSlip() {
                     </span>
                   </button>
                 </div>
+                {lastBooking && (
+                  <div
+                    style={{
+                      margin: '0 16px 16px',
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      background: T.surfaceAlt,
+                      border: `1px dashed ${T.lineStrong}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.6 }}>
+                        BOOKING CODE
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 800,
+                          letterSpacing: 1.2,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: T.ink,
+                        }}
+                      >
+                        {lastBooking.bookingCode}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+                        Share or save this code — anyone can load the same selections via My Bets → "Load by code".
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          navigator.clipboard?.writeText(lastBooking.bookingCode);
+                        } catch {
+                          /* ignore */
+                        }
+                        clearLastBooking();
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        background: T.greenBright,
+                        color: T.goldDark,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        border: 0,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </>
