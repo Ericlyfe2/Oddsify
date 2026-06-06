@@ -82,8 +82,8 @@ const stageOf = (u) => {
   return Math.min(4, Math.max(0, n));
 };
 
-// Demo seed accounts (@example.gh) are created on first boot to populate
-// other admin views — they are NEVER shown on the Stages funnel.
+// Backstop: never count any throwaway test-style email (@example.gh)
+// in the funnel even if one slips in via a manual ops action.
 const isDemoUser = (u) => /@example\.gh$/i.test(u?.email || '');
 
 export default function StagesPage() {

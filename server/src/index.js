@@ -31,11 +31,8 @@ import adminDepositsRouter from './routes/admin/deposits.js';
 import adminSettingsRouter from './routes/admin/settings.js';
 import adminSupportRouter from './routes/admin/support.js';
 import { seedAdmins } from './db/seedAdmins.js';
-import { seedDemoData } from './db/seedDemo.js';
-import { seedPromotionsIfEmpty } from './db/promotions.js';
 import { initStores } from './db/store.js';
 import { getSettings } from './db/settings.js';
-import { PROMOTIONS } from './matchesData.js';
 import { startSettlementLoop } from './services/settlement.js';
 import { attachRealtime } from './services/realtime.js';
 import { startAggregator, startLiveTrack } from './services/oddsAggregator.js';
@@ -139,24 +136,21 @@ async function boot() {
   // synchronous get/set in route handlers is safe.
   await initStores();
 
-  // Seeds depend on stores being loaded.
+  // Production safety: refuse to boot on Render's free-tier ephemeral disk
+  // when no DATABASE_URL is set. Without persistence, every user account
+  // gets wiped on each restart and the operator cannot understand why
+  // logins keep failing. Surface the misconfiguration loudly instead.
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    log.error(
+      'DATABASE_URL is not set in production. Refusing to boot — set the Neon connection string in the Render dashboard or remove NODE_ENV=production for local testing.',
+    );
+    process.exit(1);
+  }
+
+  // Only the super admin is seeded. No demo players, no demo bets, no
+  // demo transactions, no seeded promotions — operators add real content
+  // through the admin UI.
   await seedAdmins();
-  await seedDemoData();
-  const seeded = seedPromotionsIfEmpty(
-    (PROMOTIONS || []).map((p, i) => ({
-      title: p.title || p.name || 'Offer',
-      body: p.body || p.subtitle || '',
-      badge: p.badge || 'OFFER',
-      cta: p.cta || 'View',
-      accent: p.accent || '#7c5cff',
-      image: p.image || '',
-      eligibility: 'all',
-      bonusRate: p.bonusRate || 0,
-      active: true,
-      order: i,
-    })),
-  );
-  if (seeded) log.info(`Seeded ${seeded} promotions.`);
 
   await new Promise((resolve) => server.listen(PORT, resolve));
   log.info(`Oddsify API listening on http://127.0.0.1:${PORT}`);

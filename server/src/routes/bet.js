@@ -229,8 +229,8 @@ router.get('/code/:code', (req, res, next) => {
 });
 
 /**
- * Public ticker feed — up to 15 recent winning bets, real-first with
- * synthetic backfill so the homepage band always feels active.
+ * Public ticker feed — up to 15 real winning bets from the last 24h,
+ * sorted by amount desc. The client hides the ticker if the list is empty.
  */
 router.get('/recent-wins', (_req, res) => {
   res.json(getRecentWins());
