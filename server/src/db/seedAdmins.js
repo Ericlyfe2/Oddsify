@@ -1,53 +1,39 @@
 /**
- * Ensure a baseline of admin accounts exists on boot.
+ * Ensure exactly one super-admin account exists on every boot.
  *
- * In production the seed runs ONLY when the user store has zero admins.
- * Passwords are generated from env vars or randomly for each account
- * and printed once to the log — change them via the admin UI immediately.
+ * Defaults to admin@oddsify.gh / Admin@12345 — the operator can override
+ * either via ADMIN_EMAIL / ADMIN_PASSWORD env vars on Render. The seed
+ * re-applies the password hash on every boot so a forgotten or stale
+ * password in storage can't lock the operator out. Any password change
+ * made through the admin UI is intentionally reverted on the next deploy.
+ *
+ * Also clears any persistent brute-force lockout for this admin so a
+ * restart immediately unblocks a rate-limited operator.
  */
-import crypto from 'node:crypto';
 import { allUsers, createUser, findByEmail, updateUser } from './users.js';
 import { hashPassword } from '../services/password.js';
+import { createStore } from './store.js';
 import { log } from '../utils/logger.js';
 
 const env = process.env;
 
-function generatePassword() {
-  return crypto.randomBytes(24).toString('base64').replace(/[+/=]/g, '').slice(0, 20) + '!Aa1';
-}
+const DEV_FALLBACK_PASSWORD = 'Admin@12345';
+const SUPER_ADMIN = {
+  email: (env.ADMIN_EMAIL || 'admin@oddsify.gh').toLowerCase(),
+  password: env.ADMIN_PASSWORD || DEV_FALLBACK_PASSWORD,
+  displayName: 'Platform Owner',
+  adminRole: 'super_admin',
+};
 
-const DEFAULTS = [
-  {
-    email: (env.ADMIN_EMAIL || 'admin@oddsify.gh').toLowerCase(),
-    password: env.ADMIN_PASSWORD || generatePassword(),
-    displayName: 'Platform Owner',
-    adminRole: 'super_admin',
-  },
-  {
-    email: 'finance@oddsify.gh',
-    password: env.FINANCE_ADMIN_PASSWORD || generatePassword(),
-    displayName: 'Finance Lead',
-    adminRole: 'finance_admin',
-  },
-  {
-    email: 'odds@oddsify.gh',
-    password: env.ODDS_ADMIN_PASSWORD || generatePassword(),
-    displayName: 'Trading Desk',
-    adminRole: 'odds_manager',
-  },
-  {
-    email: 'support@oddsify.gh',
-    password: env.SUPPORT_ADMIN_PASSWORD || generatePassword(),
-    displayName: 'Support Agent',
-    adminRole: 'support',
-  },
-  {
-    email: 'mod@oddsify.gh',
-    password: env.MOD_ADMIN_PASSWORD || generatePassword(),
-    displayName: 'Risk Moderator',
-    adminRole: 'moderator',
-  },
-];
+// Refuse to boot in production with the well-known dev fallback. Anyone
+// reading the public repo could sign in as super_admin otherwise.
+if (env.NODE_ENV === 'production' && SUPER_ADMIN.password === DEV_FALLBACK_PASSWORD) {
+  // eslint-disable-next-line no-console
+  console.error(
+    '[FATAL] ADMIN_PASSWORD is unset in production and would default to the publicly-known dev value. Set ADMIN_PASSWORD in the Render dashboard before redeploying.',
+  );
+  process.exit(1);
+}
 
 function redact(pw) {
   if (!pw || pw.length < 6) return '****';
@@ -55,45 +41,43 @@ function redact(pw) {
 }
 
 export async function seedAdmins() {
-  const existing = allUsers().filter((u) => u.role === 'admin');
-  if (existing.length > 0) return existing.length;
+  const bruteStore = createStore('admin_brute', {});
+  const passwordHash = await hashPassword(SUPER_ADMIN.password);
+  const present = findByEmail(SUPER_ADMIN.email);
 
-  let created = 0;
-  const seeded = [];
-  for (const spec of DEFAULTS) {
-    const passwordHash = await hashPassword(spec.password);
-    const present = findByEmail(spec.email);
-    if (present) {
-      updateUser(present.id, {
-        role: 'admin',
-        adminRole: spec.adminRole,
-        emailVerified: true,
-        passwordHash,
-        displayName: spec.displayName,
-      });
-    } else {
-      createUser({
-        email: spec.email,
-        displayName: spec.displayName,
-        passwordHash,
-        emailVerified: true,
-        role: 'admin',
-        balance: 0,
-      });
-      updateUser(spec.email, {
-        adminRole: spec.adminRole,
-        kycStatus: 'verified',
-        twoFactorEnabled: false,
-      });
-    }
-    seeded.push({ email: spec.email, role: spec.adminRole, password: spec.password });
-    created++;
+  if (present) {
+    updateUser(present.id, {
+      role: 'admin',
+      adminRole: present.adminRole || SUPER_ADMIN.adminRole,
+      emailVerified: true,
+      suspended: false,
+      passwordHash,
+      displayName: present.displayName || SUPER_ADMIN.displayName,
+    });
+  } else {
+    createUser({
+      email: SUPER_ADMIN.email,
+      displayName: SUPER_ADMIN.displayName,
+      passwordHash,
+      emailVerified: true,
+      role: 'admin',
+      balance: 0,
+    });
+    updateUser(SUPER_ADMIN.email, {
+      adminRole: SUPER_ADMIN.adminRole,
+      kycStatus: 'verified',
+      twoFactorEnabled: false,
+    });
   }
 
-  for (const a of seeded) {
-    log.security(
-      `Admin account created — email: ${a.email} / role: ${a.role} / password: ${redact(a.password)}  (change immediately)`,
-    );
-  }
-  return created;
+  bruteStore.delete(SUPER_ADMIN.email);
+  log.security(
+    `Super admin ensured — email: ${SUPER_ADMIN.email} / password: ${redact(SUPER_ADMIN.password)}`,
+  );
+  return 1;
+}
+
+// Kept for backwards compatibility with anything that imported the helper.
+export function adminCount() {
+  return allUsers().filter((u) => u.role === 'admin').length;
 }

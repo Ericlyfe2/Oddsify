@@ -34,7 +34,6 @@ export default function AdminLogin() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
-  const [showDemo, setShowDemo] = useState(false);
 
   async function submitCreds(e) {
     e.preventDefault();
@@ -210,31 +209,8 @@ export default function AdminLogin() {
                   color: 'var(--text-dim)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <span>
-                    <strong style={{ color: 'var(--text-soft)' }}>Sign-up is invite-only.</strong> Ask a super admin for
-                    a link.
-                  </span>
-                  <button type="button" className="adm-btn ghost sm" onClick={() => setShowDemo((v) => !v)}>
-                    {showDemo ? 'Hide' : 'Demo creds'}
-                  </button>
-                </div>
-                {showDemo && (
-                  <div style={{ marginTop: 10, fontFamily: 'var(--ff-mono)', fontSize: 11.5, lineHeight: 1.6 }}>
-                    Super: <code style={{ color: 'var(--text)' }}>admin@oddsify.gh</code> / <code>Admin@12345</code>
-                    <br />
-                    Finance: <code style={{ color: 'var(--text)' }}>finance@oddsify.gh</code> /{' '}
-                    <code>Finance@12345</code>
-                    <br />
-                    Odds: <code style={{ color: 'var(--text)' }}>odds@oddsify.gh</code> / <code>Odds@12345</code>
-                    <br />
-                    Support: <code style={{ color: 'var(--text)' }}>support@oddsify.gh</code> /{' '}
-                    <code>Support@12345</code>
-                    <br />
-                    Moderator: <code style={{ color: 'var(--text)' }}>mod@oddsify.gh</code> /{' '}
-                    <code>Moderator@12345</code>
-                  </div>
-                )}
+                <strong style={{ color: 'var(--text-soft)' }}>Sign-up is invite-only.</strong> Ask a super admin for
+                a link.
               </div>
             </form>
           ) : (

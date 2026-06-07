@@ -35,28 +35,30 @@ export const T = {
   accentCool: '#6ad0ff',
 };
 
-/** Light-mode hardcoded fallback used when CSS hasn't loaded yet. */
+/** Light-mode hardcoded fallback used when CSS hasn't loaded yet.
+ *  Keep in sync with the html[data-theme='light'] block in app.css. */
 const T_LIGHT = {
   ...T,
   bg: '#f4f1e8',
-  surface: '#ffffff',
+  bgSoft: '#fbf7ec',
+  surface: '#fffdf6',
   surfaceAlt: '#ece6d4',
   ink: '#1a160a',
-  inkSoft: '#5a5145',
-  inkDim: '#8a8275',
-  line: 'rgba(28, 22, 8, 0.08)',
-  lineStrong: 'rgba(28, 22, 8, 0.18)',
-  headerBg: 'rgba(255, 252, 244, 0.82)',
-  accent: '#b8860b',
-  accentWarm: '#c89400',
+  inkSoft: '#4d4534',
+  inkDim: '#6f6856',
+  line: 'rgba(28, 22, 8, 0.1)',
+  lineStrong: 'rgba(28, 22, 8, 0.22)',
+  headerBg: 'rgba(251, 247, 236, 0.86)',
+  accent: '#c8980b',
+  accentWarm: '#d8a808',
   accentHot: '#d6263f',
   accentCool: '#1f8dd0',
-  gold: '#b48a2d',
-  goldSoft: 'rgba(184, 134, 11, 0.18)',
-  greenBright: '#b8860b',
+  gold: '#c8980b',
+  goldSoft: 'rgba(200, 152, 11, 0.18)',
+  greenBright: '#d4a418',
   greenMid: '#e8e0d0',
   danger: '#d6263f',
-  warn: '#d4880f',
+  warn: '#b4720a',
 };
 
 const VAR_MAP = [

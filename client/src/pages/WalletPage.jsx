@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchTransactions } from '../api/betApi.js';
 import { useAccount } from '../providers/AccountProvider.jsx';
-import { T, fmtCedi, useTokens, OddPageHeader, OddStatusChip, OddIcon } from '../components/odd/primitives.jsx';
+import { fmtCedi, useTokens, OddPageHeader, OddStatusChip, OddIcon } from '../components/odd/primitives.jsx';
 
 /**
  * Per-kind metadata. `dir` (+1 in / −1 out) drives the displayed sign because
@@ -218,6 +218,7 @@ export default function WalletPage() {
 }
 
 function TxRow({ tx }) {
+  const T = useTokens();
   const { isIn, label: labelRaw, icon: iconName, status, date, magnitude } = tx;
 
   return (

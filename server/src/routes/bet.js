@@ -30,6 +30,7 @@ import { emitAdmin, emitToUser } from '../services/realtime.js';
 import { SYSTEM_TYPES, maxSystemReturn } from '../lib/systemBets.js';
 import * as cashOutEngine from '../services/cashOutEngine.js';
 import { LIVE_BETTING } from '../config/env.js';
+import { log } from '../utils/logger.js';
 
 const router = Router();
 
@@ -44,17 +45,20 @@ function generateBookingCode() {
 }
 
 function uniqueBookingCode() {
-  const all = betsStore.all();
+  const allBets = betsStore.all();
+  const allBooked = bookedSlipsStore.all();
   for (let i = 0; i < 25; i++) {
     const code = generateBookingCode();
-    const taken = Object.values(all).some((b) => b.bookingCode === code);
-    if (!taken) return code;
+    const takenByBet = Object.values(allBets).some((b) => b.bookingCode === code);
+    const takenByBooked = !!allBooked[code];
+    if (!takenByBet && !takenByBooked) return code;
   }
   // 7-char namespace is huge; this is just paranoia.
   return generateBookingCode() + Math.floor(Math.random() * 9 + 1);
 }
 
 const betsStore = createStore('bets', {}); // { betId: receipt }
+const bookedSlipsStore = createStore('booked_slips', {}); // { code: bookedSlip }
 const jackpotStore = createStore('jackpot_entries', {});
 
 function pushBet(receipt) {
@@ -223,14 +227,93 @@ router.get(
 router.get('/code/:code', (req, res, next) => {
   const code = String(req.params.code || '').toUpperCase();
   const bet = Object.values(betsStore.all()).find((b) => b.bookingCode === code);
-  if (!bet) return next(notFound('Booking code not found'));
-  const { userId, ...publicBet } = bet;
-  res.json({ bet: publicBet });
+  if (bet) {
+    const { userId, ...publicBet } = bet;
+    return res.json({ bet: publicBet });
+  }
+  // Fall back to booked-but-not-placed slips so a code shared before payment
+  // can still be looked up by the recipient.
+  const slip = bookedSlipsStore.get(code);
+  if (slip) {
+    const { createdBy, createdIp, ...publicSlip } = slip;
+    return res.json({ bet: publicSlip });
+  }
+  return next(notFound('Booking code not found'));
+});
+
+// Booking-only schema. No stake (the recipient sets that when they place
+// the slip). No system/mode rules — both single and multi slips can be
+// shared. Selections are validated the same way as /place.
+const bookSchema = z.object({
+  selections: z
+    .array(
+      z.object({
+        matchId: z.string().min(1),
+        market: z.string().default('1X2'),
+        outcome: z.string().min(1),
+        odds: z.union([z.number(), z.string()]).transform((v) => Number(v)),
+      }),
+    )
+    .min(1, 'Add at least one selection.'),
 });
 
 /**
- * Public ticker feed — up to 15 recent winning bets, real-first with
- * synthetic backfill so the homepage band always feels active.
+ * Generate a booking code for a slip without placing the bet. No auth, no
+ * stake, no balance deduction. The code can be shared and later resolved
+ * via GET /code/:code.
+ */
+router.post(
+  '/book',
+  optionalAuth,
+  validate(bookSchema),
+  asyncHandler(async (req, res) => {
+    const { selections } = req.body;
+    const seen = new Set();
+    const normalized = [];
+    for (const sel of selections) {
+      const dedupe = `${sel.matchId}:${sel.market}:${sel.outcome}`;
+      if (seen.has(dedupe)) throw badRequest(`Duplicate selection ${sel.market} ${sel.outcome}.`);
+      seen.add(dedupe);
+      const found = adminLookupSelection({ matchId: sel.matchId, market: sel.market, outcome: sel.outcome });
+      if (!found) {
+        throw badRequest(`Invalid selection ${sel.market} ${sel.outcome} for match ${sel.matchId}.`);
+      }
+      normalized.push({
+        matchId: sel.matchId,
+        market: sel.market,
+        outcome: sel.outcome,
+        odds: found.selection.odds,
+        home: found.row.match.home,
+        away: found.row.match.away,
+        marketName: found.row.match.markets?.[sel.market]?.name || sel.market,
+      });
+    }
+
+    const code = uniqueBookingCode();
+    const totalOdds = normalized.length === 1 ? normalized[0].odds : normalized.reduce((acc, s) => acc * s.odds, 1);
+    const slip = {
+      bookingCode: code,
+      kind: 'booked',
+      status: 'booked',
+      placedAt: null,
+      createdAt: new Date().toISOString(),
+      currency: CURRENCY,
+      mode: normalized.length === 1 ? 'single' : 'multiple',
+      totalOdds: Number(totalOdds.toFixed(4)),
+      legs: normalized,
+      createdBy: req.user?.id || null,
+      createdIp: req.ip,
+    };
+    bookedSlipsStore.set(code, slip);
+    log.info(`booking_code_created code=${code} by=${req.user?.id || 'anon'} legs=${normalized.length}`);
+    const { createdBy, createdIp, ...publicSlip } = slip;
+    res.status(201).json({ ok: true, bookingCode: code, slip: publicSlip });
+  }),
+);
+
+/**
+ * Public ticker feed — up to 15 real winning bets from the last 24h,
+ * sorted by amount desc. The client hides the ticker if the list is empty.
  */
 router.get('/recent-wins', (_req, res) => {
   res.json(getRecentWins());

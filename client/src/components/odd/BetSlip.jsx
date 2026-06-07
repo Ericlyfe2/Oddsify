@@ -80,6 +80,7 @@ export function OddBetSlip() {
     totalOdds,
     busy,
     lastBet,
+    lastBooking,
     bookingCodeLookup,
     lookupLoading,
     removePick,
@@ -87,7 +88,9 @@ export function OddBetSlip() {
     closeSlip,
     openSlip,
     placeBet,
+    bookBet,
     clearLastBet,
+    clearLastBooking,
     lookupBookingCode,
     clearLookup,
   } = useSlip();
@@ -107,7 +110,10 @@ export function OddBetSlip() {
     }
   };
 
-  if (!count && !open && !lastBet) return null;
+  // Always render the slip — even with zero picks and no last-placed bet —
+  // so the "Load booking code" input is permanently reachable. When fully
+  // empty the slip collapses to a thin peek bar showing "Load by code →".
+  const emptyState = !count && !lastBet;
 
   return (
     <>
@@ -177,7 +183,7 @@ export function OddBetSlip() {
             <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineStrong, alignSelf: 'center' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.3 }}>
-                {lastBet ? '✅ Bet Placed' : 'Betslip'}
+                {lastBet ? '✅ Bet Placed' : emptyState ? 'Load booking code' : 'Betslip'}
               </span>
               {!lastBet && count > 0 && (
                 <span
@@ -192,6 +198,9 @@ export function OddBetSlip() {
                 >
                   {count}
                 </span>
+              )}
+              {!lastBet && emptyState && (
+                <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>or pick odds</span>
               )}
             </div>
           </div>
@@ -389,17 +398,29 @@ export function OddBetSlip() {
             >
               <input
                 value={codeInput}
-                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                placeholder="Booking code…"
-                maxLength={10}
+                onChange={(e) => {
+                  // Allow only A-Z and 1-9 (no zero, no letter O — same
+                  // alphabet generateBookingCode() uses server-side).
+                  const cleaned = e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z1-9]/g, '')
+                    .slice(0, 7);
+                  setCodeInput(cleaned);
+                }}
+                placeholder="e.g. AF36513"
+                maxLength={7}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') lookupBookingCode(codeInput);
                 }}
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                aria-label="Booking code"
                 style={{
                   flex: 1,
                   background: T.surface,
                   color: T.ink,
-                  border: `1px solid ${T.line}`,
+                  border: `1px solid ${codeInput.length === 7 ? T.greenBright : T.line}`,
                   borderRadius: 8,
                   padding: '8px 10px',
                   fontSize: 13,
@@ -777,6 +798,25 @@ export function OddBetSlip() {
                 <div style={{ display: 'flex', gap: 8, padding: '12px 16px 16px' }}>
                   <button
                     type="button"
+                    disabled={busy || !entries.length}
+                    onClick={() => bookBet()}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: 14,
+                      background: 'transparent',
+                      color: T.ink,
+                      border: `1px solid ${T.lineStrong}`,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: busy ? 'wait' : 'pointer',
+                      opacity: busy ? 0.7 : 1,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {busy ? 'Booking…' : 'Book Bet'}
+                  </button>
+                  <button
+                    type="button"
                     disabled={busy}
                     onClick={() => placeBet({ stake, acceptOddsChanges: acceptChanges })}
                     style={{
@@ -806,6 +846,63 @@ export function OddBetSlip() {
                     </span>
                   </button>
                 </div>
+                {lastBooking && (
+                  <div
+                    style={{
+                      margin: '0 16px 16px',
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      background: T.surfaceAlt,
+                      border: `1px dashed ${T.lineStrong}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.6 }}>
+                        BOOKING CODE
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 800,
+                          letterSpacing: 1.2,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: T.ink,
+                        }}
+                      >
+                        {lastBooking.bookingCode}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+                        Share or save this code — anyone can load the same selections via My Bets → "Load by code".
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          navigator.clipboard?.writeText(lastBooking.bookingCode);
+                        } catch {
+                          /* ignore */
+                        }
+                        clearLastBooking();
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        background: T.greenBright,
+                        color: T.goldDark,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        border: 0,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </>

@@ -24,7 +24,7 @@ import {
   OddsifyWordmark,
   OddIcon,
 } from '../components/odd/primitives.jsx';
-import { useTokens, T } from '../components/odd/tokens.jsx';
+import { useTokens } from '../components/odd/tokens.jsx';
 import StatsStrip from '../components/odd/StatsStrip.jsx';
 import QuickBetStrip from '../components/odd/QuickBetStrip.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';

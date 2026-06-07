@@ -429,7 +429,7 @@ const liveLeagues = {
   tennis: FALLBACK_TENNIS_LEAGUES,
 };
 
-let lastRefreshAt = { football: 0, basketball: 0, tennis: 0 };
+const lastRefreshAt = { football: 0, basketball: 0, tennis: 0 };
 
 const REFRESH_TTL_MS = 4 * 60 * 60 * 1000; // refresh same TTL as oddsApi cache
 

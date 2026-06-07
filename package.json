@@ -17,7 +17,9 @@
     "format": "prettier --check \"**/*.{js,jsx,mjs,mjs,css,json}\" --ignore-path .gitignore",
     "format:fix": "prettier --write \"**/*.{js,jsx,mjs,mjs,css,json}\" --ignore-path .gitignore",
     "test": "npm run test -w server",
-    "test:all": "npm run lint && npm run test"
+    "test:all": "npm run lint && npm run test",
+    "wipe:dummies": "node scripts/wipe-non-admins.mjs",
+    "wipe:dummies:dry": "node scripts/wipe-non-admins.mjs --dry-run"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

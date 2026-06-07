@@ -25,32 +25,48 @@
   --r-sm: 6px;
   --r: 10px;
   --r-lg: 18px;
+  /* Theme-aware overlay primitives. --overlay is a soft hover/fill tint;
+     --overlay-strong is the same idea but more present (active/selected);
+     --scrim is for modal/drawer backdrops. In dark mode these are
+     white-tinted; the light-mode override below flips them to black-tinted
+     so they actually show up on cream surfaces. */
+  --overlay: rgba(255, 255, 255, 0.06);
+  --overlay-strong: rgba(255, 255, 255, 0.12);
+  --scrim: rgba(0, 0, 0, 0.72);
 }
 
-/* === Light mode === */
+/* === Light mode ===
+   Warm cream rather than glaring white. The gold accent is pushed slightly
+   richer so it reads as gold (not olive) on a light background, and
+   text-dim is tightened up so secondary copy hits ~4.5:1 contrast. */
 html[data-theme='light'] {
   --bg: #f4f1e8;
-  --bg-soft: #ffffff;
-  --surface: #ffffff;
+  --bg-soft: #fbf7ec; /* header surface — warm off-white, not blinding */
+  --surface: #fffdf6; /* card surfaces — barely tinted white */
   --surface-2: #ece6d4;
-  --line: rgba(28, 22, 8, 0.08);
-  --line-strong: rgba(28, 22, 8, 0.18);
+  --line: rgba(28, 22, 8, 0.1);
+  --line-strong: rgba(28, 22, 8, 0.22);
   --text: #1a160a;
-  --text-soft: #5a5145;
-  --text-dim: #8a8275;
-  --header-bg: rgba(255, 252, 244, 0.82);
-  --accent: #b8860b;
-  --accent-warm: #c89400;
+  --text-soft: #4d4534;
+  --text-dim: #6f6856;
+  --header-bg: rgba(251, 247, 236, 0.86);
+  --accent: #c8980b; /* richer gold, less olive */
+  --accent-warm: #d8a808;
   --accent-hot: #d6263f;
   --accent-cool: #1f8dd0;
-  --gold: #b48a2d;
+  --gold: #c8980b;
   --gold-ink: #1a1300;
-  --gold-soft: rgba(184, 134, 11, 0.18);
-  --green-bright: #b8860b;
+  --gold-soft: rgba(200, 152, 11, 0.18);
+  /* Used by the floating balance pill in OddTopHeader — stay gold in both
+     modes so the visual identity carries through. */
+  --green-bright: #d4a418;
   --green-deep: #0f0e0c;
   --green-mid: #e8e0d0;
   --danger: #d6263f;
-  --warn: #d4880f;
+  --warn: #b4720a;
+  --overlay: rgba(28, 22, 8, 0.06);
+  --overlay-strong: rgba(28, 22, 8, 0.1);
+  --scrim: rgba(28, 22, 8, 0.45);
 }
 
 /* ===== Design-system primitives shared across new pages (Oddsify.html port).
@@ -763,7 +779,7 @@ nav a .live-dot {
 }
 .match-card {
   margin-top: auto;
-  background: rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   backdrop-filter: blur(10px);
   border: 1px solid var(--line);
   border-radius: var(--r);
@@ -933,7 +949,7 @@ nav a .live-dot {
   align-self: flex-start;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--overlay-strong);
 }
 .promo-2 .promo-cta {
   background: rgba(252, 198, 0, 0.15);
@@ -1370,7 +1386,7 @@ nav a .live-dot {
 .slip-tabs {
   display: flex;
   border-bottom: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--overlay-strong);
 }
 .slip-tab {
   flex: 1;
@@ -1854,7 +1870,7 @@ footer {
   width: calc(100vw - 40px);
 }
 .bv-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--scrim);
   backdrop-filter: blur(4px);
 }
 
@@ -1881,7 +1897,7 @@ footer {
   z-index: 2000;
 }
 .deposit-dlg::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--scrim);
 }
 .deposit-dlg .tx-header {
   flex: 0 0 auto;
@@ -1912,7 +1928,7 @@ footer {
 }
 .markets-dlg::backdrop,
 .search-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--scrim);
 }
 @media (min-width: 720px) {
   .markets-dlg[open],
@@ -3249,7 +3265,7 @@ nav a:active {
 }
 .sb-fav-btn:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--overlay);
 }
 .sb-fav-btn:active {
   transform: scale(0.88);
@@ -3668,7 +3684,7 @@ nav a:active {
   animation: sbSheetIn 0.25s ease;
 }
 .sb-sheet::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--scrim);
 }
 @keyframes sbSheetIn {
   from {

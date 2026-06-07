@@ -10,9 +10,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAccount } from '../providers/AccountProvider.jsx';
 import { fetchTransactions, fetchBetHistory } from '../api/betApi.js';
-import { T, fmtCedi, useTokens, OddPageHeader, OddIcon } from '../components/odd/primitives.jsx';
+import { fmtCedi, useTokens, OddPageHeader, OddIcon } from '../components/odd/primitives.jsx';
 
-const QUICK_ACTIONS = (handlers) => [
+const buildQuickActions = (T, handlers) => [
   { id: 'dep', icon: 'deposit', label: 'Deposit', tint: T.greenBright, onClick: handlers.deposit },
   { id: 'with', icon: 'upload', label: 'Withdraw', tint: T.gold, onClick: handlers.withdraw },
   { id: 'trans', icon: 'refresh', label: 'Transfer', tint: '#3a6dff', onClick: handlers.transfer },
@@ -243,7 +243,7 @@ export default function ProfilePage() {
               marginTop: 14,
             }}
           >
-            {QUICK_ACTIONS(handlers).map((a) => (
+            {buildQuickActions(T, handlers).map((a) => (
               <button
                 key={a.id}
                 type="button"

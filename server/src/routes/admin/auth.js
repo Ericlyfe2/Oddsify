@@ -48,6 +48,26 @@ const router = Router();
 const bruteStore = createStore('admin_brute', {});
 const LOCKOUT_AFTER = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
+const BRUTE_TTL_MS = 24 * 60 * 60 * 1000; // drop expired rows after a day
+
+// Periodically purge stale brute-force entries so the store doesn't
+// accumulate rows for every email that's ever attempted a login.
+setInterval(
+  () => {
+    const cutoff = Date.now() - BRUTE_TTL_MS;
+    const all = bruteStore.all() || {};
+    let purged = 0;
+    for (const [email, rec] of Object.entries(all)) {
+      const lastTouch = rec.lockedUntil || rec.updatedAt || 0;
+      if (lastTouch && lastTouch < cutoff) {
+        bruteStore.delete(email);
+        purged++;
+      }
+    }
+    if (purged) log.info(`admin_brute: swept ${purged} stale entries`);
+  },
+  60 * 60 * 1000, // hourly
+).unref();
 
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -61,6 +81,7 @@ function clearBrute(email) {
 function bumpBrute(email) {
   const rec = bruteStore.get(email) || { attempts: 0, lockedUntil: 0 };
   rec.attempts = (rec.attempts || 0) + 1;
+  rec.updatedAt = Date.now();
   if (rec.attempts >= LOCKOUT_AFTER) {
     rec.lockedUntil = Date.now() + LOCKOUT_MS;
     rec.attempts = 0;

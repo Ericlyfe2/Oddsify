@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,11 +32,8 @@ import adminDepositsRouter from './routes/admin/deposits.js';
 import adminSettingsRouter from './routes/admin/settings.js';
 import adminSupportRouter from './routes/admin/support.js';
 import { seedAdmins } from './db/seedAdmins.js';
-import { seedDemoData } from './db/seedDemo.js';
-import { seedPromotionsIfEmpty } from './db/promotions.js';
 import { initStores } from './db/store.js';
 import { getSettings } from './db/settings.js';
-import { PROMOTIONS } from './matchesData.js';
 import { startSettlementLoop } from './services/settlement.js';
 import { attachRealtime } from './services/realtime.js';
 import { startAggregator, startLiveTrack } from './services/oddsAggregator.js';
@@ -46,9 +44,27 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+// API-only deploy: the SPA is served by Vercel, so the CSP we apply here
+// only governs the few admin/utility routes hosted on the Render origin
+// (/, /api/*). Restrict scripts to same-origin + Google Identity Services
+// for the social-login popup. Vite's dev needs are not relevant here —
+// the dev server uses its own policy and bypasses Helmet entirely.
 app.use(
   helmet({
-    contentSecurityPolicy: false, // SPA + Vite dev needs inline; revisit when serving prod build with hashed assets
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", 'https://accounts.google.com', 'https://apis.google.com'],
+        'connect-src': ["'self'", 'https://accounts.google.com'],
+        'frame-src': ["'self'", 'https://accounts.google.com'],
+        'img-src': ["'self'", 'data:', 'https:'],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'object-src': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // required by Google Identity Services popup
     crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow Google's button assets
@@ -120,13 +136,30 @@ app.use('/api/admin/support', adminSupportRouter);
 
 app.use('/api', notFoundHandler);
 
+// Optional monolith mode: only serve the React SPA from this process when
+// `client/dist/index.html` actually exists. On Render the build command is
+// `npm install` (no client build), so this block stays inert and the catch-
+// all that used to ENOENT on every non-/api request is gone.
+//
+// To re-enable serving the SPA from the API, add `npm run build` to the
+// Render build command (or any equivalent build step) so client/dist is
+// populated before the server starts.
 if (isProd) {
   const dist = path.join(__dirname, '../../client/dist');
-  app.use(express.static(dist));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(dist, 'index.html'), (err) => err && next(err));
-  });
+  const indexHtml = path.join(dist, 'index.html');
+  if (fs.existsSync(indexHtml)) {
+    app.use(express.static(dist));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) return next();
+      res.sendFile(indexHtml, (err) => err && next(err));
+    });
+    log.info(`Serving SPA from ${dist}`);
+  } else {
+    log.info(`SPA bundle not present (${indexHtml}) — running as API-only.`);
+    app.get('/', (_req, res) => {
+      res.json({ ok: true, service: 'oddsify-api', mode: 'api-only' });
+    });
+  }
 }
 
 app.use(errorHandler);
@@ -139,24 +172,21 @@ async function boot() {
   // synchronous get/set in route handlers is safe.
   await initStores();
 
-  // Seeds depend on stores being loaded.
+  // Production safety: refuse to boot on Render's free-tier ephemeral disk
+  // when no DATABASE_URL is set. Without persistence, every user account
+  // gets wiped on each restart and the operator cannot understand why
+  // logins keep failing. Surface the misconfiguration loudly instead.
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    log.error(
+      'DATABASE_URL is not set in production. Refusing to boot — set the Neon connection string in the Render dashboard or remove NODE_ENV=production for local testing.',
+    );
+    process.exit(1);
+  }
+
+  // Only the super admin is seeded. No demo players, no demo bets, no
+  // demo transactions, no seeded promotions — operators add real content
+  // through the admin UI.
   await seedAdmins();
-  await seedDemoData();
-  const seeded = seedPromotionsIfEmpty(
-    (PROMOTIONS || []).map((p, i) => ({
-      title: p.title || p.name || 'Offer',
-      body: p.body || p.subtitle || '',
-      badge: p.badge || 'OFFER',
-      cta: p.cta || 'View',
-      accent: p.accent || '#7c5cff',
-      image: p.image || '',
-      eligibility: 'all',
-      bonusRate: p.bonusRate || 0,
-      active: true,
-      order: i,
-    })),
-  );
-  if (seeded) log.info(`Seeded ${seeded} promotions.`);
 
   await new Promise((resolve) => server.listen(PORT, resolve));
   log.info(`Oddsify API listening on http://127.0.0.1:${PORT}`);

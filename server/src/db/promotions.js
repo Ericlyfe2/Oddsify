@@ -53,12 +53,3 @@ export function deletePromotion(id) {
   store.delete(id);
   return true;
 }
-export function seedPromotionsIfEmpty(defaults) {
-  if (Object.keys(store.all() || {}).length > 0) return 0;
-  let n = 0;
-  for (const d of defaults || []) {
-    createPromotion(d);
-    n++;
-  }
-  return n;
-}

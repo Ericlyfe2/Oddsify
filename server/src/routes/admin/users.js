@@ -10,6 +10,7 @@
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
+import { parseIdentifier } from '../../lib/phone.js';
 import {
   allUsers,
   getUserById,
@@ -44,6 +45,13 @@ function expandUser(u) {
     stage: u.stage ?? 0,
     stageUpdatedAt: u.stageUpdatedAt || null,
     stageUpdatedBy: u.stageUpdatedBy || null,
+    stagePromotionRequested: !!u.stagePromotionRequested,
+    stagePromotionRequestedAt: u.stagePromotionRequestedAt || null,
+    stagePromotionRequestedFrom: u.stagePromotionRequestedFrom ?? null,
+    stagePromotionRequestedTo: u.stagePromotionRequestedTo ?? null,
+    stagePromotionRequestedReason: u.stagePromotionRequestedReason || null,
+    stagePromotionApprovedAt: u.stagePromotionApprovedAt || null,
+    stagePromotionApprovedBy: u.stagePromotionApprovedBy || null,
     blocked: !!u.blocked,
     blockedAt: u.blockedAt || null,
     blockedBy: u.blockedBy || null,
@@ -223,6 +231,13 @@ router.patch(
       stageUpdatedAt: new Date().toISOString(),
       stageUpdatedBy: req.admin?.email || req.admin?.id || 'admin',
     };
+    // If this stage change satisfies a previously-requested promotion, clear
+    // the pending flag so the admin queue doesn't keep flagging the user.
+    if (u.stagePromotionRequested && stage === u.stagePromotionRequestedTo) {
+      patch.stagePromotionRequested = false;
+      patch.stagePromotionApprovedAt = new Date().toISOString();
+      patch.stagePromotionApprovedBy = req.admin?.email || req.admin?.id || 'admin';
+    }
     if (stage === 3 && prev !== 3) {
       patch.blocked = true;
       patch.blockedAt = new Date().toISOString();
@@ -244,7 +259,12 @@ router.patch(
       target: u.id,
       targetType: 'user',
       severity: 'info',
-      meta: { from: prev, to: stage, note },
+      meta: {
+        from: prev,
+        to: stage,
+        note,
+        ...(patch.stagePromotionApprovedAt ? { satisfiedPendingRequest: true } : {}),
+      },
     });
     logActivity(u.id, {
       kind: `stage_${stage > prev ? 'promoted' : 'demoted'}_to_${stage}`,
@@ -410,13 +430,14 @@ router.post(
   requireRole(),
   validate(
     z.object({
-      email: z
-        .string()
-        .trim()
-        .toLowerCase()
-        .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')), {
-          message: 'Enter a valid email or phone.',
-        }),
+      email: z.string().transform((raw, ctx) => {
+        const parsed = parseIdentifier(raw);
+        if (parsed.error) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: parsed.error.message });
+          return z.NEVER;
+        }
+        return parsed.value;
+      }),
       password: z.string().min(8),
       displayName: z.string().trim().max(60).optional(),
       country: z

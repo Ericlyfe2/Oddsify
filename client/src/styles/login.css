@@ -224,6 +224,25 @@ html[data-theme='light'] .login-page-v2 {
   border-color: var(--accent-hot);
   box-shadow: 0 0 0 3px rgba(255, 53, 84, 0.12);
 }
+.field.valid {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 3px rgba(247, 201, 72, 0.1);
+}
+
+/* Inline hint + error copy for PhoneInput. The hint shows while the field
+   is empty (welcoming the user to the format); the error replaces it as
+   soon as they start typing something invalid. */
+.phone-hint {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.phone-error {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--accent-hot);
+  font-weight: 600;
+}
 .field-icon {
   font-size: 14px;
   margin-right: 8px;

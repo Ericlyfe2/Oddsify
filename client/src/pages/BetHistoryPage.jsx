@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router-dom';
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import {
-  T,
   fmtCedi,
   useTokens,
   OddPageHeader,
@@ -203,6 +202,7 @@ export default function BetHistoryPage() {
 }
 
 function Stat({ label, value, dark = false, accent }) {
+  const T = useTokens();
   return (
     <div>
       <div
@@ -232,6 +232,7 @@ function Stat({ label, value, dark = false, accent }) {
 }
 
 function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
+  const T = useTokens();
   const legs = bet.legs || bet.selections || [];
   const code = bet.code || bet.id?.slice(-8) || '—';
   const odds = Number(bet.totalOdds || bet.odds || 1);
@@ -453,6 +454,7 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
 }
 
 function HistoryRow({ bet }) {
+  const T = useTokens();
   const isWon = bet.status === 'won' || bet.status === 'cashed_out';
   const win = Number(bet.payout || bet.winAmount || bet.win || 0);
   const odds = Number(bet.totalOdds || bet.odds || 0);
@@ -512,6 +514,7 @@ function HistoryRow({ bet }) {
 }
 
 function EmptyState({ icon, title, hint }) {
+  const T = useTokens();
   return (
     <div style={{ padding: '40px 24px', textAlign: 'center' }}>
       <div
@@ -536,6 +539,7 @@ function EmptyState({ icon, title, hint }) {
 }
 
 function SignedOutState({ navigate }) {
+  const T = useTokens();
   return (
     <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
       <OddPageHeader title="My Bets" subtitle="Sign in to view your slips" />

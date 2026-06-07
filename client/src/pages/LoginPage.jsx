@@ -5,6 +5,11 @@ import { setAdminTokens } from '../api/adminApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import CountrySelect from '../components/CountrySelect.jsx';
 import PageBack from '../components/PageBack.jsx';
+import {
+  parseIdentifier,
+  autoFormatPhoneInput,
+  E164_PLACEHOLDER,
+} from '../lib/phone.js';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -137,8 +142,9 @@ export default function LoginPage() {
     }
   }
 
-  const isEmail = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier), [identifier]);
-  const isPhone = useMemo(() => /^\+?\d{9,15}$/.test(identifier.replace(/\s|-/g, '')), [identifier]);
+  const parsedId = useMemo(() => parseIdentifier(identifier), [identifier]);
+  const isEmail = parsedId.kind === 'email';
+  const isPhone = parsedId.kind === 'phone';
   const idValid = isEmail || isPhone;
 
   const pwStrength = useMemo(() => {
@@ -154,10 +160,9 @@ export default function LoginPage() {
 
   const reset = () => setErr('');
 
-  const phoneTrim = phone.replace(/\s|-/g, '');
-  const phoneValid = /^\+?\d{9,15}$/.test(phoneTrim);
-  const regIsEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(phone.trim());
-  const regIsPhone = phoneValid;
+  const parsedPhone = useMemo(() => parseIdentifier(phone), [phone]);
+  const regIsEmail = parsedPhone.kind === 'email';
+  const regIsPhone = parsedPhone.kind === 'phone';
   const regIdValid = regIsEmail || regIsPhone;
 
   const validate = () => {
@@ -165,18 +170,18 @@ export default function LoginPage() {
       if (!firstName.trim()) return 'Enter your first name.';
       if (!lastName.trim()) return 'Enter your last name.';
       if (!phone.trim()) return 'Enter your phone or email.';
-      if (!regIdValid) return 'Enter a valid email or phone (e.g. you@email.com or 233241234567).';
+      if (!regIdValid) return parsedPhone.error?.message || 'Enter a valid email or phone.';
       if (!password) return 'Enter your password.';
       if (!country) return 'Select your country.';
       if (password.length < 8) return 'Password must be at least 8 characters.';
       if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) return 'Password must mix upper- and lower-case letters.';
       if (!/\d/.test(password)) return 'Password must include a digit.';
-      if (password !== confirm) return 'Passwords don’t match.';
+      if (password !== confirm) return 'Passwords don\u2019t match.';
       if (!agree) return 'Accept the terms to create an account.';
       return null;
     }
     if (!identifier.trim()) return 'Enter your phone or email.';
-    if (!idValid) return 'Enter a valid email or phone (e.g. 233241234567).';
+    if (!idValid) return parsedId.error?.message || 'Enter a valid email or phone.';
     if (!password) return 'Enter your password.';
     if (!country) return 'Select your country.';
     return null;
@@ -206,14 +211,24 @@ export default function LoginPage() {
       setBusy(true);
       if (mode === 'register') {
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-        const idValue = regIsEmail ? phone.trim().toLowerCase() : phoneTrim;
+        const idValue = parsedPhone.value;
         const data = await register({
           email: idValue,
           password,
           displayName: fullName || idValue,
           country,
         });
-        toast(`Welcome to Oddsify, ${data.account?.displayName || data.account?.email}!`);
+        // Surface the exact identifier that was stored on the server.
+        // The whole "I keep losing my account" problem is usually that
+        // a different format was typed on the next login (e.g. no '+',
+        // wrong case on email). Echoing it here makes the value the
+        // user has to remember explicit.
+        const storedId = data.account?.email || idValue;
+        toast(
+          `Account created. Sign in next time with ${storedId} — write it down.`,
+          'success',
+          { ttl: 12000 },
+        );
         routeAfterLogin(data);
       } else {
         const data = await login({
@@ -336,18 +351,24 @@ export default function LoginPage() {
                 </div>
 
                 <label htmlFor="auth-phone">Phone or email</label>
-                <div className={`field${phone && !regIdValid ? ' invalid' : ''}`}>
+                <div className={`field${phone && !regIdValid && !!parsedPhone.error ? ' invalid' : ''}${phone && regIdValid ? ' valid' : ''}`}>
                   <span className="field-icon">{regIsEmail ? '✉' : regIsPhone ? '📱' : '👤'}</span>
                   <input
                     id="auth-phone"
                     type="text"
-                    autoComplete={regIsEmail ? 'email' : 'tel'}
-                    inputMode={regIsEmail ? 'email' : 'tel'}
-                    placeholder="233241234567 or you@email.com"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    placeholder={E164_PLACEHOLDER + ' or you@email.com'}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setPhone(raw.includes('@') ? raw : autoFormatPhoneInput(raw));
+                    }}
                   />
                 </div>
+                {phone && parsedPhone.error && (
+                  <p className="phone-error">{parsedPhone.error.message}</p>
+                )}
 
                 <label htmlFor="auth-pw">Password</label>
                 <div className="field">
@@ -408,18 +429,24 @@ export default function LoginPage() {
             ) : (
               <>
                 <label htmlFor="auth-id">Phone or email</label>
-                <div className={`field${identifier && !idValid ? ' invalid' : ''}`}>
+                <div className={`field${identifier && !idValid && !!parsedId.error ? ' invalid' : ''}${identifier && idValid ? ' valid' : ''}`}>
                   <span className="field-icon">{isEmail ? '✉' : isPhone ? '📱' : '👤'}</span>
                   <input
                     id="auth-id"
                     type="text"
                     autoComplete="username"
-                    placeholder="233241234567 or you@email.com"
+                    placeholder={E164_PLACEHOLDER + ' or you@email.com'}
                     value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setIdentifier(raw.includes('@') ? raw : autoFormatPhoneInput(raw));
+                    }}
                     autoFocus
                   />
                 </div>
+                {identifier && parsedId.error && (
+                  <p className="phone-error">{parsedId.error.message}</p>
+                )}
 
                 <label htmlFor="auth-pw">Password</label>
                 <div className="field">

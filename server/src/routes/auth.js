@@ -28,21 +28,27 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { badRequest, unauthorized, conflict, forbidden } from '../utils/httpError.js';
 import { GOOGLE } from '../config/env.js';
 import { log } from '../utils/logger.js';
+import { parseIdentifier } from '../lib/phone.js';
 
 const router = Router();
 
 /* ------------ Schemas ------------ */
-const emailLike = z
-  .string()
-  .transform((v) => v.replace(/\s+/g, '').toLowerCase())
-  .pipe(
-    z
-      .string()
-      .min(3, 'Enter a valid email or phone.')
-      .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^\+?\d{9,15}$/.test(v.replace(/\s|-/g, '')), {
-        message: 'Enter a valid email or phone.',
-      }),
-  );
+// "Phone or email" identifier. Runs the same parseIdentifier the client
+// uses, surfacing the spec's exact error messages when the input isn't a
+// valid email or E.164 phone. The transform normalizes to lowercase for
+// emails and sanitized-E.164 for phones, so we never store two formats
+// of the same number.
+const emailLike = z.string().transform((raw, ctx) => {
+  const parsed = parseIdentifier(raw);
+  if (parsed.error) {
+    if (parsed.error.code !== 'invalid_email' && parsed.error.code !== 'empty') {
+      log.warn(`phone validation failure (auth): ${parsed.error.code} — input masked`);
+    }
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: parsed.error.message });
+    return z.NEVER;
+  }
+  return parsed.value;
+});
 
 const country = z
   .string()
@@ -117,6 +123,15 @@ router.post(
       emailVerified: true,
     });
     logActivity(user.id, { kind: 'register', ip: req.ip, country: countryCode });
+    recordAudit({
+      actorId: user.id,
+      action: 'user.register',
+      target: user.id,
+      targetType: 'user',
+      ip: req.ip,
+      userAgent: req.get('user-agent') || '',
+      meta: { email, country: countryCode },
+    });
     log.info(`registered ${email} (${countryCode})`);
     const session = issueSession(user, req);
     res.status(201).json({ ok: true, kind: 'user', account: publicUser(user), ...session });
@@ -175,9 +190,29 @@ router.post(
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
       logActivity(user.id, { kind: 'login_failed', ip: req.ip });
+      recordAudit({
+        actorId: user.id,
+        action: 'user.login.failed',
+        target: user.id,
+        targetType: 'user',
+        severity: 'warning',
+        ip: req.ip,
+        meta: { email, reason: 'bad_password' },
+      });
       throw unauthorized('Incorrect email or password.');
     }
-    if (user.suspended) throw unauthorized('Account suspended. Contact support.');
+    if (user.suspended) {
+      recordAudit({
+        actorId: user.id,
+        action: 'user.login.suspended',
+        target: user.id,
+        targetType: 'user',
+        severity: 'warning',
+        ip: req.ip,
+        meta: { email },
+      });
+      throw unauthorized('Account suspended. Contact support.');
+    }
 
     // Country validation: if user has a country on file, the submitted one must match.
     // If user has no country (legacy account), accept and persist the submitted value.
@@ -191,6 +226,15 @@ router.post(
     const fresh = patch ? updateUser(user.id, patch) : user;
 
     logActivity(fresh.id, { kind: 'login_success', ip: req.ip, userAgent: req.get('user-agent') });
+    recordAudit({
+      actorId: fresh.id,
+      action: 'user.login.success',
+      target: fresh.id,
+      targetType: 'user',
+      ip: req.ip,
+      userAgent: req.get('user-agent') || '',
+      meta: { email },
+    });
     const session = issueSession(fresh, req);
     res.json({ ok: true, kind: 'user', account: publicUser(fresh), ...session });
   }),
