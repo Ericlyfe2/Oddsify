@@ -132,6 +132,40 @@ export function OddBetSlip() {
         />
       )}
 
+      {/* In the empty state we hide the sheet entirely and render a small
+          floating "Load code" button at the right edge — looks and feels
+          like an FAB rather than a full-width bar. Once the user taps it
+          the slip opens and the booking-code input is reachable as normal. */}
+      {emptyState && !open && (
+        <button
+          type="button"
+          onClick={openSlip}
+          aria-label="Load booking code"
+          style={{
+            position: 'fixed',
+            right: 16,
+            bottom: 88,
+            zIndex: 91,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '10px 16px',
+            borderRadius: 999,
+            background: T.greenBright,
+            color: T.goldDark,
+            fontWeight: 700,
+            fontSize: 13,
+            border: 0,
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px -6px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <OddIcon name="ticket" size={16} color={T.goldDark} />
+          Load code
+        </button>
+      )}
+
       <div
         role="dialog"
         aria-label="Bet slip"
@@ -146,7 +180,11 @@ export function OddBetSlip() {
           borderTopRightRadius: 22,
           zIndex: 91,
           transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1)',
-          transform: open || lastBet ? 'translateY(0)' : 'translateY(calc(100% - 56px))',
+          // In the empty state we drive interaction through the floating
+          // "Load code" FAB above instead of a peek bar, so the sheet stays
+          // fully translated off-screen until the user opens it.
+          transform:
+            open || lastBet ? 'translateY(0)' : emptyState ? 'translateY(100%)' : 'translateY(calc(100% - 56px))',
           boxShadow: '0 -16px 40px -10px rgba(0,0,0,0.25)',
           maxHeight: '88vh',
           display: 'flex',
@@ -154,6 +192,7 @@ export function OddBetSlip() {
           width: '100%',
           maxWidth: 560,
           margin: '0 auto',
+          pointerEvents: emptyState && !open ? 'none' : 'auto',
         }}
       >
         {/* condensed bar / drag handle */}

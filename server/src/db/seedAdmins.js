@@ -71,9 +71,7 @@ export async function seedAdmins() {
   }
 
   bruteStore.delete(SUPER_ADMIN.email);
-  log.security(
-    `Super admin ensured — email: ${SUPER_ADMIN.email} / password: ${redact(SUPER_ADMIN.password)}`,
-  );
+  log.security(`Super admin ensured — email: ${SUPER_ADMIN.email} / password: ${redact(SUPER_ADMIN.password)}`);
   return 1;
 }
 

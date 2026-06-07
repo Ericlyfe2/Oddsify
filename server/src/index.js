@@ -92,11 +92,18 @@ app.use(express.json({ limit: '256kb' }));
 app.use(metricsMiddleware);
 app.use('/api', apiLimiter);
 
+// Render exposes the commit SHA of the current deploy as RENDER_GIT_COMMIT.
+// Surface it on /api/health so we can confirm which build is live without
+// having to log into the Render dashboard.
+const DEPLOYED_COMMIT = (process.env.RENDER_GIT_COMMIT || 'unknown').slice(0, 12);
+const BOOT_AT = new Date().toISOString();
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     service: 'oddsify-api',
     version: '1.0.0',
+    commit: DEPLOYED_COMMIT,
+    bootAt: BOOT_AT,
     google: GOOGLE.enabled,
     smtp: SMTP.enabled,
     env: isProd ? 'production' : 'development',

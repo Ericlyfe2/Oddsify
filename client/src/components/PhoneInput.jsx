@@ -5,12 +5,7 @@
  * `.field` chrome used by LoginPage etc.
  */
 import { useMemo } from 'react';
-import {
-  E164_HINT,
-  E164_PLACEHOLDER,
-  autoFormatPhoneInput,
-  validatePhone,
-} from '../lib/phone.js';
+import { E164_HINT, E164_PLACEHOLDER, autoFormatPhoneInput, validatePhone } from '../lib/phone.js';
 
 export default function PhoneInput({
   id,

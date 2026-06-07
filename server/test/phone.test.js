@@ -1,11 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  sanitizePhone,
-  isValidPhone,
-  validatePhone,
-  parseIdentifier,
-} from '../src/lib/phone.js';
+import { sanitizePhone, isValidPhone, validatePhone, parseIdentifier } from '../src/lib/phone.js';
 
 describe('sanitizePhone', () => {
   test('strips spaces', () => {
