@@ -142,6 +142,8 @@ export default function Home() {
 
       <StatsStrip />
 
+      <GrandPrizeWinners wins={wins} />
+
       <div style={{ padding: '24px 16px 60px', textAlign: 'center' }}>
         <OddsifyWordmark size={18} color={T.ink} accent={T.greenBright} />
         <div
@@ -334,6 +336,112 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
     </div>
   );
 });
+
+/**
+ * Grand Prize Winners — static list of the top recent real wins.
+ *
+ * Pulls from the same /api/bet/recent-wins payload the marquee ticker
+ * uses. Surfaces the top 5 by amount with masked phone, GHS amount in
+ * brand green, sport category, and a "just now / N min ago / N hr ago"
+ * relative timestamp. Hides itself silently when there are no real
+ * wins to show (we deliberately removed the synthetic backfill earlier).
+ */
+function GrandPrizeWinners({ wins }) {
+  const T = useTokens();
+  if (!wins || wins.length === 0) return null;
+
+  const top = [...wins].sort((a, b) => (b.amountGhs || 0) - (a.amountGhs || 0)).slice(0, 5);
+  if (top.length === 0) return null;
+
+  return (
+    <div style={{ padding: '16px 16px 0' }}>
+      <SectionHeader title="Grand Prize Winners" count={top.length} />
+      <div
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}
+      >
+        {top.map((w, i) => (
+          <div
+            key={w.id}
+            style={{
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              borderBottom: i < top.length - 1 ? `1px solid ${T.line}` : 'none',
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: T.surfaceAlt,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: T.greenBright,
+                fontWeight: 800,
+                fontSize: 12,
+                fontFamily: '"JetBrains Mono", monospace',
+              }}
+              aria-hidden="true"
+            >
+              {i + 1}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: T.ink,
+                  fontFamily: '"JetBrains Mono", monospace',
+                  letterSpacing: 0.4,
+                }}
+              >
+                {w.phoneMasked}
+              </div>
+              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
+                in Sports · {w.betType === 'multi' ? `${w.legs}-leg multi` : 'Single'}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: T.greenBright,
+                  fontVariantNumeric: 'tabular-nums',
+                  letterSpacing: -0.2,
+                }}
+              >
+                GHS{fmtCedi(w.amountGhs, true)}
+              </div>
+              <div style={{ fontSize: 10.5, color: T.inkDim, marginTop: 2 }}>{relTimeShort(w.settledAt)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** "just now" / "12 min ago" / "3 hr ago" — concise wins-feed cadence. */
+function relTimeShort(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return 'just now';
+  const m = Math.floor(ms / 60_000);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  const d = Math.floor(h / 24);
+  return `${d} d ago`;
+}
 
 /**
  * Pull a hex from the league crest's inline-gradient style (e.g.
