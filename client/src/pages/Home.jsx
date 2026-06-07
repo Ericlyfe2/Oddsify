@@ -391,88 +391,99 @@ function generateGrandPrizeWinners(count = 5) {
 
 function GrandPrizeWinners() {
   const T = useTokens();
-  const [rows, setRows] = useState(() => generateGrandPrizeWinners(5));
+  const [rows, setRows] = useState(() => generateGrandPrizeWinners(8));
 
   useEffect(() => {
     // Refresh every 60s so the timestamps keep ticking up between 1
     // and ~3:30 ago and the dataset rotates without a page reload.
-    const id = setInterval(() => setRows(generateGrandPrizeWinners(5)), 60 * 1000);
+    const id = setInterval(() => setRows(generateGrandPrizeWinners(8)), 60 * 1000);
     return () => clearInterval(id);
   }, []);
 
+  // Double the list so the CSS marquee can loop without a visible jump
+  // (the existing `odd-marquee` keyframes translate by -50% — when the
+  // first half scrolls off the second half slides in seamlessly).
+  const loop = [...rows, ...rows];
+
   return (
-    <div style={{ padding: '16px 16px 0' }}>
-      <SectionHeader title="Grand Prize Winners" count={rows.length} />
+    <div style={{ padding: '16px 0 0' }}>
+      <div style={{ padding: '0 16px' }}>
+        <SectionHeader title="Grand Prize Winners" count={rows.length} />
+      </div>
       <div
         style={{
-          background: T.surface,
-          border: `1px solid ${T.line}`,
-          borderRadius: 14,
           overflow: 'hidden',
+          padding: '6px 0',
+          maskImage: 'linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%)',
+          WebkitMaskImage:
+            'linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%)',
         }}
       >
-        {rows.map((w, i) => (
-          <div
-            key={w.id}
-            style={{
-              padding: '12px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              borderBottom: i < rows.length - 1 ? `1px solid ${T.line}` : 'none',
-            }}
-          >
+        <div
+          className="gp-marquee-track"
+          style={{
+            display: 'flex',
+            gap: 12,
+            width: 'max-content',
+            animation: 'odd-marquee 36s linear infinite',
+            willChange: 'transform',
+          }}
+        >
+          {loop.map((w, i) => (
             <div
+              key={`${w.id}-${i}`}
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: T.surfaceAlt,
+                flex: '0 0 auto',
+                width: 250,
+                padding: '12px 14px',
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                borderRadius: 14,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: T.greenBright,
-                fontWeight: 800,
-                fontSize: 12,
-                fontFamily: '"JetBrains Mono", monospace',
+                flexDirection: 'column',
+                gap: 4,
+                boxShadow: '0 4px 16px -10px rgba(0,0,0,0.4)',
               }}
-              aria-hidden="true"
             >
-              {i + 1}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: T.ink,
-                  fontFamily: '"JetBrains Mono", monospace',
-                  letterSpacing: 0.4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                {w.phoneMasked}
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: T.ink,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  {w.phoneMasked}
+                </span>
+                <span style={{ fontSize: 10, color: T.inkDim, fontWeight: 600 }}>{relTimeShort(w.settledAt)}</span>
               </div>
-              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
-                in Sports · {w.betType === 'multi' ? `${w.legs}-leg multi` : 'Single'} ·{' '}
-                <span style={{ color: T.greenBright, fontWeight: 700 }}>{w.odds}x</span>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
               <div
                 style={{
-                  fontSize: 15,
+                  fontSize: 18,
                   fontWeight: 800,
                   color: T.greenBright,
                   fontVariantNumeric: 'tabular-nums',
-                  letterSpacing: -0.2,
+                  letterSpacing: -0.4,
+                  fontFamily: '"Space Grotesk", system-ui, sans-serif',
                 }}
               >
                 GHS{fmtCedi(w.amountGhs, true)}
               </div>
-              <div style={{ fontSize: 10.5, color: T.inkDim, marginTop: 2 }}>{relTimeShort(w.settledAt)}</div>
+              <div style={{ fontSize: 11, color: T.inkSoft }}>
+                in Sports · {w.betType === 'multi' ? `${w.legs}-leg` : 'Single'} ·{' '}
+                <span style={{ color: T.greenBright, fontWeight: 700 }}>{w.odds}x</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
