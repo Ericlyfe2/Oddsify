@@ -22,8 +22,9 @@ import { getRecentWins } from '../services/recentWins.js';
 import { createStore } from '../db/store.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { bookingLookupLimiter } from '../middleware/rateLimit.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { badRequest, conflict, notFound, unauthorized } from '../utils/httpError.js';
+import { badRequest, conflict, gone, notFound, unauthorized } from '../utils/httpError.js';
 import { updateUser, logActivity } from '../db/users.js';
 import { pushTx } from './wallet.js';
 import { emitAdmin, emitToUser } from '../services/realtime.js';
@@ -31,30 +32,20 @@ import { SYSTEM_TYPES, maxSystemReturn } from '../lib/systemBets.js';
 import * as cashOutEngine from '../services/cashOutEngine.js';
 import { LIVE_BETTING } from '../config/env.js';
 import { log } from '../utils/logger.js';
+import { mintUniqueBookingCode } from '../lib/bookingCode.js';
 
 const router = Router();
 
-// AF36513 — 2 uppercase letters + 5 digits.
-function generateBookingCode() {
-  const A = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; // dropped 'O' to avoid 0/O confusion
-  const D = '123456789';
-  const letters = A[Math.floor(Math.random() * A.length)] + A[Math.floor(Math.random() * A.length)];
-  let digits = '';
-  for (let i = 0; i < 5; i++) digits += D[Math.floor(Math.random() * D.length)];
-  return letters + digits;
-}
-
 function uniqueBookingCode() {
-  const allBets = betsStore.all();
-  const allBooked = bookedSlipsStore.all();
-  for (let i = 0; i < 25; i++) {
-    const code = generateBookingCode();
-    const takenByBet = Object.values(allBets).some((b) => b.bookingCode === code);
-    const takenByBooked = !!allBooked[code];
-    if (!takenByBet && !takenByBooked) return code;
-  }
-  // 7-char namespace is huge; this is just paranoia.
-  return generateBookingCode() + Math.floor(Math.random() * 9 + 1);
+  // Build the in-use set from both placed-bet codes and standalone
+  // booked-slip codes so the same namespace is never reused.
+  const taken = new Set(
+    Object.values(betsStore.all() || {})
+      .map((b) => b.bookingCode)
+      .filter(Boolean),
+  );
+  for (const code of Object.keys(bookedSlipsStore.all() || {})) taken.add(code);
+  return mintUniqueBookingCode({ existingCodes: taken });
 }
 
 const betsStore = createStore('bets', {}); // { betId: receipt }
@@ -224,8 +215,16 @@ router.get(
 
 /* ------------ authenticated bet operations ------------ */
 
-router.get('/code/:code', (req, res, next) => {
+// Booked slips expire 30 days after creation. After that the lookup
+// returns HTTP 410 so the client can show the "expired" toast instead
+// of a generic "not found." Placed-bet codes never expire — they're
+// permanent records of money having changed hands.
+const BOOKED_SLIP_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+router.get('/code/:code', bookingLookupLimiter, (req, res, next) => {
   const code = String(req.params.code || '').toUpperCase();
+  log.info(`booking_code_lookup code=${code} ip=${req.ip}`);
+
   const bet = Object.values(betsStore.all()).find((b) => b.bookingCode === code);
   if (bet) {
     const { userId, ...publicBet } = bet;
@@ -235,10 +234,16 @@ router.get('/code/:code', (req, res, next) => {
   // can still be looked up by the recipient.
   const slip = bookedSlipsStore.get(code);
   if (slip) {
+    // Expiration check (graceful — never throws on legacy rows that
+    // pre-date this field).
+    const createdAt = slip.createdAt ? new Date(slip.createdAt).getTime() : null;
+    if (createdAt && Date.now() - createdAt > BOOKED_SLIP_TTL_MS) {
+      return next(gone('This booking code has expired.'));
+    }
     const { createdBy, createdIp, ...publicSlip } = slip;
     return res.json({ bet: publicSlip });
   }
-  return next(notFound('Booking code not found'));
+  return next(notFound('Booking code not found.'));
 });
 
 // Booking-only schema. No stake (the recipient sets that when they place
@@ -291,12 +296,15 @@ router.post(
 
     const code = uniqueBookingCode();
     const totalOdds = normalized.length === 1 ? normalized[0].odds : normalized.reduce((acc, s) => acc * s.odds, 1);
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + BOOKED_SLIP_TTL_MS);
     const slip = {
       bookingCode: code,
       kind: 'booked',
       status: 'booked',
       placedAt: null,
-      createdAt: new Date().toISOString(),
+      createdAt: createdAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
       currency: CURRENCY,
       mode: normalized.length === 1 ? 'single' : 'multiple',
       totalOdds: Number(totalOdds.toFixed(4)),

@@ -30,3 +30,15 @@ export const loginLimiter = rateLimit({
   keyGenerator: emailKey,
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
+
+// Booking-code lookups: the format alphabet only has 25^2 * 9^5 ≈
+// 14.7M combinations, and the global apiLimiter (100 req/min per IP)
+// leaves enough headroom for casual enumeration. This tighter cap
+// (30 req/min per IP) makes brute-forcing impractical without hurting
+// real users who type a couple of codes by hand.
+export const bookingLookupLimiter = rateLimit({
+  ...standardOpts,
+  windowMs: 60 * 1000,
+  limit: 30,
+  message: { error: 'Too many booking-code lookups. Try again shortly.' },
+});

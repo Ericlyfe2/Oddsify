@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
+import { useSlip } from '../providers/SlipProvider.jsx';
 import {
   fmtCedi,
   useTokens,
@@ -22,6 +23,36 @@ import {
   OddStatusChip,
   OddIcon,
 } from '../components/odd/primitives.jsx';
+
+/* ── shared booking-code helpers used by every history row ── */
+
+function makeShareUrl(code) {
+  if (typeof window === 'undefined') return `/code/${code}`;
+  return `${window.location.origin}/code/${code}`;
+}
+
+function shareCode(code, toast) {
+  const url = makeShareUrl(code);
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    navigator.share({ title: 'Oddsify booking code', text: `Booking code ${code} on Oddsify`, url }).catch(() => {});
+    return;
+  }
+  try {
+    navigator.clipboard?.writeText(url);
+    toast(`Copied share link.`, 'success');
+  } catch {
+    toast('Share unsupported — copy manually.', 'warn');
+  }
+}
+
+function copyCode(code, toast) {
+  try {
+    navigator.clipboard?.writeText(code);
+    toast(`Copied ${code}.`, 'success');
+  } catch {
+    toast('Copy failed — long-press to copy manually.', 'warn');
+  }
+}
 
 const STATUS_KIND = {
   open: 'open',
@@ -155,6 +186,34 @@ export default function BetHistoryPage() {
         />
       </div>
 
+      {/* Code Hub shortcut — pinned to the top of the list so every
+          history view advertises the load-by-code action. */}
+      <div style={{ padding: '0 16px 8px' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/codehub')}
+          style={{
+            width: '100%',
+            padding: '12px 14px',
+            borderRadius: 12,
+            background: T.surfaceAlt,
+            border: `1px dashed ${T.lineStrong}`,
+            color: T.ink,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            cursor: 'pointer',
+          }}
+        >
+          <OddIcon name="ticket" size={16} color={T.greenBright} />
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700 }}>Booking Code Hub</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 1 }}>Load any code, see recent codes, share.</div>
+          </div>
+          <OddIcon name="chevR" size={14} color={T.inkDim} />
+        </button>
+      </div>
+
       {loading ? (
         <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
           {[0, 1].map((i) => (
@@ -181,7 +240,7 @@ export default function BetHistoryPage() {
                 bet={bet}
                 open={expanded === bet.id}
                 onToggle={() => setExpanded(expanded === bet.id ? null : bet.id)}
-                onCopy={() => copy(bet.code || bet.id)}
+                onCopy={() => copy(bet.bookingCode || bet.code || bet.id)}
                 onCashOut={() => onCashOut(bet)}
                 cashingOut={cashingOut === bet.id}
               />
@@ -233,8 +292,19 @@ function Stat({ label, value, dark = false, accent }) {
 
 function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
   const T = useTokens();
+  const { loadFromSlip, rememberCode } = useSlip();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const legs = bet.legs || bet.selections || [];
-  const code = bet.code || bet.id?.slice(-8) || '—';
+  const code = bet.bookingCode || bet.code || bet.id?.slice(-8) || '—';
+
+  const handleRebook = () => {
+    if (!legs.length) return toast('No selections to rebook on this slip.', 'warn');
+    if (loadFromSlip({ bookingCode: code, legs, mode: bet.mode })) {
+      if (bet.bookingCode) rememberCode(bet.bookingCode, { kind: 'placed', legs: legs.length });
+      navigate('/');
+    }
+  };
   const odds = Number(bet.totalOdds || bet.odds || 1);
   const stake = Number(bet.stake || 0);
   const potential = Number(bet.potentialReturn || bet.win || stake * odds);
@@ -315,26 +385,59 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
               {code}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onCopy}
-            style={{
-              padding: '6px 10px',
-              borderRadius: 8,
-              background: open ? T.greenBright : T.greenDeep,
-              color: open ? T.goldDark : '#fff',
-              fontSize: 11,
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              border: 0,
-              cursor: 'pointer',
-            }}
-          >
-            <OddIcon name="check" size={12} color={open ? T.goldDark : '#fff'} />
-            Copy
-          </button>
+          <div style={{ display: 'inline-flex', gap: 6 }}>
+            <button
+              type="button"
+              onClick={onCopy}
+              aria-label="Copy code"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                background: open ? T.surfaceAlt : T.greenDeep,
+                color: open ? T.ink : '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              onClick={() => shareCode(code, toast)}
+              aria-label="Share code"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                background: open ? T.surfaceAlt : T.greenDeep,
+                color: open ? T.ink : '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Share
+            </button>
+            <button
+              type="button"
+              onClick={handleRebook}
+              aria-label="Rebook this slip"
+              style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                background: T.greenBright,
+                color: T.goldDark,
+                fontSize: 11,
+                fontWeight: 800,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Rebook
+            </button>
+          </div>
         </div>
 
         {cashOutValue > 0 && (
@@ -455,60 +558,137 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
 
 function HistoryRow({ bet }) {
   const T = useTokens();
+  const { loadFromSlip, rememberCode } = useSlip();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const isWon = bet.status === 'won' || bet.status === 'cashed_out';
   const win = Number(bet.payout || bet.winAmount || bet.win || 0);
   const odds = Number(bet.totalOdds || bet.odds || 0);
+  const code = bet.bookingCode || bet.code || bet.id?.slice(-8) || '';
+  const legs = bet.legs || bet.selections || [];
+
+  const handleRebook = () => {
+    if (!legs.length) return toast('No selections to rebook on this slip.', 'warn');
+    if (loadFromSlip({ bookingCode: code, legs, mode: bet.mode })) {
+      if (bet.bookingCode) rememberCode(bet.bookingCode, { kind: 'placed', legs: legs.length });
+      navigate('/');
+    }
+  };
+
   return (
     <div
       style={{
         background: T.surface,
         borderRadius: 14,
         border: `1px solid ${T.line}`,
-        padding: '12px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
+        overflow: 'hidden',
       }}
     >
       <div
         style={{
-          width: 4,
-          alignSelf: 'stretch',
-          borderRadius: 2,
-          background: isWon ? T.greenBright : T.danger,
+          padding: '12px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
         }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <span
+      >
+        <div
+          style={{
+            width: 4,
+            alignSelf: 'stretch',
+            borderRadius: 2,
+            background: isWon ? T.greenBright : T.danger,
+          }}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: T.ink,
+                fontVariantNumeric: 'tabular-nums',
+                fontFamily: code && code.length === 7 ? '"JetBrains Mono", monospace' : 'inherit',
+                letterSpacing: code && code.length === 7 ? 0.4 : 0,
+              }}
+            >
+              #{code || '—'}
+            </span>
+            <OddStatusChip kind={STATUS_KIND[bet.status] || bet.status} label={(bet.status || '').toUpperCase()} />
+          </div>
+          <div style={{ fontSize: 11, color: T.inkSoft }}>
+            {placedAt(bet.placedAt || bet.createdAt)} · stake GHS {fmtCedi(bet.stake)} · {odds.toFixed(2)}x
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div
             style={{
               fontSize: 14,
               fontWeight: 700,
-              color: T.ink,
               fontVariantNumeric: 'tabular-nums',
+              color: isWon ? T.greenBright : T.inkDim,
             }}
           >
-            #{bet.code || bet.id?.slice(-8) || '—'}
-          </span>
-          <OddStatusChip kind={STATUS_KIND[bet.status] || bet.status} label={(bet.status || '').toUpperCase()} />
-        </div>
-        <div style={{ fontSize: 11, color: T.inkSoft }}>
-          {placedAt(bet.placedAt || bet.createdAt)} · stake GHS {fmtCedi(bet.stake)} · {odds.toFixed(2)}x
+            {isWon ? '+' : ''}GHS {fmtCedi(win)}
+          </div>
+          <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>{isWon ? 'Payout' : 'No return'}</div>
         </div>
       </div>
-      <div style={{ textAlign: 'right' }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            fontVariantNumeric: 'tabular-nums',
-            color: isWon ? T.greenBright : T.inkDim,
-          }}
-        >
-          {isWon ? '+' : ''}GHS {fmtCedi(win)}
+      {code && legs.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, padding: '8px 12px 12px', borderTop: `1px solid ${T.line}` }}>
+          <button
+            type="button"
+            onClick={() => copyCode(code, toast)}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              borderRadius: 8,
+              background: T.surfaceAlt,
+              color: T.ink,
+              border: 0,
+              fontWeight: 600,
+              fontSize: 11.5,
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            onClick={() => shareCode(code, toast)}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              borderRadius: 8,
+              background: T.surfaceAlt,
+              color: T.ink,
+              border: 0,
+              fontWeight: 600,
+              fontSize: 11.5,
+              cursor: 'pointer',
+            }}
+          >
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={handleRebook}
+            style={{
+              flex: 1.2,
+              padding: '8px 0',
+              borderRadius: 8,
+              background: T.greenBright,
+              color: T.goldDark,
+              border: 0,
+              fontWeight: 800,
+              fontSize: 11.5,
+              cursor: 'pointer',
+            }}
+          >
+            Rebook
+          </button>
         </div>
-        <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>{isWon ? 'Payout' : 'No return'}</div>
-      </div>
+      )}
     </div>
   );
 }
