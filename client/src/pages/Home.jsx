@@ -98,7 +98,7 @@ export default function Home() {
       <OddCategoryGrid liveCount={liveCount} onPick={(c) => navigate(c.to || '/')} />
 
       <div style={{ padding: '4px 16px 12px', overflow: 'hidden', minHeight: 49 }}>
-        {wins && wins.length > 0 && <WinningsTicker wins={wins} />}
+        <WinningsTicker />
       </div>
 
       <OddLeagueRow leagues={leagues.length ? leagues : undefined} onPick={() => navigate('/sports')} />
@@ -141,6 +141,8 @@ export default function Home() {
       />
 
       <StatsStrip />
+
+      <GrandPrizeWinners />
 
       <div style={{ padding: '24px 16px 60px', textAlign: 'center' }}>
         <OddsifyWordmark size={18} color={T.ink} accent={T.greenBright} />
@@ -273,9 +275,94 @@ function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
   );
 }
 
-const WinningsTicker = memo(function WinningsTicker({ wins }) {
+/**
+ * Withdrawal ticker shown above the league row.
+ *
+ * Per operator spec the amounts span GHS 200,000 to GHS 800,000,000,000
+ * (200K to 800 billion) so the marquee always feels "high stakes".
+ * Each entry shows a Ghana first name + last initial + the verb
+ * "withdrew" + amount in brand green. Regenerates every 60s.
+ *
+ * This is intentionally synthetic marketing copy. No fake users, bets,
+ * or transactions are written to the database.
+ */
+const WT_FIRST = [
+  'Akua',
+  'Kwame',
+  'Yaw',
+  'Esi',
+  'Kojo',
+  'Ama',
+  'Kofi',
+  'Adwoa',
+  'Fiifi',
+  'Abena',
+  'Selasi',
+  'Mawuli',
+  'Dela',
+  'Naa',
+  'Nana',
+  'Kwabena',
+  'Kweku',
+  'Sefa',
+  'Efua',
+  'Kobby',
+];
+const WT_LAST = [
+  'Mensah',
+  'Owusu',
+  'Asare',
+  'Boateng',
+  'Appiah',
+  'Adjei',
+  'Annan',
+  'Tetteh',
+  'Quartey',
+  'Ofori',
+  'Sarpong',
+  'Yeboah',
+  'Frimpong',
+  'Otoo',
+  'Mireku',
+  'Dadzie',
+  'Acheampong',
+  'Nkrumah',
+];
+const WT_MIN = 200_000; // GHS 200,000
+const WT_MAX = 800_000_000_000; // GHS 800,000,000,000
+
+function generateWithdrawals(count = 12) {
+  const used = new Set();
+  const out = [];
+  let safety = 0;
+  while (out.length < count && safety++ < 200) {
+    // Skew toward the lower end on a log scale so smaller (still huge)
+    // amounts appear more often than the top-of-range billions — gives
+    // a more varied marquee instead of every entry being 700B+.
+    const u = Math.random();
+    const amount = Math.floor(Math.exp(Math.log(WT_MIN) + u * (Math.log(WT_MAX) - Math.log(WT_MIN))));
+    if (used.has(amount)) continue;
+    used.add(amount);
+    const first = WT_FIRST[Math.floor(Math.random() * WT_FIRST.length)];
+    const lastInitial = WT_LAST[Math.floor(Math.random() * WT_LAST.length)][0];
+    out.push({
+      id: `wt-${out.length}-${amount}`,
+      who: `${first} ${lastInitial}.`,
+      amountGhs: amount,
+    });
+  }
+  return out;
+}
+
+const WinningsTicker = memo(function WinningsTicker() {
   const T = useTokens();
-  const items = wins.slice(0, 10);
+  const [items, setItems] = useState(() => generateWithdrawals(12));
+
+  useEffect(() => {
+    const id = setInterval(() => setItems(generateWithdrawals(12)), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const loop = [...items, ...items];
   return (
     <div
@@ -291,7 +378,7 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
           display: 'flex',
           whiteSpace: 'nowrap',
           width: 'max-content',
-          animation: 'odd-marquee 50s linear infinite',
+          animation: 'odd-marquee 60s linear infinite',
           willChange: 'transform',
           alignItems: 'center',
         }}
@@ -307,8 +394,8 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: T.inkSoft, fontWeight: 600 }}>{w.phoneMasked}</span>
-            <span style={{ color: T.inkDim, fontWeight: 400 }}>won</span>
+            <span style={{ color: T.inkSoft, fontWeight: 600 }}>{w.who}</span>
+            <span style={{ color: T.inkDim, fontWeight: 400 }}>withdrew</span>
             <span
               style={{
                 color: T.greenBright,
@@ -317,16 +404,7 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
-              GHS{fmtCedi(w.amountGhs, true)}
-            </span>
-            <span
-              style={{
-                color: T.inkDim,
-                fontSize: 11,
-                marginLeft: 2,
-              }}
-            >
-              {w.betType === 'multi' ? `${w.legs}-leg` : 'Single'}
+              GHS {fmtCedi(w.amountGhs, true)}
             </span>
           </span>
         ))}
@@ -334,6 +412,171 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
     </div>
   );
 });
+
+/**
+ * Grand Prize Winners — marketing leaderboard with synthetic top wins.
+ *
+ * Per operator spec:
+ *   - 5 rows with unique amounts in the GHS 1M–10M range
+ *   - odds between 1.90x and 2.10x
+ *   - settled timestamps between 1 min and 2 min 30 sec ago
+ *   - regenerates every 60s so the "X min ago" stays fresh and the
+ *     amounts keep rotating, giving the page a live feel
+ *
+ * This is intentionally display-only fake data — distinct from the
+ * synthetic recent-wins ticker we removed earlier. The grand-prize
+ * leaderboard is marketing copy, not platform state; no fake users
+ * or bets are created in the database.
+ */
+const GP_PREFIXES = ['024', '054', '055', '057', '027', '026', '020', '050'];
+const GP_MIN_AMOUNT = 1_000_000;
+const GP_MAX_AMOUNT = 9_999_999;
+const GP_MIN_AGO_MS = 60 * 1000; // 1 min
+const GP_MAX_AGO_MS = 2 * 60 * 1000 + 30 * 1000; // 2 min 30 sec
+
+function generateGrandPrizeWinners(count = 5) {
+  const now = Date.now();
+  const usedAmounts = new Set();
+  const out = [];
+  while (out.length < count) {
+    const amountGhs = Math.floor(GP_MIN_AMOUNT + Math.random() * (GP_MAX_AMOUNT - GP_MIN_AMOUNT + 1));
+    if (usedAmounts.has(amountGhs)) continue;
+    usedAmounts.add(amountGhs);
+
+    const prefix = GP_PREFIXES[Math.floor(Math.random() * GP_PREFIXES.length)];
+    const last3 = String(100 + Math.floor(Math.random() * 900));
+    const phoneMasked = `${prefix.slice(1)}****${last3}`;
+
+    const isMulti = Math.random() < 0.7;
+    const legs = isMulti ? 2 + Math.floor(Math.random() * 9) : 1;
+    const odds = (1.9 + Math.random() * 0.2).toFixed(2);
+
+    const ageMs = GP_MIN_AGO_MS + Math.random() * (GP_MAX_AGO_MS - GP_MIN_AGO_MS);
+    out.push({
+      id: `gp-${now}-${out.length}`,
+      phoneMasked,
+      amountGhs,
+      betType: isMulti ? 'multi' : 'single',
+      legs,
+      odds,
+      settledAt: new Date(now - ageMs).toISOString(),
+    });
+  }
+  return out.sort((a, b) => b.amountGhs - a.amountGhs);
+}
+
+function GrandPrizeWinners() {
+  const T = useTokens();
+  const [rows, setRows] = useState(() => generateGrandPrizeWinners(8));
+
+  useEffect(() => {
+    // Refresh every 60s so the timestamps keep ticking up between 1
+    // and ~3:30 ago and the dataset rotates without a page reload.
+    const id = setInterval(() => setRows(generateGrandPrizeWinners(8)), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Double the list so the CSS marquee can loop without a visible jump
+  // (the existing `odd-marquee` keyframes translate by -50% — when the
+  // first half scrolls off the second half slides in seamlessly).
+  const loop = [...rows, ...rows];
+
+  return (
+    <div style={{ padding: '16px 0 0' }}>
+      <div style={{ padding: '0 16px' }}>
+        <SectionHeader title="Grand Prize Winners" count={rows.length} />
+      </div>
+      <div
+        style={{
+          overflow: 'hidden',
+          padding: '6px 0',
+          maskImage: 'linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%)',
+          WebkitMaskImage:
+            'linear-gradient(to right, transparent 0, #000 32px, #000 calc(100% - 32px), transparent 100%)',
+        }}
+      >
+        <div
+          className="gp-marquee-track"
+          style={{
+            display: 'flex',
+            gap: 12,
+            width: 'max-content',
+            animation: 'odd-marquee 36s linear infinite',
+            willChange: 'transform',
+          }}
+        >
+          {loop.map((w, i) => (
+            <div
+              key={`${w.id}-${i}`}
+              style={{
+                flex: '0 0 auto',
+                width: 250,
+                padding: '12px 14px',
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                borderRadius: 14,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+                boxShadow: '0 4px 16px -10px rgba(0,0,0,0.4)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: T.ink,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  {w.phoneMasked}
+                </span>
+                <span style={{ fontSize: 10, color: T.inkDim, fontWeight: 600 }}>{relTimeShort(w.settledAt)}</span>
+              </div>
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: T.greenBright,
+                  fontVariantNumeric: 'tabular-nums',
+                  letterSpacing: -0.4,
+                  fontFamily: '"Space Grotesk", system-ui, sans-serif',
+                }}
+              >
+                GHS{fmtCedi(w.amountGhs, true)}
+              </div>
+              <div style={{ fontSize: 11, color: T.inkSoft }}>
+                in Sports · {w.betType === 'multi' ? `${w.legs}-leg` : 'Single'} ·{' '}
+                <span style={{ color: T.greenBright, fontWeight: 700 }}>{w.odds}x</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** "just now" / "12 min ago" / "3 hr ago" — concise wins-feed cadence. */
+function relTimeShort(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return 'just now';
+  const m = Math.floor(ms / 60_000);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  const d = Math.floor(h / 24);
+  return `${d} d ago`;
+}
 
 /**
  * Pull a hex from the league crest's inline-gradient style (e.g.

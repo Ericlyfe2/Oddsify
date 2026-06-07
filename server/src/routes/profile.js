@@ -36,6 +36,17 @@ const profileSchema = z.object({
       selfExcludedUntil: z.string().nullable().optional(),
     })
     .optional(),
+  // Notification routing toggles surfaced on the Account screen.
+  // All three default to true on the server when the user record
+  // hasn't been touched; explicit boolean here lets the player opt
+  // any channel off.
+  commsPrefs: z
+    .object({
+      email: z.boolean().optional(),
+      sms: z.boolean().optional(),
+      push: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 router.get('/', requireAuth, (req, res) => {
@@ -43,7 +54,24 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 router.patch('/', requireAuth, validate(profileSchema), (req, res) => {
-  const updated = updateUser(req.user.id, req.body);
+  // Shallow merge isn't enough for the nested settings groups — sending
+  // { responsibleGaming: { dailyDepositLimit: 100 } } would otherwise
+  // wipe out the weekly/monthly entries. Merge nested groups against the
+  // existing user record before persisting.
+  const patch = { ...req.body };
+  if (patch.responsibleGaming) {
+    patch.responsibleGaming = {
+      ...(req.user.responsibleGaming || {}),
+      ...patch.responsibleGaming,
+    };
+  }
+  if (patch.commsPrefs) {
+    patch.commsPrefs = {
+      ...(req.user.commsPrefs || {}),
+      ...patch.commsPrefs,
+    };
+  }
+  const updated = updateUser(req.user.id, patch);
   logActivity(req.user.id, { kind: 'profile_update' });
   res.json({ account: publicUser(updated) });
 });

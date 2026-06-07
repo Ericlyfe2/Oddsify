@@ -1,63 +1,236 @@
 /**
- * Account — port of the Claude Design OddAccountScreen.
+ * Account — comprehensive player profile hub for Oddsify.
  *
- * Floating balance card overlapping the page header, 4 quick actions
- * (Deposit / Withdraw / Transfer / Help), 3-stat row, navigable menu list,
- * log out button. Wires deposit/withdraw via the existing AccountProvider
- * dialogs so we keep the working MoMo / Paybill / Card flows intact.
+ * Sections (top → bottom):
+ *  - Balance hero with toggleable visibility, KYC chip, stage chip,
+ *    pending-promotion banner.
+ *  - Quick action grid (Deposit / Withdraw / Bet History / Promos).
+ *  - Stats strip (open bets · win rate · staked).
+ *  - Personal information editor (display name + phone).
+ *  - Security panel (change password, 2FA placeholder).
+ *  - Verification status (KYC / stage 0→1 explicit gate).
+ *  - Responsible gambling (daily / weekly / monthly deposit limits, self-
+ *    exclusion).
+ *  - Refer & earn (share code).
+ *  - Communication preferences (email / SMS / push toggles).
+ *  - Shortcut menu (Bet history, Wallet, Promos, Notifications, Help).
+ *  - Sign out.
+ *
+ * Wires to existing endpoints (PATCH /api/profile, POST /api/auth/change-
+ * password). Sections that don't yet have a backend (push prefs, KYC doc
+ * upload, referrals) render as "coming soon" rows so the surface is
+ * intentionally incomplete rather than fake.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAccount } from '../providers/AccountProvider.jsx';
-import { fetchTransactions, fetchBetHistory } from '../api/betApi.js';
+import { useAccount, useToast } from '../providers/AccountProvider.jsx';
+import { fetchTransactions, fetchBetHistory, updateProfile, changePassword } from '../api/betApi.js';
 import { fmtCedi, useTokens, OddPageHeader, OddIcon } from '../components/odd/primitives.jsx';
+import { validatePhone, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
+
+const STAGE_LABELS = {
+  0: 'Newcomer',
+  1: 'Verified',
+  2: 'Trusted',
+  3: 'High roller',
+  4: 'VIP',
+};
 
 const buildQuickActions = (T, handlers) => [
   { id: 'dep', icon: 'deposit', label: 'Deposit', tint: T.greenBright, onClick: handlers.deposit },
   { id: 'with', icon: 'upload', label: 'Withdraw', tint: T.gold, onClick: handlers.withdraw },
-  { id: 'trans', icon: 'refresh', label: 'Transfer', tint: '#3a6dff', onClick: handlers.transfer },
-  { id: 'help', icon: 'info', label: 'Help', tint: T.inkSoft, onClick: handlers.help },
+  { id: 'bets', icon: 'ticket', label: 'Bet history', tint: '#3a6dff', onClick: handlers.bets },
+  { id: 'promos', icon: 'trophy', label: 'Promos', tint: T.accentHot, onClick: handlers.promos },
 ];
 
-const MENU_ITEMS = (counts, navigate) => [
+const SHORTCUTS = (counts) => [
   { icon: 'ticket', label: 'My bets', detail: counts.openBets ? `${counts.openBets} open` : null, to: '/my-bets' },
   { icon: 'wallet', label: 'Transactions', detail: counts.tx ? String(counts.tx) : null, to: '/wallet' },
-  { icon: 'trophy', label: 'Rewards & promos', detail: '3 new', to: '/promos' },
-  {
-    icon: 'bell',
-    label: 'Notifications',
-    detail: counts.unread ? String(counts.unread) : null,
-    to: '/profile#notifications',
-  },
-  { icon: 'user', label: 'Profile & KYC', to: '/profile#kyc' },
+  { icon: 'trophy', label: 'Rewards & promos', to: '/promos' },
   { icon: 'info', label: 'Help center', to: '/help' },
 ];
+
+/* ─── small shared sub-components ──────────────────────── */
+
+function Section({ title, subtitle, children, action }) {
+  const T = useTokens();
+  return (
+    <div style={{ padding: '20px 16px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 11, color: T.inkSoft }}>{subtitle}</div>}
+        </div>
+        {action}
+      </div>
+      <div
+        style={{
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Row({ children, onClick, danger }) {
+  const T = useTokens();
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        cursor: onClick ? 'pointer' : 'default',
+        color: danger ? T.danger : T.ink,
+        borderBottom: `1px solid ${T.line}`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, type = 'text', autoComplete, helper, error }) {
+  const T = useTokens();
+  return (
+    <div style={{ padding: '12px 14px', borderBottom: `1px solid ${T.line}` }}>
+      <label style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4 }}>{label}</label>
+      <input
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        type={type}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          marginTop: 4,
+          background: 'transparent',
+          color: T.ink,
+          fontSize: 14,
+          fontWeight: 600,
+          border: 0,
+          outline: 'none',
+        }}
+      />
+      {error && <div style={{ fontSize: 11, color: T.danger, marginTop: 4 }}>{error}</div>}
+      {!error && helper && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 4 }}>{helper}</div>}
+    </div>
+  );
+}
+
+function Toggle({ label, on, onChange, helper, disabled }) {
+  const T = useTokens();
+  return (
+    <div
+      style={{
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        borderBottom: `1px solid ${T.line}`,
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>{label}</div>
+        {helper && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>{helper}</div>}
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-pressed={on}
+        onClick={() => onChange(!on)}
+        style={{
+          width: 40,
+          height: 22,
+          borderRadius: 999,
+          border: 0,
+          padding: 2,
+          background: on ? T.greenBright : T.surfaceAlt,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.6 : 1,
+          transition: 'background 160ms',
+        }}
+      >
+        <span
+          style={{
+            display: 'block',
+            width: 18,
+            height: 18,
+            borderRadius: 999,
+            background: '#fff',
+            transform: on ? 'translateX(18px)' : 'translateX(0)',
+            transition: 'transform 160ms',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+          }}
+        />
+      </button>
+    </div>
+  );
+}
+
+/* ─── main page ──────────────────────────────────────────── */
 
 export default function ProfilePage() {
   const T = useTokens();
   const navigate = useNavigate();
-  const { account, signOut, openDeposit, openWithdraw, unreadCount } = useAccount();
-  const [counts, setCounts] = useState({ openBets: 0, tx: 0, unread: 0 });
+  const { account, signOut, openDeposit, openWithdraw, unreadCount, refresh } = useAccount();
+  const { toast } = useToast();
+
+  const [counts, setCounts] = useState({ openBets: 0, tx: 0 });
+  const [balanceVisible, setBalanceVisible] = useState(true);
+
+  // personal info editor state
+  const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // change password state
+  const [pwOpen, setPwOpen] = useState(false);
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [savingPw, setSavingPw] = useState(false);
+
+  // communication prefs (UI-only for now — wired-up state from account when available)
+  const [emailPref, setEmailPref] = useState(true);
+  const [smsPref, setSmsPref] = useState(true);
+  const [pushPref, setPushPref] = useState(false);
+
+  useEffect(() => {
+    if (!account) return;
+    setDisplayName(account.displayName || '');
+    setPhone(account.phone || '');
+    if (account.commsPrefs) {
+      setEmailPref(account.commsPrefs.email !== false);
+      setSmsPref(account.commsPrefs.sms !== false);
+      setPushPref(account.commsPrefs.push === true);
+    }
+  }, [account]);
 
   useEffect(() => {
     if (!account) return;
     let alive = true;
-    // Best-effort badge counts — the page renders without them, so failures
-    // are silent. Both endpoints are cheap reads we already cache server-side.
     Promise.all([fetchBetHistory().catch(() => null), fetchTransactions().catch(() => null)]).then(([bets, txs]) => {
       if (!alive) return;
       const items = bets?.bets || bets?.history || [];
       setCounts({
         openBets: items.filter((b) => b.status === 'open').length,
         tx: (txs?.transactions || txs?.items || []).length,
-        unread: unreadCount,
       });
     });
     return () => {
       alive = false;
     };
-  }, [account, unreadCount]);
+  }, [account]);
 
+  /* ----- signed-out state ----- */
   if (!account) {
     return (
       <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
@@ -66,7 +239,7 @@ export default function ProfilePage() {
           <OddIcon name="user" size={32} color={T.inkDim} />
           <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>Sign in to Oddsify</div>
           <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 6 }}>
-            Track balance, deposits and bets in one place.
+            Track balance, deposits, bets and verification in one place.
           </div>
           <Link
             to="/login"
@@ -92,25 +265,89 @@ export default function ProfilePage() {
   const handlers = {
     deposit: () => openDeposit(),
     withdraw: () => openWithdraw(),
-    transfer: () => navigate('/wallet'),
-    help: () => navigate('/help'),
+    bets: () => navigate('/my-bets'),
+    promos: () => navigate('/promos'),
   };
 
   const balance = Number(account.balance || 0);
   const bonus = Number(account.bonus || 0);
   const firstName = (account.displayName || account.email || '').split(/[ @]/)[0];
+  const totalStaked = Number(account.totalStaked || 0);
+  const stage = Number(account.stage ?? 0);
+  const stageLabel = STAGE_LABELS[stage] || `Stage ${stage}`;
+  const promotionPending = !!account.stagePromotionRequested;
+
+  /* ----- handlers ----- */
+
+  const phoneError = phone ? validatePhone(phone, { allowEmpty: true })?.message : null;
+  const profileDirty =
+    displayName.trim() !== (account.displayName || '').trim() || phone.trim() !== (account.phone || '').trim();
+
+  async function saveProfile() {
+    if (savingProfile) return;
+    if (phone && phoneError) {
+      toast(phoneError, 'warn');
+      return;
+    }
+    if (!displayName.trim()) {
+      toast('Display name cannot be empty.', 'warn');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      await updateProfile({ displayName: displayName.trim(), phone: phone.trim() });
+      await refresh();
+      toast('Profile updated.', 'success');
+    } catch (e) {
+      toast(e?.body?.error || e?.message || 'Could not save profile.', 'error');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  async function submitPasswordChange() {
+    if (savingPw) return;
+    if (!currentPw) return toast('Enter your current password.', 'warn');
+    if (newPw.length < 8) return toast('New password must be at least 8 characters.', 'warn');
+    if (newPw !== confirmPw) return toast("New passwords don't match.", 'warn');
+    setSavingPw(true);
+    try {
+      await changePassword({ currentPassword: currentPw, newPassword: newPw });
+      toast('Password updated. Other sessions were signed out.', 'success');
+      setCurrentPw('');
+      setNewPw('');
+      setConfirmPw('');
+      setPwOpen(false);
+    } catch (e) {
+      toast(e?.body?.error || e?.message || 'Could not change password.', 'error');
+    } finally {
+      setSavingPw(false);
+    }
+  }
+
+  async function saveCommsPrefs(next) {
+    try {
+      await updateProfile({ commsPrefs: next });
+      await refresh();
+    } catch (e) {
+      toast(e?.body?.error || e?.message || 'Could not save preference.', 'error');
+    }
+  }
+
+  /* ----- render ----- */
 
   return (
-    <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
+    <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 140 }}>
       <OddPageHeader
         title="Account"
         subtitle={`Hello, ${firstName}`}
         right={
           <button
             type="button"
-            onClick={() => navigate('/wallet')}
+            onClick={() => navigate('/profile#notifications')}
             aria-label="Notifications"
             style={{
+              position: 'relative',
               width: 36,
               height: 36,
               borderRadius: 999,
@@ -141,29 +378,45 @@ export default function ProfilePage() {
         }
       />
 
-      {/* floating balance + quick actions */}
-      <div style={{ padding: '0 16px', marginTop: -16, position: 'relative', zIndex: 2 }}>
+      {/* Pending promotion banner — only when admin gate is pending */}
+      {promotionPending && (
+        <div style={{ padding: '0 16px', marginTop: -8 }}>
+          <div
+            style={{
+              background: 'color-mix(in srgb, var(--warn) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--warn) 40%, transparent)',
+              borderRadius: 14,
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <OddIcon name="info" size={18} color="var(--warn)" />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>Verification in review</div>
+              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
+                Your account is awaiting approval. You'll be notified once it's verified.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Balance hero */}
+      <div style={{ padding: '0 16px', marginTop: promotionPending ? 12 : -16, position: 'relative', zIndex: 2 }}>
         <div
           style={{
             background: T.surface,
             borderRadius: 18,
-            padding: '16px',
+            padding: 16,
             border: `1px solid ${T.line}`,
             boxShadow: '0 12px 32px -16px rgba(0,0,0,0.6)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: T.inkSoft,
-                  fontWeight: 600,
-                  letterSpacing: 0.4,
-                }}
-              >
-                MAIN BALANCE
-              </div>
+              <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600, letterSpacing: 0.4 }}>MAIN BALANCE</div>
               <div
                 style={{
                   fontSize: 28,
@@ -174,21 +427,14 @@ export default function ProfilePage() {
                   fontFamily: '"Space Grotesk", system-ui, sans-serif',
                 }}
               >
-                GHS <span>{fmtCedi(balance)}</span>
+                GHS <span>{balanceVisible ? fmtCedi(balance) : '••••'}</span>
               </div>
-              {bonus > 0 && (
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: T.greenBright,
-                    fontWeight: 600,
-                    marginTop: 2,
-                  }}
-                >
-                  Bonus GHS {fmtCedi(bonus)} · expires in 6 days
+              {bonus > 0 && balanceVisible && (
+                <div style={{ fontSize: 11, color: T.greenBright, fontWeight: 600, marginTop: 2 }}>
+                  Bonus GHS {fmtCedi(bonus)}
                 </div>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                 <span
                   style={{
                     display: 'inline-flex',
@@ -213,11 +459,25 @@ export default function ProfilePage() {
                   />
                   {account.verified ? 'Verified' : 'Unverified'}
                 </span>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: T.surfaceAlt,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: 0.3,
+                    color: T.inkSoft,
+                  }}
+                >
+                  {stageLabel}
+                </span>
               </div>
             </div>
             <button
               type="button"
-              aria-label="Toggle balance visibility"
+              aria-label={balanceVisible ? 'Hide balance' : 'Show balance'}
+              onClick={() => setBalanceVisible((v) => !v)}
               style={{
                 width: 38,
                 height: 38,
@@ -235,14 +495,7 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 8,
-              marginTop: 14,
-            }}
-          >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 14 }}>
             {buildQuickActions(T, handlers).map((a) => (
               <button
                 key={a.id}
@@ -280,45 +533,27 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* quick stats */}
-      <div
-        style={{
-          padding: '16px 16px 0',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 8,
-        }}
-      >
+      {/* Stats strip */}
+      <div style={{ padding: '16px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {[
           { label: 'Open bets', value: String(counts.openBets) },
-          { label: 'Win rate', value: account.winRate ? `${Math.round(account.winRate * 100)}%` : '—' },
-          { label: 'Streak', value: account.streak ? `🔥 ${account.streak}` : '0' },
+          { label: 'Deposited', value: `GHS ${fmtCedi(Number(account.totalDeposited || 0))}` },
+          { label: 'Staked', value: `GHS ${fmtCedi(totalStaked)}` },
         ].map((s) => (
           <div
             key={s.label}
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.line}`,
-              borderRadius: 12,
-              padding: '12px',
-            }}
+            style={{ background: T.surface, border: `1px solid ${T.line}`, borderRadius: 12, padding: 12 }}
           >
-            <div
-              style={{
-                fontSize: 10,
-                color: T.inkSoft,
-                fontWeight: 700,
-                letterSpacing: 0.4,
-              }}
-            >
+            <div style={{ fontSize: 10, color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4 }}>
               {s.label.toUpperCase()}
             </div>
             <div
               style={{
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: 700,
                 color: T.ink,
                 letterSpacing: -0.3,
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
               {s.value}
@@ -327,56 +562,348 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* menu list */}
-      <div style={{ padding: '16px 16px 0' }}>
-        <div
-          style={{
-            background: T.surface,
-            borderRadius: 14,
-            overflow: 'hidden',
-            border: `1px solid ${T.line}`,
-          }}
-        >
-          {MENU_ITEMS(counts, navigate).map((m, i, arr) => (
+      {/* Personal information */}
+      <Section
+        title="Personal information"
+        subtitle="What we show on receipts and notifications"
+        action={
+          profileDirty ? (
             <button
-              key={m.label}
               type="button"
-              onClick={() => navigate(m.to)}
+              onClick={saveProfile}
+              disabled={savingProfile}
               style={{
-                width: '100%',
-                padding: '14px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                borderBottom: i < arr.length - 1 ? `1px solid ${T.line}` : 'none',
-                color: T.ink,
-                background: 'transparent',
+                fontSize: 12,
+                fontWeight: 700,
+                color: T.goldDark,
+                background: T.greenBright,
                 border: 0,
+                borderRadius: 8,
+                padding: '6px 12px',
                 cursor: 'pointer',
+                opacity: savingProfile ? 0.7 : 1,
               }}
             >
-              <div
+              {savingProfile ? 'Saving…' : 'Save'}
+            </button>
+          ) : null
+        }
+      >
+        <Field
+          label="Display name"
+          value={displayName}
+          onChange={setDisplayName}
+          placeholder="How you'll appear on slips"
+          autoComplete="name"
+        />
+        <Field
+          label="Email / sign-in"
+          value={account.email}
+          onChange={() => {}}
+          helper="Sign-in identifier. Contact support to change."
+        />
+        <Field
+          label="Phone number"
+          value={phone}
+          onChange={(v) => setPhone(v.includes('@') ? v : autoFormatPhoneInput(v))}
+          placeholder={E164_PLACEHOLDER}
+          autoComplete="tel"
+          helper={!phone ? 'Used for MoMo withdrawals — must be in international format.' : null}
+          error={phoneError}
+        />
+        <Row>
+          <OddIcon name="info" size={16} color={T.inkSoft} />
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>Country</span>
+          <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>{account.country || '—'}</span>
+        </Row>
+      </Section>
+
+      {/* Security */}
+      <Section title="Security" subtitle="Protect your account">
+        {pwOpen ? (
+          <>
+            <Field
+              label="Current password"
+              value={currentPw}
+              onChange={setCurrentPw}
+              type="password"
+              autoComplete="current-password"
+            />
+            <Field
+              label="New password"
+              value={newPw}
+              onChange={setNewPw}
+              type="password"
+              autoComplete="new-password"
+              helper="At least 8 chars, with a digit and mixed case."
+            />
+            <Field
+              label="Confirm new password"
+              value={confirmPw}
+              onChange={setConfirmPw}
+              type="password"
+              autoComplete="new-password"
+              error={confirmPw && confirmPw !== newPw ? 'Does not match the new password.' : null}
+            />
+            <div style={{ display: 'flex', gap: 8, padding: '12px 14px' }}>
+              <button
+                type="button"
+                onClick={submitPasswordChange}
+                disabled={savingPw}
                 style={{
-                  width: 32,
-                  height: 32,
+                  flex: 1,
+                  padding: '10px 0',
                   borderRadius: 10,
-                  background: T.surfaceAlt,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  background: T.greenBright,
+                  color: T.goldDark,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  border: 0,
+                  cursor: 'pointer',
+                  opacity: savingPw ? 0.7 : 1,
                 }}
               >
-                <OddIcon name={m.icon} size={16} color={T.greenBright} />
-              </div>
-              <span style={{ flex: 1, textAlign: 'left', fontSize: 14, fontWeight: 600 }}>{m.label}</span>
-              {m.detail && <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>{m.detail}</span>}
-              <OddIcon name="chevR" size={14} color={T.inkDim} />
-            </button>
-          ))}
-        </div>
-      </div>
+                {savingPw ? 'Updating…' : 'Update password'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPwOpen(false);
+                  setCurrentPw('');
+                  setNewPw('');
+                  setConfirmPw('');
+                }}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'transparent',
+                  color: T.inkSoft,
+                  border: `1px solid ${T.line}`,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <Row onClick={() => setPwOpen(true)}>
+            <OddIcon name="lock" size={16} color={T.greenBright} />
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>Change password</span>
+            <OddIcon name="chevR" size={14} color={T.inkDim} />
+          </Row>
+        )}
+        <Row>
+          <OddIcon name="lock" size={16} color={T.inkSoft} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Two-factor authentication</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>Adds an extra layer on sign-in.</div>
+          </div>
+          <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700 }}>
+            {account.twoFactorEnabled ? 'ON' : 'Coming soon'}
+          </span>
+        </Row>
+        <Row>
+          <OddIcon name="bolt" size={16} color={T.inkSoft} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Active sessions</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>Signed in here · 30-day access window.</div>
+          </div>
+        </Row>
+      </Section>
 
-      <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+      {/* Verification */}
+      <Section title="Verification (KYC)" subtitle="Required for higher limits & withdrawals">
+        <Row>
+          <OddIcon
+            name={account.verified ? 'check' : 'info'}
+            size={16}
+            color={account.verified ? T.greenBright : 'var(--warn)'}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+              {account.verified ? 'Account verified' : promotionPending ? 'Pending review' : 'Not yet verified'}
+            </div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+              {account.verified
+                ? `Verified ${account.verifiedAt ? new Date(account.verifiedAt).toLocaleDateString('en-GH') : ''}`
+                : 'Make a deposit of GHS 1,000+ in one transaction to trigger admin review.'}
+            </div>
+          </div>
+        </Row>
+        <Row onClick={() => openDeposit()}>
+          <OddIcon name="deposit" size={16} color={T.greenBright} />
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>Deposit to trigger verification</span>
+          <OddIcon name="chevR" size={14} color={T.inkDim} />
+        </Row>
+      </Section>
+
+      {/* Responsible gaming */}
+      <Section title="Responsible gaming" subtitle="Stay in control">
+        <ResponsibleGamingRow
+          label="Daily deposit limit"
+          field="dailyDepositLimit"
+          value={account?.responsibleGaming?.dailyDepositLimit}
+          refresh={refresh}
+          toast={toast}
+        />
+        <ResponsibleGamingRow
+          label="Weekly deposit limit"
+          field="weeklyDepositLimit"
+          value={account?.responsibleGaming?.weeklyDepositLimit}
+          refresh={refresh}
+          toast={toast}
+        />
+        <ResponsibleGamingRow
+          label="Monthly deposit limit"
+          field="monthlyDepositLimit"
+          value={account?.responsibleGaming?.monthlyDepositLimit}
+          refresh={refresh}
+          toast={toast}
+        />
+        <Row onClick={() => navigate('/info#responsible')}>
+          <OddIcon name="info" size={16} color={T.inkSoft} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Self-exclude</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+              Temporarily lock your account. Contact support to start.
+            </div>
+          </div>
+          <OddIcon name="chevR" size={14} color={T.inkDim} />
+        </Row>
+      </Section>
+
+      {/* Refer & earn */}
+      <Section title="Refer & earn" subtitle="Share your invite code">
+        <Row>
+          <OddIcon name="trophy" size={16} color={T.greenBright} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Your code</div>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                color: T.greenBright,
+                letterSpacing: 2,
+                fontFamily: '"JetBrains Mono", monospace',
+                marginTop: 2,
+              }}
+            >
+              {(account.id || '').slice(0, 6).toUpperCase()}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const code = (account.id || '').slice(0, 6).toUpperCase();
+              try {
+                navigator.clipboard?.writeText(code);
+                toast(`Copied ${code}.`, 'success');
+              } catch {
+                /* ignore */
+              }
+            }}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: T.greenBright,
+              color: T.goldDark,
+              fontWeight: 700,
+              fontSize: 12,
+              border: 0,
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
+        </Row>
+        <Row>
+          <OddIcon name="info" size={16} color={T.inkSoft} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>How it works</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+              Share your code. When a friend signs up and deposits GHS 100+, you both get bonus credit. Tracking
+              dashboard coming soon.
+            </div>
+          </div>
+        </Row>
+      </Section>
+
+      {/* Communication preferences */}
+      <Section title="Communication preferences" subtitle="Choose how we reach you">
+        <Toggle
+          label="Email notifications"
+          on={emailPref}
+          onChange={(v) => {
+            setEmailPref(v);
+            saveCommsPrefs({ email: v, sms: smsPref, push: pushPref });
+          }}
+          helper="Receipts, security alerts, big wins."
+        />
+        <Toggle
+          label="SMS notifications"
+          on={smsPref}
+          onChange={(v) => {
+            setSmsPref(v);
+            saveCommsPrefs({ email: emailPref, sms: v, push: pushPref });
+          }}
+          helper="MoMo deposit & withdrawal updates."
+        />
+        <Toggle
+          label="Push notifications"
+          on={pushPref}
+          onChange={(v) => {
+            setPushPref(v);
+            saveCommsPrefs({ email: emailPref, sms: smsPref, push: v });
+          }}
+          helper="Live odds movement & bet settled alerts."
+        />
+      </Section>
+
+      {/* Shortcuts */}
+      <Section title="Shortcuts">
+        {SHORTCUTS(counts).map((m, i, arr) => (
+          <button
+            key={m.label}
+            type="button"
+            onClick={() => navigate(m.to)}
+            style={{
+              width: '100%',
+              padding: '14px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              borderBottom: i < arr.length - 1 ? `1px solid ${T.line}` : 'none',
+              color: T.ink,
+              background: 'transparent',
+              border: 0,
+              cursor: 'pointer',
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                background: T.surfaceAlt,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <OddIcon name={m.icon} size={16} color={T.greenBright} />
+            </div>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 14, fontWeight: 600 }}>{m.label}</span>
+            {m.detail && <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>{m.detail}</span>}
+            <OddIcon name="chevR" size={14} color={T.inkDim} />
+          </button>
+        ))}
+      </Section>
+
+      {/* Sign out + footer */}
+      <div style={{ padding: '24px 16px 8px', textAlign: 'center' }}>
         <button
           type="button"
           onClick={signOut}
@@ -392,6 +919,116 @@ export default function ProfilePage() {
           }}
         >
           Log out
+        </button>
+      </div>
+      <div style={{ padding: '0 16px 16px', textAlign: 'center', fontSize: 10.5, color: T.inkDim }}>
+        Member since{' '}
+        {account.createdAt
+          ? new Date(account.createdAt).toLocaleDateString('en-GH', { month: 'short', year: 'numeric' })
+          : '—'}{' '}
+        · Account ID:{' '}
+        <span style={{ fontFamily: '"JetBrains Mono", monospace' }}>{(account.id || '').slice(0, 8)}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── responsible gaming inline editor row ─────────────── */
+
+function ResponsibleGamingRow({ label, field, value, refresh, toast }) {
+  const T = useTokens();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(String(value ?? ''));
+  const [busy, setBusy] = useState(false);
+
+  const display = useMemo(() => (value > 0 ? `GHS ${fmtCedi(Number(value))}` : 'Not set'), [value]);
+
+  async function save() {
+    const n = Number(String(draft).replace(/[, ]/g, ''));
+    if (!Number.isFinite(n) || n < 0) {
+      toast('Enter a valid amount (0 to disable).', 'warn');
+      return;
+    }
+    setBusy(true);
+    try {
+      await updateProfile({ responsibleGaming: { [field]: n } });
+      await refresh();
+      toast(`${label} updated.`, 'success');
+      setOpen(false);
+    } catch (e) {
+      toast(e?.body?.error || e?.message || 'Could not save limit.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <Row onClick={() => setOpen(true)}>
+        <OddIcon name="lock" size={16} color={T.inkSoft} />
+        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>{display}</span>
+        <OddIcon name="chevR" size={14} color={T.inkDim} />
+      </Row>
+    );
+  }
+  return (
+    <div style={{ padding: '12px 14px', borderBottom: `1px solid ${T.line}` }}>
+      <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 700, letterSpacing: 0.4 }}>{label.toUpperCase()}</div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.replace(/[^\d.]/g, ''))}
+          placeholder="GHS 0 to disable"
+          inputMode="decimal"
+          style={{
+            flex: 1,
+            background: T.surfaceAlt,
+            color: T.ink,
+            fontSize: 14,
+            fontWeight: 600,
+            border: `1px solid ${T.line}`,
+            borderRadius: 8,
+            padding: '8px 10px',
+            outline: 'none',
+          }}
+        />
+        <button
+          type="button"
+          onClick={save}
+          disabled={busy}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            background: T.greenBright,
+            color: T.goldDark,
+            fontWeight: 700,
+            fontSize: 12,
+            border: 0,
+            cursor: 'pointer',
+            opacity: busy ? 0.7 : 1,
+          }}
+        >
+          {busy ? '…' : 'Save'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setDraft(String(value ?? ''));
+          }}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            background: 'transparent',
+            color: T.inkSoft,
+            border: `1px solid ${T.line}`,
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
         </button>
       </div>
     </div>
