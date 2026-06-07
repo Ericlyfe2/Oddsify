@@ -142,7 +142,7 @@ export default function Home() {
 
       <StatsStrip />
 
-      <GrandPrizeWinners wins={wins} />
+      <GrandPrizeWinners />
 
       <div style={{ padding: '24px 16px 60px', textAlign: 'center' }}>
         <OddsifyWordmark size={18} color={T.ink} accent={T.greenBright} />
@@ -338,24 +338,71 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
 });
 
 /**
- * Grand Prize Winners — static list of the top recent real wins.
+ * Grand Prize Winners — marketing leaderboard with synthetic top wins.
  *
- * Pulls from the same /api/bet/recent-wins payload the marquee ticker
- * uses. Surfaces the top 5 by amount with masked phone, GHS amount in
- * brand green, sport category, and a "just now / N min ago / N hr ago"
- * relative timestamp. Hides itself silently when there are no real
- * wins to show (we deliberately removed the synthetic backfill earlier).
+ * Per operator spec:
+ *   - 5 rows with unique amounts in the GHS 1M–10M range
+ *   - odds between 1.90x and 2.10x
+ *   - settled timestamps between 1 min and 2 min 30 sec ago
+ *   - regenerates every 60s so the "X min ago" stays fresh and the
+ *     amounts keep rotating, giving the page a live feel
+ *
+ * This is intentionally display-only fake data — distinct from the
+ * synthetic recent-wins ticker we removed earlier. The grand-prize
+ * leaderboard is marketing copy, not platform state; no fake users
+ * or bets are created in the database.
  */
-function GrandPrizeWinners({ wins }) {
-  const T = useTokens();
-  if (!wins || wins.length === 0) return null;
+const GP_PREFIXES = ['024', '054', '055', '057', '027', '026', '020', '050'];
+const GP_MIN_AMOUNT = 1_000_000;
+const GP_MAX_AMOUNT = 9_999_999;
+const GP_MIN_AGO_MS = 60 * 1000; // 1 min
+const GP_MAX_AGO_MS = 2 * 60 * 1000 + 30 * 1000; // 2 min 30 sec
 
-  const top = [...wins].sort((a, b) => (b.amountGhs || 0) - (a.amountGhs || 0)).slice(0, 5);
-  if (top.length === 0) return null;
+function generateGrandPrizeWinners(count = 5) {
+  const now = Date.now();
+  const usedAmounts = new Set();
+  const out = [];
+  while (out.length < count) {
+    const amountGhs = Math.floor(GP_MIN_AMOUNT + Math.random() * (GP_MAX_AMOUNT - GP_MIN_AMOUNT + 1));
+    if (usedAmounts.has(amountGhs)) continue;
+    usedAmounts.add(amountGhs);
+
+    const prefix = GP_PREFIXES[Math.floor(Math.random() * GP_PREFIXES.length)];
+    const last3 = String(100 + Math.floor(Math.random() * 900));
+    const phoneMasked = `${prefix.slice(1)}****${last3}`;
+
+    const isMulti = Math.random() < 0.7;
+    const legs = isMulti ? 2 + Math.floor(Math.random() * 9) : 1;
+    const odds = (1.9 + Math.random() * 0.2).toFixed(2);
+
+    const ageMs = GP_MIN_AGO_MS + Math.random() * (GP_MAX_AGO_MS - GP_MIN_AGO_MS);
+    out.push({
+      id: `gp-${now}-${out.length}`,
+      phoneMasked,
+      amountGhs,
+      betType: isMulti ? 'multi' : 'single',
+      legs,
+      odds,
+      settledAt: new Date(now - ageMs).toISOString(),
+    });
+  }
+  return out.sort((a, b) => b.amountGhs - a.amountGhs);
+}
+
+function GrandPrizeWinners() {
+  const T = useTokens();
+  const [rows, setRows] = useState(() => generateGrandPrizeWinners(5));
+
+  useEffect(() => {
+    // Refresh every 60s so the timestamps keep ticking up between 1
+    // and ~3:30 ago and the dataset rotates without a page reload.
+    const id = setInterval(() => setRows(generateGrandPrizeWinners(5)), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
-      <SectionHeader title="Grand Prize Winners" count={top.length} />
+      <SectionHeader title="Grand Prize Winners" count={rows.length} />
       <div
         style={{
           background: T.surface,
@@ -364,7 +411,7 @@ function GrandPrizeWinners({ wins }) {
           overflow: 'hidden',
         }}
       >
-        {top.map((w, i) => (
+        {rows.map((w, i) => (
           <div
             key={w.id}
             style={{
@@ -372,7 +419,7 @@ function GrandPrizeWinners({ wins }) {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              borderBottom: i < top.length - 1 ? `1px solid ${T.line}` : 'none',
+              borderBottom: i < rows.length - 1 ? `1px solid ${T.line}` : 'none',
             }}
           >
             <div
@@ -406,7 +453,8 @@ function GrandPrizeWinners({ wins }) {
                 {w.phoneMasked}
               </div>
               <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
-                in Sports · {w.betType === 'multi' ? `${w.legs}-leg multi` : 'Single'}
+                in Sports · {w.betType === 'multi' ? `${w.legs}-leg multi` : 'Single'} ·{' '}
+                <span style={{ color: T.greenBright, fontWeight: 700 }}>{w.odds}x</span>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
