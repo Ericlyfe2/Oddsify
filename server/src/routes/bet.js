@@ -541,6 +541,49 @@ router.get('/bets/:id', requireAuth, (req, res, next) => {
   res.json({ bet });
 });
 
+/* ── Cashout-specific endpoints ── */
+
+/** GET /bets/cashouts — list all cashouts for the current user. */
+router.get('/bets/cashouts', requireAuth, (req, res) => {
+  const userCashouts = Object.values(betsStore.all() || {})
+    .filter((b) => b.userId === req.user.id && (b.status === 'cashed_out' || b.cashOut != null))
+    .sort((a, b) => (a.cashOutAt < b.cashOutAt ? 1 : -1))
+    .map((b) => ({
+      id: b.id,
+      bookingCode: b.bookingCode,
+      betId: b.parentBetId || b.id,
+      cashOut: b.cashOut,
+      cashOutFraction: b.cashOutFraction,
+      cashOutAt: b.cashOutAt,
+      stake: b.stake,
+      totalOdds: b.totalOdds,
+      potentialWin: b.potentialWin,
+      profit: Number(((b.cashOut || 0) - b.stake).toFixed(2)),
+      mode: b.mode,
+      legs: b.legs?.length || 0,
+      residualBetId: b.residualBetId || null,
+    }));
+  res.json({ cashouts: userCashouts });
+});
+
+/** GET /bets/:id/offer — current cash-out offer for a specific bet (real-time). */
+router.get('/bets/:id/offer', requireAuth, (req, res, next) => {
+  const bet = betsStore.get(req.params.id);
+  if (!bet || bet.userId !== req.user.id) return next(notFound('Bet not found'));
+  if (bet.status !== 'open') {
+    return res.json({ eligible: false, reason: 'Bet is already settled.' });
+  }
+  const last = cashOutEngine.getLastOffer(bet.id);
+  if (last && last.cashOut > 0) {
+    return res.json({ eligible: true, cashOut: last.cashOut, ts: last.ts });
+  }
+  const fallback = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+  if (fallback > 0) {
+    return res.json({ eligible: true, cashOut: fallback, ts: Date.now(), estimated: true });
+  }
+  res.json({ eligible: false, reason: 'Cash-out not currently available.' });
+});
+
 router.delete(
   '/bets/:id',
   requireAuth,

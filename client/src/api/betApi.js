@@ -123,6 +123,8 @@ export const cashOutBet = (id, acceptedAmount, fraction) => {
 };
 export const fetchUnacknowledgedWins = () => get('/bet/bets/unacknowledged');
 export const acknowledgeBet = (id) => post(`/bet/bets/${encodeURIComponent(id)}/ack`);
+export const fetchCashouts = () => get('/bet/bets/cashouts');
+export const fetchCashoutOffer = (id) => get(`/bet/bets/${encodeURIComponent(id)}/offer`);
 
 /* casino, virtuals, jackpot, promos */
 export const fetchCasinoGames = (cat) => get(`/bet/casino/games${cat ? `?category=${encodeURIComponent(cat)}` : ''}`);

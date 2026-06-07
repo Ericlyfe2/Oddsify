@@ -17,6 +17,7 @@ import OddIcon from './Icon.jsx';
 import { TeamLogo } from './teamBranding.jsx';
 import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
+import BetSuccessModal from '../BetSuccessModal.jsx';
 
 export function OddBetSlipFAB() {
   const T = useTokens();
@@ -82,6 +83,8 @@ export function OddBetSlip() {
     totalOdds,
     busy,
     lastBet,
+    successBet,
+    clearSuccessModal,
     lastBooking,
     bookingCodeLookup,
     lookupLoading,
@@ -261,7 +264,7 @@ export function OddBetSlip() {
           </div>
         </button>
 
-        {/* ─── Bet placed confirmation ─── */}
+        {/* ─── Bet placed confirmation (inline fallback) ─── */}
         {lastBet ? (
           <>
             <div className="odd-pane" style={{ overflowY: 'auto', flex: 1, padding: '0 16px' }}>
@@ -990,6 +993,17 @@ export function OddBetSlip() {
           </>
         ) : null}
       </div>
+      {/* Premium fullscreen success celebration */}
+      <BetSuccessModal
+        bet={successBet}
+        onClose={clearSuccessModal}
+        onViewBet={() => { clearSuccessModal(); navigate('/my-bets'); }}
+        onGoHistory={() => { clearSuccessModal(); navigate('/my-bets?tab=hist'); }}
+        onCopy={(code) => copyCode(code)}
+        onShare={() => {}}
+        onRebook={() => { clearSuccessModal(); loadFromSlip(lastBet); }}
+        onReturn={() => { clearSuccessModal(); navigate('/'); }}
+      />
     </>
   );
 }
