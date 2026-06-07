@@ -21,17 +21,33 @@ export default function CashoutConfirmModal({ bet, cashoutValue, open, onClose, 
   if (!open || !bet) return null;
 
   return (
-    <dialog
-      ref={dlgRef}
-      className="bv-cashout-confirm"
-      onClose={handleClose}
-      onClick={handleClose}
-    >
-      <div className="bv-cashout-confirm-card" onClick={(e) => e.stopPropagation()} role="alertdialog" aria-labelledby="cco-title">
+    <dialog ref={dlgRef} className="bv-cashout-confirm" onClose={handleClose} onClick={handleClose}>
+      <div
+        className="bv-cashout-confirm-card"
+        onClick={(e) => e.stopPropagation()}
+        role="alertdialog"
+        aria-labelledby="cco-title"
+      >
         <header className="bv-cashout-confirm-head">
           <span className="bv-cashout-confirm-badge">CASH OUT</span>
-          <button type="button" className="bv-cashout-confirm-x" onClick={handleClose} aria-label="Close" disabled={busy}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <button
+            type="button"
+            className="bv-cashout-confirm-x"
+            onClick={handleClose}
+            aria-label="Close"
+            disabled={busy}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
           </button>
         </header>
 
@@ -44,12 +60,21 @@ export default function CashoutConfirmModal({ bet, cashoutValue, open, onClose, 
               </linearGradient>
             </defs>
             <circle cx="24" cy="24" r="20" fill="rgba(255,200,80,.12)" />
-            <path d="M14 28 L24 18 L34 28" fill="none" stroke="url(#ccoGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M14 28 L24 18 L34 28"
+              fill="none"
+              stroke="url(#ccoGrad)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
             <rect x="14" y="30" width="20" height="3" rx="1.5" fill="rgba(255,200,80,.3)" />
           </svg>
         </div>
 
-        <h3 id="cco-title" className="bv-cashout-confirm-title">Confirm Cashout</h3>
+        <h3 id="cco-title" className="bv-cashout-confirm-title">
+          Confirm Cashout
+        </h3>
         <p className="bv-cashout-confirm-sub">You are about to cash out this bet. This action cannot be undone.</p>
 
         <div className="bv-cashout-confirm-amounts">
@@ -78,11 +103,7 @@ export default function CashoutConfirmModal({ bet, cashoutValue, open, onClose, 
             Cancel
           </button>
           <button type="button" className="bv-cashout-btn bv-cashout-btn-confirm" onClick={onConfirm} disabled={busy}>
-            {busy ? (
-              <span className="bv-cashout-spinner" />
-            ) : (
-              `Cash Out GHS ${fmtCedi(cashoutValue)}`
-            )}
+            {busy ? <span className="bv-cashout-spinner" /> : `Cash Out GHS ${fmtCedi(cashoutValue)}`}
           </button>
         </div>
       </div>

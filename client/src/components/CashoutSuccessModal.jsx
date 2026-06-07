@@ -23,19 +23,50 @@ export default function CashoutSuccessModal({ bet, cashoutAmount, open, onClose,
   const stake = Number(bet.stake || 0);
   const profit = Number((cashoutAmount - stake).toFixed(2));
   const isProfit = profit >= 0;
-  const ts = bet.cashOutAt ? new Date(bet.cashOutAt).toLocaleString('en-GH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleString('en-GH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const ts = bet.cashOutAt
+    ? new Date(bet.cashOutAt).toLocaleString('en-GH', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : new Date().toLocaleString('en-GH', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
-  const handleClose = () => { if (canClose) onClose?.(); };
+  const handleClose = () => {
+    if (canClose) onClose?.();
+  };
 
   return (
     <dialog ref={dlgRef} className="bv-cashout-success" onClose={onClose} onClick={handleClose}>
       <Confetti count={40} />
-      <div className="bv-cashout-success-card" onClick={(e) => e.stopPropagation()} role="alertdialog" aria-labelledby="cso-title">
+      <div
+        className="bv-cashout-success-card"
+        onClick={(e) => e.stopPropagation()}
+        role="alertdialog"
+        aria-labelledby="cso-title"
+      >
         <header className="bv-cashout-success-head">
           <span className="bv-cashout-success-badge">CASH-OUT CONFIRMED</span>
           {canClose && (
             <button type="button" className="bv-cashout-success-x" onClick={onClose} aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
           )}
         </header>
@@ -46,7 +77,9 @@ export default function CashoutSuccessModal({ bet, cashoutAmount, open, onClose,
 
         <div className="bv-cashout-success-glow" aria-hidden />
 
-        <h2 id="cso-title" className="bv-cashout-success-title">Cash-out Successful!</h2>
+        <h2 id="cso-title" className="bv-cashout-success-title">
+          Cash-out Successful!
+        </h2>
         <p className="bv-cashout-success-sub">Your cash-out has been credited to your wallet.</p>
 
         <div className="bv-cashout-success-amount">
@@ -76,12 +109,21 @@ export default function CashoutSuccessModal({ bet, cashoutAmount, open, onClose,
           </div>
           <div className="bv-cashout-success-stat">
             <span className="lbl">Status</span>
-            <span className="val" style={{ color: '#ffc44d' }}>Cashed Out</span>
+            <span className="val" style={{ color: '#ffc44d' }}>
+              Cashed Out
+            </span>
           </div>
         </div>
 
         <div className="bv-cashout-success-actions">
-          <button type="button" className="bv-cashout-success-btn bv-cashout-success-btn-primary" onClick={() => { onViewBets?.(); onClose?.(); }}>
+          <button
+            type="button"
+            className="bv-cashout-success-btn bv-cashout-success-btn-primary"
+            onClick={() => {
+              onViewBets?.();
+              onClose?.();
+            }}
+          >
             View My Bets
           </button>
           <button type="button" className="bv-cashout-success-btn bv-cashout-success-btn-ghost" onClick={onClose}>
@@ -107,7 +149,9 @@ function CashIcon() {
           </linearGradient>
         </defs>
         <rect x="6" y="14" width="36" height="20" rx="4" fill="url(#csoGrad)" />
-        <text x="24" y="28" textAnchor="middle" fill="#4d2600" fontSize="14" fontWeight="800" fontFamily="sans-serif">¢</text>
+        <text x="24" y="28" textAnchor="middle" fill="#4d2600" fontSize="14" fontWeight="800" fontFamily="sans-serif">
+          ¢
+        </text>
         <circle cx="24" cy="24" r="5" fill="none" stroke="#4d2600" strokeWidth="1.5" opacity=".5" />
         <path d="M12 14 V10 H36 V14" fill="none" stroke="url(#csoGrad)" strokeWidth="2" strokeLinecap="round" />
         <path d="M8 14 C4 14 4 18 8 18" fill="none" stroke="#cc7a00" strokeWidth="1.5" />
@@ -132,15 +176,19 @@ function Confetti({ count = 32 }) {
   return (
     <div className="bv-cashout-success-confetti" aria-hidden>
       {pieces.map((p) => (
-        <span key={p.key} style={{
-          left: `${p.left}%`,
-          animationDelay: `${p.delay}s`,
-          animationDuration: `${p.dur}s`,
-          background: p.c,
-          width: p.w, height: p.h,
-          transform: `rotate(${p.rot}deg)`,
-          '--tx': `${p.tx}px`,
-        }} />
+        <span
+          key={p.key}
+          style={{
+            left: `${p.left}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.dur}s`,
+            background: p.c,
+            width: p.w,
+            height: p.h,
+            transform: `rotate(${p.rot}deg)`,
+            '--tx': `${p.tx}px`,
+          }}
+        />
       ))}
     </div>
   );

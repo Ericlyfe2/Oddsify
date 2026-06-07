@@ -19,7 +19,10 @@ describe('cashOutEngine.computeOffer', () => {
 
   test('returns null for system bets', () => {
     const bet = { id: 's1', mode: 'system', stake: 100, totalOdds: 10, legs: [] };
-    assert.equal(engine.computeOffer(bet, () => 1, HOUSE), null);
+    assert.equal(
+      engine.computeOffer(bet, () => 1, HOUSE),
+      null,
+    );
   });
 
   test('returns 0 when a leg has finished and lost', () => {
@@ -30,7 +33,10 @@ describe('cashOutEngine.computeOffer', () => {
       totalOdds: 2,
       legs: [{ matchId: 'fx', market: '1X2', outcome: '1', odds: 2, finished: true, won: false }],
     };
-    assert.equal(engine.computeOffer(bet, () => 2, HOUSE), 0);
+    assert.equal(
+      engine.computeOffer(bet, () => 2, HOUSE),
+      0,
+    );
   });
 
   test('factors finished+won legs as probability 1', () => {
@@ -265,7 +271,9 @@ describe('Cashout betting flow', () => {
 
   after(() => {
     // Clean up test data
-    try { deleteUser(TEST_USER.id); } catch {}
+    try {
+      deleteUser(TEST_USER.id);
+    } catch {}
   });
 
   test('place a bet → verify receipt fields', () => {
@@ -425,8 +433,7 @@ describe('Cashout betting flow', () => {
   });
 
   test('Booking code is set and readable on every placed bet', () => {
-    const all = Object.values(betsStore.all() || {})
-      .filter((b) => b.userId === TEST_USER.id);
+    const all = Object.values(betsStore.all() || {}).filter((b) => b.userId === TEST_USER.id);
     for (const b of all) {
       assert.ok(b.bookingCode, `bet ${b.id} missing bookingCode`);
       assert.equal(b.bookingCode.length, 7);
@@ -442,7 +449,10 @@ describe('Cashout edge cases', () => {
   before(() => engine.__resetForTests());
 
   test('computeOffer handles null bet gracefully', () => {
-    assert.equal(engine.computeOffer(null, () => 2, 0.05), null);
+    assert.equal(
+      engine.computeOffer(null, () => 2, 0.05),
+      null,
+    );
   });
 
   test('computeOffer handles empty legs gracefully', () => {

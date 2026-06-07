@@ -174,18 +174,20 @@ export default function BetHistoryPage() {
         title="My Bets"
         subtitle="Open bets & history"
         right={
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 12px 8px 10px',
-            borderRadius: 999,
-            background: T.greenBright,
-            color: T.goldDark,
-            fontWeight: 700,
-            fontSize: 13,
-            fontVariantNumeric: 'tabular-nums',
-          }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 12px 8px 10px',
+              borderRadius: 999,
+              background: T.greenBright,
+              color: T.goldDark,
+              fontWeight: 700,
+              fontSize: 13,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             GHS {fmtCedi(account.balance)}
           </div>
         }
@@ -232,7 +234,16 @@ export default function BetHistoryPage() {
       {loading ? (
         <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
           {[0, 1].map((i) => (
-            <div key={i} style={{ height: 220, borderRadius: 16, background: T.surface, border: `1px solid ${T.line}`, opacity: 0.6 + i * 0.2 }} />
+            <div
+              key={i}
+              style={{
+                height: 220,
+                borderRadius: 16,
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                opacity: 0.6 + i * 0.2,
+              }}
+            />
           ))}
         </div>
       ) : tab === 'open' ? (
@@ -269,7 +280,10 @@ export default function BetHistoryPage() {
         bet={cashoutTarget}
         cashoutValue={cashoutOffer}
         open={!!cashoutTarget}
-        onClose={() => { setCashoutTarget(null); setCashoutOffer(null); }}
+        onClose={() => {
+          setCashoutTarget(null);
+          setCashoutOffer(null);
+        }}
         onConfirm={confirmCashout}
         busy={cashingOut === cashoutTarget?.id}
       />
@@ -280,7 +294,10 @@ export default function BetHistoryPage() {
         cashoutAmount={cashoutSuccessAmount}
         open={!!cashoutSuccess}
         onClose={() => setCashoutSuccess(null)}
-        onViewBets={() => { setCashoutSuccess(null); navigate('/my-bets'); }}
+        onViewBets={() => {
+          setCashoutSuccess(null);
+          navigate('/my-bets');
+        }}
       />
     </div>
   );
@@ -290,8 +307,28 @@ function Stat({ label, value, dark = false, accent }) {
   const T = useTokens();
   return (
     <div>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.6, color: dark ? 'rgba(255,255,255,0.5)' : T.inkSoft, marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: accent || (dark ? '#fff' : T.ink), letterSpacing: -0.2 }}>{value}</div>
+      <div
+        style={{
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: 0.6,
+          color: dark ? 'rgba(255,255,255,0.5)' : T.inkSoft,
+          marginBottom: 2,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          fontVariantNumeric: 'tabular-nums',
+          color: accent || (dark ? '#fff' : T.ink),
+          letterSpacing: -0.2,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -321,12 +358,14 @@ function OpenBetCard({ bet, liveOffer, open, onToggle, onCopy, onCashOut, cashin
 
   return (
     <div style={{ background: T.surface, borderRadius: 16, border: `1px solid ${T.line}`, overflow: 'hidden' }}>
-      <div style={{
-        background: open ? T.greenDeep : 'transparent',
-        color: open ? '#fff' : T.ink,
-        padding: '14px 14px 12px',
-        transition: 'background 180ms',
-      }}>
+      <div
+        style={{
+          background: open ? T.greenDeep : 'transparent',
+          color: open ? '#fff' : T.ink,
+          padding: '14px 14px 12px',
+          transition: 'background 180ms',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <OddStatusChip kind="open" label={`OPEN · ${bet.type || (legs.length > 1 ? 'Multiple' : 'Single')}`} />
           <span style={{ fontSize: 11, opacity: open ? 0.6 : 0.5, color: open ? '#fff' : T.inkSoft }}>
@@ -339,28 +378,75 @@ function OpenBetCard({ bet, liveOffer, open, onToggle, onCopy, onCashOut, cashin
           <Stat label="POTENTIAL" value={`GHS ${fmtCedi(potential)}`} dark={open} accent={T.greenBright} />
         </div>
 
-        <div style={{
-          marginTop: 12, padding: '10px 12px', borderRadius: 10,
-          background: open ? 'rgba(255,255,255,0.07)' : T.surfaceAlt,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+        <div
+          style={{
+            marginTop: 12,
+            padding: '10px 12px',
+            borderRadius: 10,
+            background: open ? 'rgba(255,255,255,0.07)' : T.surfaceAlt,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <div>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.6, opacity: 0.6 }}>BOOKING CODE</div>
-            <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: 0.8 }}>{code}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: 0.8 }}>
+              {code}
+            </div>
           </div>
           <div style={{ display: 'inline-flex', gap: 6 }}>
-            <button type="button" onClick={onCopy} aria-label="Copy code" style={{
-              padding: '6px 10px', borderRadius: 8, background: open ? T.surfaceAlt : T.greenDeep,
-              color: open ? T.ink : '#fff', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer',
-            }}>Copy</button>
-            <button type="button" onClick={() => shareCode(code, toast)} aria-label="Share code" style={{
-              padding: '6px 10px', borderRadius: 8, background: open ? T.surfaceAlt : T.greenDeep,
-              color: open ? T.ink : '#fff', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer',
-            }}>Share</button>
-            <button type="button" onClick={handleRebook} aria-label="Rebook this slip" style={{
-              padding: '6px 12px', borderRadius: 8, background: T.greenBright,
-              color: T.goldDark, fontSize: 11, fontWeight: 800, border: 0, cursor: 'pointer',
-            }}>Rebook</button>
+            <button
+              type="button"
+              onClick={onCopy}
+              aria-label="Copy code"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                background: open ? T.surfaceAlt : T.greenDeep,
+                color: open ? T.ink : '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              onClick={() => shareCode(code, toast)}
+              aria-label="Share code"
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                background: open ? T.surfaceAlt : T.greenDeep,
+                color: open ? T.ink : '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Share
+            </button>
+            <button
+              type="button"
+              onClick={handleRebook}
+              aria-label="Rebook this slip"
+              style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                background: T.greenBright,
+                color: T.goldDark,
+                fontSize: 11,
+                fontWeight: 800,
+                border: 0,
+                cursor: 'pointer',
+              }}
+            >
+              Rebook
+            </button>
           </div>
         </div>
 
@@ -370,19 +456,23 @@ function OpenBetCard({ bet, liveOffer, open, onToggle, onCopy, onCashOut, cashin
             onClick={onCashOut}
             disabled={cashingOut}
             style={{
-              marginTop: 10, width: '100%', padding: '12px 14px', borderRadius: 12,
+              marginTop: 10,
+              width: '100%',
+              padding: '12px 14px',
+              borderRadius: 12,
               background: open ? 'rgba(247, 201, 72, 0.2)' : T.gold,
               color: open ? T.gold : T.greenDeep,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              fontWeight: 700, fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontWeight: 700,
+              fontSize: 13,
               border: open ? `1px solid ${T.gold}` : 0,
               cursor: cashingOut ? 'wait' : 'pointer',
               opacity: cashingOut ? 0.7 : 1,
             }}
           >
-            <span>
-              {cashingOut ? 'Cashing out…' : liveOffer ? `Cash Out` : 'Cash Out'}
-            </span>
+            <span>{cashingOut ? 'Cashing out…' : liveOffer ? `Cash Out` : 'Cash Out'}</span>
             <span style={{ fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: 6 }}>
               {liveOffer && <LivePulse />}
               GHS {fmtCedi(displayOffer)}
@@ -397,18 +487,36 @@ function OpenBetCard({ bet, liveOffer, open, onToggle, onCopy, onCashOut, cashin
         )}
       </div>
 
-      <button type="button" onClick={onToggle} style={{
-        width: '100%', padding: '10px 14px', background: T.surface, borderTop: `1px solid ${T.line}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        fontSize: 12, fontWeight: 600, color: T.inkSoft, border: 0, cursor: 'pointer',
-      }}>
-        <span>{open ? 'Hide' : 'Show'} {legs.length} leg{legs.length === 1 ? '' : 's'}</span>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={{
+          width: '100%',
+          padding: '10px 14px',
+          background: T.surface,
+          borderTop: `1px solid ${T.line}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 12,
+          fontWeight: 600,
+          color: T.inkSoft,
+          border: 0,
+          cursor: 'pointer',
+        }}
+      >
+        <span>
+          {open ? 'Hide' : 'Show'} {legs.length} leg{legs.length === 1 ? '' : 's'}
+        </span>
         <OddIcon name={open ? 'chevU' : 'chevD'} size={14} color={T.inkSoft} />
       </button>
       {open && (
         <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column' }}>
           {legs.map((leg, i) => (
-            <div key={i} style={{ padding: '12px 0', borderBottom: i < legs.length - 1 ? `1px dashed ${T.line}` : 'none' }}>
+            <div
+              key={i}
+              style={{ padding: '12px 0', borderBottom: i < legs.length - 1 ? `1px dashed ${T.line}` : 'none' }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, letterSpacing: -0.1 }}>
@@ -438,10 +546,16 @@ function OpenBetCard({ bet, liveOffer, open, onToggle, onCopy, onCashOut, cashin
 
 function LivePulse() {
   return (
-    <span style={{
-      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-      background: '#4ade80', animation: 'bvPulse 1.2s ease-in-out infinite',
-    }} />
+    <span
+      style={{
+        display: 'inline-block',
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: '#4ade80',
+        animation: 'bvPulse 1.2s ease-in-out infinite',
+      }}
+    />
   );
 }
 
@@ -468,41 +582,99 @@ function HistoryRow({ bet }) {
   return (
     <div style={{ background: T.surface, borderRadius: 14, border: `1px solid ${T.line}`, overflow: 'hidden' }}>
       <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: isWon ? T.greenBright : T.danger }} />
+        <div
+          style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: isWon ? T.greenBright : T.danger }}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-            <span style={{
-              fontSize: 14, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums',
-              fontFamily: code && code.length === 7 ? '"JetBrains Mono", monospace' : 'inherit',
-              letterSpacing: code && code.length === 7 ? 0.4 : 0,
-            }}>#{code || '—'}</span>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: T.ink,
+                fontVariantNumeric: 'tabular-nums',
+                fontFamily: code && code.length === 7 ? '"JetBrains Mono", monospace' : 'inherit',
+                letterSpacing: code && code.length === 7 ? 0.4 : 0,
+              }}
+            >
+              #{code || '—'}
+            </span>
             <OddStatusChip kind={STATUS_KIND[bet.status] || bet.status} label={(bet.status || '').toUpperCase()} />
-            {isCashedOut && (
-              <span style={{ fontSize: 10, color: T.greenBright, fontWeight: 600 }}>CASHD OUT</span>
-            )}
+            {isCashedOut && <span style={{ fontSize: 10, color: T.greenBright, fontWeight: 600 }}>CASHD OUT</span>}
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft }}>
             {placedAt(bet.placedAt || bet.createdAt)} · stake GHS {fmtCedi(bet.stake)} · {odds.toFixed(2)}x
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: isWon ? T.greenBright : T.inkDim }}>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              color: isWon ? T.greenBright : T.inkDim,
+            }}
+          >
             {isWon ? '+' : ''}GHS {fmtCedi(win)}
           </div>
-          <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>{isWon ? (isCashedOut ? 'Cash-out' : 'Payout') : 'No return'}</div>
+          <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>
+            {isWon ? (isCashedOut ? 'Cash-out' : 'Payout') : 'No return'}
+          </div>
         </div>
       </div>
       {code && legs.length > 0 && (
         <div style={{ display: 'flex', gap: 6, padding: '8px 12px 12px', borderTop: `1px solid ${T.line}` }}>
-          <button type="button" onClick={() => copyCode(code, toast)} style={{
-            flex: 1, padding: '8px 0', borderRadius: 8, background: T.surfaceAlt, color: T.ink, border: 0, fontWeight: 600, fontSize: 11.5, cursor: 'pointer',
-          }}>Copy</button>
-          <button type="button" onClick={() => shareCode(code, toast)} style={{
-            flex: 1, padding: '8px 0', borderRadius: 8, background: T.surfaceAlt, color: T.ink, border: 0, fontWeight: 600, fontSize: 11.5, cursor: 'pointer',
-          }}>Share</button>
-          <button type="button" onClick={handleRebook} style={{
-            flex: 1.2, padding: '8px 0', borderRadius: 8, background: T.greenBright, color: T.goldDark, border: 0, fontWeight: 800, fontSize: 11.5, cursor: 'pointer',
-          }}>Rebook</button>
+          <button
+            type="button"
+            onClick={() => copyCode(code, toast)}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              borderRadius: 8,
+              background: T.surfaceAlt,
+              color: T.ink,
+              border: 0,
+              fontWeight: 600,
+              fontSize: 11.5,
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            onClick={() => shareCode(code, toast)}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              borderRadius: 8,
+              background: T.surfaceAlt,
+              color: T.ink,
+              border: 0,
+              fontWeight: 600,
+              fontSize: 11.5,
+              cursor: 'pointer',
+            }}
+          >
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={handleRebook}
+            style={{
+              flex: 1.2,
+              padding: '8px 0',
+              borderRadius: 8,
+              background: T.greenBright,
+              color: T.goldDark,
+              border: 0,
+              fontWeight: 800,
+              fontSize: 11.5,
+              cursor: 'pointer',
+            }}
+          >
+            Rebook
+          </button>
         </div>
       )}
     </div>
@@ -513,7 +685,19 @@ function EmptyState({ icon, title, hint }) {
   const T = useTokens();
   return (
     <div style={{ padding: '40px 24px', textAlign: 'center' }}>
-      <div style={{ width: 60, height: 60, borderRadius: 999, background: T.surface, border: `1px solid ${T.line}`, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: 999,
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          margin: '0 auto 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <OddIcon name={icon} size={26} color={T.inkDim} />
       </div>
       <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{title}</div>
@@ -530,7 +714,23 @@ function SignedOutState({ navigate }) {
       <div style={{ padding: '40px 24px', textAlign: 'center' }}>
         <OddIcon name="lock" size={32} color={T.inkDim} />
         <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>Sign in to see your bets</div>
-        <button type="button" onClick={() => navigate('/login?next=/my-bets')} style={{ marginTop: 16, padding: '12px 24px', borderRadius: 999, background: T.greenBright, color: T.goldDark, fontWeight: 700, fontSize: 13, border: 0, cursor: 'pointer' }}>Sign in</button>
+        <button
+          type="button"
+          onClick={() => navigate('/login?next=/my-bets')}
+          style={{
+            marginTop: 16,
+            padding: '12px 24px',
+            borderRadius: 999,
+            background: T.greenBright,
+            color: T.goldDark,
+            fontWeight: 700,
+            fontSize: 13,
+            border: 0,
+            cursor: 'pointer',
+          }}
+        >
+          Sign in
+        </button>
       </div>
     </div>
   );

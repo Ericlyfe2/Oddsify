@@ -997,12 +997,24 @@ export function OddBetSlip() {
       <BetSuccessModal
         bet={successBet}
         onClose={clearSuccessModal}
-        onViewBet={() => { clearSuccessModal(); navigate('/my-bets'); }}
-        onGoHistory={() => { clearSuccessModal(); navigate('/my-bets?tab=hist'); }}
+        onViewBet={() => {
+          clearSuccessModal();
+          navigate('/my-bets');
+        }}
+        onGoHistory={() => {
+          clearSuccessModal();
+          navigate('/my-bets?tab=hist');
+        }}
         onCopy={(code) => copyCode(code)}
         onShare={() => {}}
-        onRebook={() => { clearSuccessModal(); loadFromSlip(lastBet); }}
-        onReturn={() => { clearSuccessModal(); navigate('/'); }}
+        onRebook={() => {
+          clearSuccessModal();
+          loadFromSlip(lastBet);
+        }}
+        onReturn={() => {
+          clearSuccessModal();
+          navigate('/');
+        }}
       />
     </>
   );

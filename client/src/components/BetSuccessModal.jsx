@@ -33,9 +33,19 @@ export default function BetSuccessModal({ bet, onClose, onViewBet, onGoHistory, 
 
   if (!bet) return null;
   const code = bet.bookingCode || toBookingCode(bet.id);
-  const ts = bet.placedAt ? new Date(bet.placedAt).toLocaleString('en-GH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  const ts = bet.placedAt
+    ? new Date(bet.placedAt).toLocaleString('en-GH', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—';
 
-  const handleClose = () => { if (canClose) onClose?.(); };
+  const handleClose = () => {
+    if (canClose) onClose?.();
+  };
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/code/${code}` : `/code/${code}`;
 
   return (
@@ -44,12 +54,27 @@ export default function BetSuccessModal({ bet, onClose, onViewBet, onGoHistory, 
       <Particles count={20} />
       <Sparkles count={12} />
 
-      <div className="bv-success-card" onClick={(e) => e.stopPropagation()} role="alertdialog" aria-labelledby="bv-success-title">
+      <div
+        className="bv-success-card"
+        onClick={(e) => e.stopPropagation()}
+        role="alertdialog"
+        aria-labelledby="bv-success-title"
+      >
         <header className="bv-success-head">
           <span className="bv-success-badge">BET CONFIRMED</span>
           {canClose && (
             <button type="button" className="bv-success-x" onClick={onClose} aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
           )}
         </header>
@@ -60,7 +85,9 @@ export default function BetSuccessModal({ bet, onClose, onViewBet, onGoHistory, 
 
         <div className="bv-success-glow" aria-hidden />
 
-        <h2 id="bv-success-title" className="bv-success-title">Congratulations!</h2>
+        <h2 id="bv-success-title" className="bv-success-title">
+          Congratulations!
+        </h2>
         <p className="bv-success-sub">Your bet has been placed successfully.</p>
 
         <div className="bv-success-amount">
@@ -69,15 +96,16 @@ export default function BetSuccessModal({ bet, onClose, onViewBet, onGoHistory, 
         </div>
 
         <div className="bv-success-meta">
-          {bet.totalOdds ? `${bet.totalOdds.toFixed(2)}x` : ''} odds · {bet.mode || 'single'} · {
-            (bet.legs?.length || 1)
-          } selection{(bet.legs?.length || 1) > 1 ? 's' : ''}
+          {bet.totalOdds ? `${bet.totalOdds.toFixed(2)}x` : ''} odds · {bet.mode || 'single'} · {bet.legs?.length || 1}{' '}
+          selection{(bet.legs?.length || 1) > 1 ? 's' : ''}
         </div>
 
         <div className="bv-success-grid">
           <div className="bv-success-stat">
             <span className="lbl">Potential Win</span>
-            <span className="val" style={{ color: '#ffc44d' }}>GHS {fmt(bet.potentialWin)}</span>
+            <span className="val" style={{ color: '#ffc44d' }}>
+              GHS {fmt(bet.potentialWin)}
+            </span>
           </div>
           <div className="bv-success-stat">
             <span className="lbl">Booking Code</span>
@@ -94,29 +122,69 @@ export default function BetSuccessModal({ bet, onClose, onViewBet, onGoHistory, 
         </div>
 
         <div className="bv-success-actions">
-          <button type="button" className="bv-success-btn bv-success-btn-primary" onClick={() => { onViewBet?.(); onClose?.(); }}>
+          <button
+            type="button"
+            className="bv-success-btn bv-success-btn-primary"
+            onClick={() => {
+              onViewBet?.();
+              onClose?.();
+            }}
+          >
             View Bet
           </button>
-          <button type="button" className="bv-success-btn bv-success-btn-ghost" onClick={() => { onGoHistory?.(); onClose?.(); }}>
+          <button
+            type="button"
+            className="bv-success-btn bv-success-btn-ghost"
+            onClick={() => {
+              onGoHistory?.();
+              onClose?.();
+            }}
+          >
             Bet History
           </button>
-          <button type="button" className="bv-success-btn bv-success-btn-ghost" onClick={() => { onCopy?.(code); }}>
+          <button
+            type="button"
+            className="bv-success-btn bv-success-btn-ghost"
+            onClick={() => {
+              onCopy?.(code);
+            }}
+          >
             Copy Code
           </button>
-          <button type="button" className="bv-success-btn bv-success-btn-ghost" onClick={() => {
-            if (typeof navigator !== 'undefined' && navigator.share) {
-              navigator.share({ title: 'Oddsify booking code', text: `Booking code ${code} on Oddsify`, url: shareUrl }).catch(() => {});
-            } else {
-              navigator.clipboard?.writeText(shareUrl);
-            }
-            onShare?.(code);
-          }}>
+          <button
+            type="button"
+            className="bv-success-btn bv-success-btn-ghost"
+            onClick={() => {
+              if (typeof navigator !== 'undefined' && navigator.share) {
+                navigator
+                  .share({ title: 'Oddsify booking code', text: `Booking code ${code} on Oddsify`, url: shareUrl })
+                  .catch(() => {});
+              } else {
+                navigator.clipboard?.writeText(shareUrl);
+              }
+              onShare?.(code);
+            }}
+          >
             Share Bet
           </button>
-          <button type="button" className="bv-success-btn bv-success-btn-ghost" onClick={() => { onRebook?.(); onClose?.(); }}>
+          <button
+            type="button"
+            className="bv-success-btn bv-success-btn-ghost"
+            onClick={() => {
+              onRebook?.();
+              onClose?.();
+            }}
+          >
             Rebook
           </button>
-          <button type="button" className="bv-success-btn bv-success-btn-ghost" onClick={() => { onReturn?.(); onClose?.(); }}>
+          <button
+            type="button"
+            className="bv-success-btn bv-success-btn-ghost"
+            onClick={() => {
+              onReturn?.();
+              onClose?.();
+            }}
+          >
             Sports
           </button>
         </div>
@@ -150,11 +218,24 @@ function TrophyIcon() {
           <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
         </circle>
         <path d="M16 14 H56 V36 C56 48 48 54 36 54 C24 54 16 48 16 36 Z" fill="url(#sCupBody)">
-          <animateTransform attributeName="transform" type="scale" values="1;1.04;1" dur="1.6s" repeatCount="indefinite" additive="sum" />
+          <animateTransform
+            attributeName="transform"
+            type="scale"
+            values="1;1.04;1"
+            dur="1.6s"
+            repeatCount="indefinite"
+            additive="sum"
+          />
         </path>
         <ellipse cx="36" cy="14" rx="20" ry="4" fill="#ffe28a" />
         <path d="M16 22 Q7 22 8 28 Q9 34 18 34" fill="none" stroke="#cc7a00" strokeWidth="3.5" strokeLinecap="round" />
-        <path d="M56 22 Q65 22 64 28 Q63 34 54 34" fill="none" stroke="#cc7a00" strokeWidth="3.5" strokeLinecap="round" />
+        <path
+          d="M56 22 Q65 22 64 28 Q63 34 54 34"
+          fill="none"
+          stroke="#cc7a00"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+        />
         <path d="M32 54 H40 V60 H32 Z" fill="url(#sCupBase)" />
         <path d="M25 60 H47 V63 H25 Z" fill="url(#sCupBase)" />
         <circle cx="36" cy="32" r="7" fill="#fff3b8" opacity=".7" />
@@ -179,16 +260,19 @@ function Confetti({ count = 36 }) {
   return (
     <div className="bv-success-confetti" aria-hidden>
       {pieces.map((p) => (
-        <span key={p.key} style={{
-          left: `${p.left}%`,
-          animationDelay: `${p.delay}s`,
-          animationDuration: `${p.dur}s`,
-          background: p.c,
-          width: p.w,
-          height: p.h,
-          transform: `rotate(${p.rot}deg)`,
-          '--tx': `${p.tx}px`,
-        }} />
+        <span
+          key={p.key}
+          style={{
+            left: `${p.left}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.dur}s`,
+            background: p.c,
+            width: p.w,
+            height: p.h,
+            transform: `rotate(${p.rot}deg)`,
+            '--tx': `${p.tx}px`,
+          }}
+        />
       ))}
     </div>
   );
@@ -206,14 +290,17 @@ function Particles({ count = 16 }) {
   return (
     <div className="bv-success-particles" aria-hidden>
       {particles.map((p) => (
-        <span key={p.key} style={{
-          left: `${p.left}%`,
-          animationDelay: `${p.delay}s`,
-          animationDuration: `${p.dur}s`,
-          width: p.size,
-          height: p.size,
-          background: p.c,
-        }} />
+        <span
+          key={p.key}
+          style={{
+            left: `${p.left}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.dur}s`,
+            width: p.size,
+            height: p.size,
+            background: p.c,
+          }}
+        />
       ))}
     </div>
   );
@@ -231,14 +318,17 @@ function Sparkles({ count = 8 }) {
   return (
     <div className="bv-success-sparkles" aria-hidden>
       {sparkles.map((s) => (
-        <span key={s.key} style={{
-          top: `${s.top}%`,
-          left: `${s.left}%`,
-          animationDelay: `${s.delay}s`,
-          animationDuration: `${s.dur}s`,
-          width: s.size,
-          height: s.size,
-        }}>
+        <span
+          key={s.key}
+          style={{
+            top: `${s.top}%`,
+            left: `${s.left}%`,
+            animationDelay: `${s.delay}s`,
+            animationDuration: `${s.dur}s`,
+            width: s.size,
+            height: s.size,
+          }}
+        >
           <svg viewBox="0 0 24 24" width={s.size * 4} height={s.size * 4}>
             <path d="M12 0l1.5 9 7.5-3-5 7 7 5-9-1.5L12 24l-1.5-9L3 18l5-7-7-5 9 1.5z" fill="#ffd76d" />
           </svg>
