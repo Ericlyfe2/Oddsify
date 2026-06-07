@@ -1,20 +1,9 @@
-/**
- * Bet History — port of the Claude Design OddBetHistoryScreen.
- *
- * Top: page header with balance pill.
- * Tabs: Open bets / History (full-width segmented).
- * Open bets: expandable cards showing total odds, stake, potential return,
- *   booking code with copy, cash-out CTA, leg-by-leg breakdown.
- * History: compact rows with status accent + payout column.
- *
- * Data flows from /api/bet/history. Cash-out hits cashOutBet() and refreshes
- * the list on success.
- */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
+import { onLive } from '../api/socketClient.js';
 import {
   fmtCedi,
   useTokens,
@@ -23,8 +12,8 @@ import {
   OddStatusChip,
   OddIcon,
 } from '../components/odd/primitives.jsx';
-
-/* ── shared booking-code helpers used by every history row ── */
+import CashoutConfirmModal from '../components/CashoutConfirmModal.jsx';
+import CashoutSuccessModal from '../components/CashoutSuccessModal.jsx';
 
 function makeShareUrl(code) {
   if (typeof window === 'undefined') return `/code/${code}`;
@@ -41,7 +30,7 @@ function shareCode(code, toast) {
     navigator.clipboard?.writeText(url);
     toast(`Copied share link.`, 'success');
   } catch {
-    toast('Share unsupported — copy manually.', 'warn');
+    toast('Share unsupported.', 'warn');
   }
 }
 
@@ -50,7 +39,7 @@ function copyCode(code, toast) {
     navigator.clipboard?.writeText(code);
     toast(`Copied ${code}.`, 'success');
   } catch {
-    toast('Copy failed — long-press to copy manually.', 'warn');
+    toast('Copy failed.', 'warn');
   }
 }
 
@@ -81,13 +70,23 @@ function legResult(leg) {
 export default function BetHistoryPage() {
   const T = useTokens();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { account, refresh } = useAccount();
   const { toast } = useToast();
-  const [tab, setTab] = useState('open');
+  const { cashoutOffers, updateCashoutOffer } = useSlip();
+  const initialTab = searchParams.get('tab') === 'hist' ? 'hist' : 'open';
+  const [tab, setTab] = useState(initialTab);
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [cashingOut, setCashingOut] = useState(null);
+
+  /* ── cashout modals state ── */
+  const [cashoutTarget, setCashoutTarget] = useState(null);
+  const [cashoutOffer, setCashoutOffer] = useState(null);
+  const cashoutBusyRef = useRef(false);
+  const [cashoutSuccess, setCashoutSuccess] = useState(null);
+  const [cashoutSuccessAmount, setCashoutSuccessAmount] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,10 +94,8 @@ export default function BetHistoryPage() {
       const data = await fetchBetHistory();
       const items = data?.bets || data?.history || [];
       setBets(items);
-      // Auto-expand the first open bet so the user lands on leg detail,
-      // matching the prototype's default state.
       const firstOpen = items.find((b) => b.status === 'open');
-      if (firstOpen) setExpanded(firstOpen.id);
+      if (firstOpen) setExpanded((prev) => prev || firstOpen.id);
     } catch {
       setBets([]);
     } finally {
@@ -109,13 +106,22 @@ export default function BetHistoryPage() {
     if (account) load();
   }, [account, load]);
 
-  // Surface open-bet count on the window so the bottom nav badge (legacy
-  // path) and any future consumer can read it without re-fetching.
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.__oddsifyOpenCount = bets.filter((b) => b.status === 'open').length;
     }
   }, [bets]);
+
+  /* ── live cashout offers via socket ── */
+  useEffect(() => {
+    if (!account) return;
+    const off = onLive('cashout:offer', (payload) => {
+      if (payload?.betId && typeof payload.cashOut === 'number') {
+        updateCashoutOffer(payload.betId, payload);
+      }
+    });
+    return () => off?.();
+  }, [account, updateCashoutOffer]);
 
   const openBets = useMemo(() => bets.filter((b) => b.status === 'open'), [bets]);
   const history = useMemo(() => bets.filter((b) => b.status !== 'open'), [bets]);
@@ -124,26 +130,39 @@ export default function BetHistoryPage() {
     try {
       navigator.clipboard?.writeText(text);
       toast(`Copied code ${text}`);
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   };
 
-  const onCashOut = async (bet) => {
-    if (!bet?.cashOutValue) {
+  /* ── cashout flow ── */
+  const openCashoutConfirm = (bet) => {
+    const offer = cashoutOffers[bet.id];
+    const value = offer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
+    if (value <= 0) {
       toast('Cash-out not currently available for this bet.', 'warn');
       return;
     }
-    setCashingOut(bet.id);
+    setCashoutTarget(bet);
+    setCashoutOffer(value);
+  };
+
+  const confirmCashout = async () => {
+    if (!cashoutTarget || cashoutBusyRef.current) return;
+    cashoutBusyRef.current = true;
+    setCashingOut(cashoutTarget.id);
     try {
-      await cashOutBet(bet.id, bet.cashOutValue);
-      toast(`Cashed out GHS ${fmtCedi(bet.cashOutValue)}.`, 'success');
+      const result = await cashOutBet(cashoutTarget.id, cashoutOffer);
+      const bet = result?.bet || cashoutTarget;
+      setCashoutSuccess(bet);
+      setCashoutSuccessAmount(cashoutOffer);
+      setCashoutTarget(null);
+      setCashoutOffer(null);
       await refresh();
       await load();
     } catch (e) {
-      toast(e?.body?.error || e?.message || 'Cash-out failed.', 'error');
+      toast(e?.body?.error || e?.message || 'Cash-out failed. Please try again.', 'error');
     } finally {
       setCashingOut(null);
+      cashoutBusyRef.current = false;
     }
   };
 
@@ -186,8 +205,6 @@ export default function BetHistoryPage() {
         />
       </div>
 
-      {/* Code Hub shortcut — pinned to the top of the list so every
-          history view advertises the load-by-code action. */}
       <div style={{ padding: '0 16px 8px' }}>
         <button
           type="button"
@@ -238,10 +255,11 @@ export default function BetHistoryPage() {
               <OpenBetCard
                 key={bet.id}
                 bet={bet}
+                liveOffer={cashoutOffers[bet.id] || null}
                 open={expanded === bet.id}
                 onToggle={() => setExpanded(expanded === bet.id ? null : bet.id)}
                 onCopy={() => copy(bet.bookingCode || bet.code || bet.id)}
-                onCashOut={() => onCashOut(bet)}
+                onCashOut={() => openCashoutConfirm(bet)}
                 cashingOut={cashingOut === bet.id}
               />
             ))}
@@ -256,6 +274,31 @@ export default function BetHistoryPage() {
           ))}
         </div>
       )}
+
+      {/* Cashout confirmation modal */}
+      <CashoutConfirmModal
+        bet={cashoutTarget}
+        cashoutValue={cashoutOffer}
+        open={!!cashoutTarget}
+        onClose={() => {
+          setCashoutTarget(null);
+          setCashoutOffer(null);
+        }}
+        onConfirm={confirmCashout}
+        busy={cashingOut === cashoutTarget?.id}
+      />
+
+      {/* Cashout success celebration */}
+      <CashoutSuccessModal
+        bet={cashoutSuccess}
+        cashoutAmount={cashoutSuccessAmount}
+        open={!!cashoutSuccess}
+        onClose={() => setCashoutSuccess(null)}
+        onViewBets={() => {
+          setCashoutSuccess(null);
+          navigate('/my-bets');
+        }}
+      />
     </div>
   );
 }
@@ -290,7 +333,7 @@ function Stat({ label, value, dark = false, accent }) {
   );
 }
 
-function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
+function OpenBetCard({ bet, liveOffer, open, onToggle, onCopy, onCashOut, cashingOut }) {
   const T = useTokens();
   const { loadFromSlip, rememberCode } = useSlip();
   const { toast } = useToast();
@@ -308,17 +351,13 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
   const odds = Number(bet.totalOdds || bet.odds || 1);
   const stake = Number(bet.stake || 0);
   const potential = Number(bet.potentialReturn || bet.win || stake * odds);
-  const cashOutValue = Number(bet.cashOutValue || 0);
+
+  const displayOffer = liveOffer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
+  const showCashout = displayOffer > 0 && bet.status === 'open';
+  const offerStale = liveOffer && !liveOffer.cashOut;
 
   return (
-    <div
-      style={{
-        background: T.surface,
-        borderRadius: 16,
-        border: `1px solid ${T.line}`,
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ background: T.surface, borderRadius: 16, border: `1px solid ${T.line}`, overflow: 'hidden' }}>
       <div
         style={{
           background: open ? T.greenDeep : 'transparent',
@@ -327,22 +366,9 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
           transition: 'background 180ms',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 10,
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <OddStatusChip kind="open" label={`OPEN · ${bet.type || (legs.length > 1 ? 'Multiple' : 'Single')}`} />
-          <span
-            style={{
-              fontSize: 11,
-              opacity: open ? 0.6 : 0.5,
-              color: open ? '#fff' : T.inkSoft,
-            }}
-          >
+          <span style={{ fontSize: 11, opacity: open ? 0.6 : 0.5, color: open ? '#fff' : T.inkSoft }}>
             {legs.length} selection{legs.length === 1 ? '' : 's'} · {placedAt(bet.placedAt || bet.createdAt)}
           </span>
         </div>
@@ -364,24 +390,8 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
           }}
         >
           <div>
-            <div
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: 0.6,
-                opacity: 0.6,
-              }}
-            >
-              BOOKING CODE
-            </div>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                fontVariantNumeric: 'tabular-nums',
-                letterSpacing: 0.8,
-              }}
-            >
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.6, opacity: 0.6 }}>BOOKING CODE</div>
+            <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: 0.8 }}>
               {code}
             </div>
           </div>
@@ -440,7 +450,7 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
           </div>
         </div>
 
-        {cashOutValue > 0 && (
+        {showCashout && (
           <button
             type="button"
             onClick={onCashOut}
@@ -462,9 +472,18 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
               opacity: cashingOut ? 0.7 : 1,
             }}
           >
-            <span>{cashingOut ? 'Cashing out…' : 'Cash Out'}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>GHS {fmtCedi(cashOutValue)}</span>
+            <span>{cashingOut ? 'Cashing out…' : liveOffer ? `Cash Out` : 'Cash Out'}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {liveOffer && <LivePulse />}
+              GHS {fmtCedi(displayOffer)}
+            </span>
           </button>
+        )}
+
+        {offerStale && (
+          <div style={{ marginTop: 6, fontSize: 11, color: T.warn, textAlign: 'center', fontWeight: 600 }}>
+            Cash-out temporarily unavailable.
+          </div>
         )}
       </div>
 
@@ -496,28 +515,11 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
           {legs.map((leg, i) => (
             <div
               key={i}
-              style={{
-                padding: '12px 0',
-                borderBottom: i < legs.length - 1 ? `1px dashed ${T.line}` : 'none',
-              }}
+              style={{ padding: '12px 0', borderBottom: i < legs.length - 1 ? `1px dashed ${T.line}` : 'none' }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                  alignItems: 'flex-start',
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: T.ink,
-                      letterSpacing: -0.1,
-                    }}
-                  >
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, letterSpacing: -0.1 }}>
                     {leg.home} <span style={{ color: T.inkDim, fontWeight: 500 }}>vs</span> {leg.away}
                   </div>
                   <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
@@ -527,22 +529,8 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
                     </span>
                   </div>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    gap: 4,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: T.ink,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
                     {Number(leg.odds || 0).toFixed(2)}
                   </span>
                   <OddStatusChip kind={STATUS_KIND[legResult(leg)] || 'pending'} label={legResult(leg).toUpperCase()} />
@@ -556,16 +544,32 @@ function OpenBetCard({ bet, open, onToggle, onCopy, onCashOut, cashingOut }) {
   );
 }
 
+function LivePulse() {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: '#4ade80',
+        animation: 'bvPulse 1.2s ease-in-out infinite',
+      }}
+    />
+  );
+}
+
 function HistoryRow({ bet }) {
   const T = useTokens();
   const { loadFromSlip, rememberCode } = useSlip();
   const { toast } = useToast();
   const navigate = useNavigate();
   const isWon = bet.status === 'won' || bet.status === 'cashed_out';
-  const win = Number(bet.payout || bet.winAmount || bet.win || 0);
+  const win = Number(bet.payout || bet.winAmount || bet.cashOut || bet.win || 0);
   const odds = Number(bet.totalOdds || bet.odds || 0);
   const code = bet.bookingCode || bet.code || bet.id?.slice(-8) || '';
   const legs = bet.legs || bet.selections || [];
+  const isCashedOut = bet.status === 'cashed_out';
 
   const handleRebook = () => {
     if (!legs.length) return toast('No selections to rebook on this slip.', 'warn');
@@ -576,29 +580,10 @@ function HistoryRow({ bet }) {
   };
 
   return (
-    <div
-      style={{
-        background: T.surface,
-        borderRadius: 14,
-        border: `1px solid ${T.line}`,
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          padding: '12px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
+    <div style={{ background: T.surface, borderRadius: 14, border: `1px solid ${T.line}`, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div
-          style={{
-            width: 4,
-            alignSelf: 'stretch',
-            borderRadius: 2,
-            background: isWon ? T.greenBright : T.danger,
-          }}
+          style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: isWon ? T.greenBright : T.danger }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
@@ -615,6 +600,7 @@ function HistoryRow({ bet }) {
               #{code || '—'}
             </span>
             <OddStatusChip kind={STATUS_KIND[bet.status] || bet.status} label={(bet.status || '').toUpperCase()} />
+            {isCashedOut && <span style={{ fontSize: 10, color: T.greenBright, fontWeight: 600 }}>CASHD OUT</span>}
           </div>
           <div style={{ fontSize: 11, color: T.inkSoft }}>
             {placedAt(bet.placedAt || bet.createdAt)} · stake GHS {fmtCedi(bet.stake)} · {odds.toFixed(2)}x
@@ -631,7 +617,9 @@ function HistoryRow({ bet }) {
           >
             {isWon ? '+' : ''}GHS {fmtCedi(win)}
           </div>
-          <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>{isWon ? 'Payout' : 'No return'}</div>
+          <div style={{ fontSize: 10, color: T.inkDim, marginTop: 2 }}>
+            {isWon ? (isCashedOut ? 'Cash-out' : 'Payout') : 'No return'}
+          </div>
         </div>
       </div>
       {code && legs.length > 0 && (

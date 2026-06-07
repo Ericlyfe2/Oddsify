@@ -306,6 +306,13 @@ export default function AppProviders({ children }) {
       } catch {}
     });
 
+    const offCashout = onLive('wallet:update', ({ balance, reason }) => {
+      if (reason === 'cash_out' && typeof balance === 'number') {
+        setAccount((prev) => (prev ? { ...prev, balance } : prev));
+        toast(`Cash-out processed! Balance: GHS ${formatAmt(balance)}`, 'success', { ttl: 5000 });
+      }
+    });
+
     return () => {
       alive = false;
       clearInterval(id);
@@ -316,6 +323,7 @@ export default function AppProviders({ children }) {
       offNotif?.();
       offWin?.();
       offSettled?.();
+      offCashout?.();
     };
   }, [accountId]);
 

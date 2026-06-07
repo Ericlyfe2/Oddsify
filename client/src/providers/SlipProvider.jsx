@@ -1,17 +1,4 @@
-/**
- * SlipProvider — global bet slip state for the Oddsify design port.
- *
- * Replaces the per-page slip that lived inside the old Home.jsx. Any screen
- * that renders <OddsTile>s talks to this provider (togglePick / removePick /
- * clearSlip), and the global <OddBetSlip /> sheet mounted in AppShell reads
- * the same state.
- *
- * Submission goes through the real /api/bet/place endpoint via betApi. On
- * success we credit a toast through the existing AccountProvider context
- * (so the toast stack and balance refresh live in exactly one place) and
- * clear the slip.
- */
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { placeBet, bookBet, fetchBetByCode } from '../api/betApi.js';
 import { useAccount, useToast } from './AccountProvider.jsx';
 
@@ -27,6 +14,9 @@ const EMPTY = {
   bookingCodeLookup: null,
   lookupLoading: false,
   recentCodes: [],
+  submitting: false,
+  cashoutOffers: {},
+  successBet: null,
   togglePick: () => {},
   removePick: () => {},
   clearSlip: () => {},
@@ -42,13 +32,13 @@ const EMPTY = {
   rememberCode: () => {},
   forgetCode: () => {},
   clearLookup: () => {},
+  showSuccessModal: () => {},
+  clearSuccessModal: () => {},
+  updateCashoutOffer: () => {},
 };
 
 export const useSlip = () => useContext(SlipCtx) || EMPTY;
 
-// Persistent registry of codes the user has interacted with — codes
-// they booked themselves AND codes they've looked up. Capped so it
-// can't grow forever; the cap chosen to fit a long-tail user comfortably.
 const RECENT_CODES_KEY = 'bv_recent_codes';
 const RECENT_CODES_MAX = 12;
 
@@ -69,9 +59,7 @@ function persistRecentCodes(entries) {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(RECENT_CODES_KEY, JSON.stringify(entries.slice(0, RECENT_CODES_MAX)));
-  } catch {
-    /* ignore quota errors */
-  }
+  } catch {}
 }
 
 export default function SlipProvider({ children }) {
@@ -80,17 +68,33 @@ export default function SlipProvider({ children }) {
   const [picks, setPicks] = useState({});
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [lastBet, setLastBet] = useState(null);
   const [lastBooking, setLastBooking] = useState(null);
   const [bookingCodeLookup, setBookingCodeLookup] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [recentCodes, setRecentCodes] = useState(loadRecentCodes);
+  const [successBet, setSuccessBet] = useState(null);
+  const [cashoutOffers, setCashoutOffers] = useState({});
+
+  const submitRef = useRef(false);
+
+  const updateCashoutOffer = useCallback((betId, offer) => {
+    setCashoutOffers((prev) => ({ ...prev, [betId]: offer }));
+  }, []);
+
+  const showSuccessModal = useCallback((bet) => {
+    setSuccessBet(bet);
+  }, []);
+
+  const clearSuccessModal = useCallback(() => {
+    setSuccessBet(null);
+  }, []);
 
   const rememberCode = useCallback((code, meta = {}) => {
     if (!code) return;
     const upper = String(code).toUpperCase();
     setRecentCodes((prev) => {
-      // Dedupe: any existing entry for this code is replaced and moved to top.
       const next = [{ code: upper, lastSeenAt: Date.now(), ...meta }, ...prev.filter((e) => e.code !== upper)].slice(
         0,
         RECENT_CODES_MAX,
@@ -114,16 +118,14 @@ export default function SlipProvider({ children }) {
     setPicks((cur) => {
       const id = match.id;
       const existing = cur[id];
-      // Toggle off if same key already selected.
       if (existing && existing.key === key) {
         const next = { ...cur };
         delete next[id];
         return next;
       }
-      // Replace existing pick or add new.
       return { ...cur, [id]: { match, key, val, market: match.market || '1X2' } };
     });
-    setOpen((prev) => prev || true); // open the sheet on first selection
+    setOpen((prev) => prev || true);
   }, []);
 
   const removePick = useCallback((id) => {
@@ -155,12 +157,22 @@ export default function SlipProvider({ children }) {
     async ({ stake, acceptOddsChanges = true } = {}) => {
       const entries = Object.values(picks);
       if (!entries.length) return null;
+
+      if (submitRef.current) {
+        toast('Bet is already being placed. Please wait.', 'warn');
+        return null;
+      }
+
       const amt = Number(stake) || 0;
       if (amt <= 0) {
         toast('Enter a stake before placing the bet.', 'warn');
         return null;
       }
+
+      submitRef.current = true;
+      setSubmitting(true);
       setBusy(true);
+
       try {
         const payload = {
           mode: entries.length === 1 ? 'single' : 'multiple',
@@ -175,19 +187,20 @@ export default function SlipProvider({ children }) {
         };
         const result = await placeBet(payload);
         setLastBet(result.bet);
+        setSuccessBet(result.bet);
         setPicks({});
-        toast(`Bet placed: ${entries.length} selection${entries.length > 1 ? 's' : ''}.`, 'success');
         try {
-          await refresh();
-        } catch {
-          /* ignore */
-        }
+          const updated = await refresh();
+          if (updated?.balance != null) setSuccessBet((prev) => ({ ...prev, balance: updated.balance }));
+        } catch {}
         return result;
       } catch (err) {
         toast(err?.body?.error || err?.message || 'Bet failed.', 'error', { ttl: 6000 });
         return null;
       } finally {
+        setSubmitting(false);
         setBusy(false);
+        submitRef.current = false;
       }
     },
     [picks, toast, refresh],
@@ -199,6 +212,11 @@ export default function SlipProvider({ children }) {
       toast('Add at least one selection before booking.', 'warn');
       return null;
     }
+    if (submitRef.current) {
+      toast('A booking is already in progress.', 'warn');
+      return null;
+    }
+    submitRef.current = true;
     setBusy(true);
     try {
       const payload = {
@@ -219,6 +237,7 @@ export default function SlipProvider({ children }) {
       return null;
     } finally {
       setBusy(false);
+      submitRef.current = false;
     }
   }, [picks, toast]);
 
@@ -226,9 +245,6 @@ export default function SlipProvider({ children }) {
     setBookingCodeLookup(null);
   }, []);
 
-  // Booking codes are 7 characters: 2 uppercase letters (no O) + 5
-  // digits 1-9 (no zero). Matches server/src/lib/bookingCode.js so the
-  // client gives the same answer the API would, before any round-trip.
   const BOOKING_CODE_RE = /^[A-NP-Z]{2}[1-9]{5}$/;
 
   const lookupBookingCode = useCallback(
@@ -258,7 +274,6 @@ export default function SlipProvider({ children }) {
         toast(`Booking code loaded successfully.`, 'success');
         return slip;
       } catch (err) {
-        // Surface specific, user-friendly messages per the spec.
         let message;
         if (err?.status === 404) message = 'Booking code not found.';
         else if (err?.status === 410) message = 'This booking code has expired.';
@@ -274,12 +289,6 @@ export default function SlipProvider({ children }) {
     [toast, rememberCode],
   );
 
-  /**
-   * Drop a slip's selections into the active picks state — the
-   * "Rebook" action. Accepts either a slip object returned from the
-   * server (with .legs) or a placed bet from history. Opens the slip
-   * so the user sees what got loaded.
-   */
   const loadFromSlip = useCallback(
     (slip) => {
       if (!slip?.legs?.length) {
@@ -312,7 +321,6 @@ export default function SlipProvider({ children }) {
     [toast],
   );
 
-  /** Look the code up, then load the slip into picks in one motion. */
   const loadFromCode = useCallback(
     async (rawCode) => {
       const slip = await lookupBookingCode(rawCode);
@@ -329,11 +337,14 @@ export default function SlipProvider({ children }) {
       picks,
       open,
       busy,
+      submitting,
+      cashoutOffers,
       lastBet,
       lastBooking,
       bookingCodeLookup,
       lookupLoading,
       recentCodes,
+      successBet,
       count: entries.length,
       totalOdds,
       togglePick,
@@ -351,16 +362,22 @@ export default function SlipProvider({ children }) {
       rememberCode,
       forgetCode,
       clearLookup,
+      showSuccessModal,
+      clearSuccessModal,
+      updateCashoutOffer,
     };
   }, [
     picks,
     open,
     busy,
+    submitting,
+    cashoutOffers,
     lastBet,
     lastBooking,
     bookingCodeLookup,
     lookupLoading,
     recentCodes,
+    successBet,
     togglePick,
     removePick,
     clearSlip,
@@ -376,6 +393,9 @@ export default function SlipProvider({ children }) {
     rememberCode,
     forgetCode,
     clearLookup,
+    showSuccessModal,
+    clearSuccessModal,
+    updateCashoutOffer,
   ]);
 
   return <SlipCtx.Provider value={value}>{children}</SlipCtx.Provider>;

@@ -52,11 +52,10 @@ async function createTestApp() {
 }
 
 function makeToken(user) {
-  return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role, scope: 'user' },
-    JWT.secret,
-    { expiresIn: '1h', issuer: JWT.issuer },
-  );
+  return jwt.sign({ sub: user.id, email: user.email, role: user.role, scope: 'user' }, JWT.secret, {
+    expiresIn: '1h',
+    issuer: JWT.issuer,
+  });
 }
 
 const VALID_MATCH = 'gh-adu-med';
@@ -143,9 +142,7 @@ describe('Booking Code Endpoint Integration', () => {
       const res = await fetchApi('/book', {
         method: 'POST',
         body: JSON.stringify({
-          selections: [
-            { matchId: 'non-existent-match', market: '1X2', outcome: '1', odds: 2.0 },
-          ],
+          selections: [{ matchId: 'non-existent-match', market: '1X2', outcome: '1', odds: 2.0 }],
         }),
       });
       assert.equal(res.status, 400);
