@@ -95,6 +95,8 @@ export function OddBetSlip() {
     clearLastBooking,
     lookupBookingCode,
     clearLookup,
+    loadFromCode,
+    loadFromSlip,
   } = useSlip();
   const { account } = useAccount();
   const balance = account?.balance ?? 0;
@@ -535,6 +537,44 @@ export function OddBetSlip() {
                   <span style={{ color: bookingCodeLookup.status === 'won' ? T.greenBright : T.inkSoft }}>
                     {bookingCodeLookup.status}
                   </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadFromCode(codeInput);
+                      clearLookup();
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '8px 0',
+                      borderRadius: 8,
+                      background: T.greenBright,
+                      color: T.goldDark,
+                      border: 0,
+                      fontWeight: 700,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Load to slip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearLookup}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      background: 'transparent',
+                      color: T.ink,
+                      border: `1px solid ${T.line}`,
+                      fontWeight: 600,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             )}

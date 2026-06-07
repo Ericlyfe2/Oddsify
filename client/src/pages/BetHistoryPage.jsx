@@ -240,7 +240,7 @@ export default function BetHistoryPage() {
                 bet={bet}
                 open={expanded === bet.id}
                 onToggle={() => setExpanded(expanded === bet.id ? null : bet.id)}
-                onCopy={() => copy(bet.code || bet.id)}
+                onCopy={() => copy(bet.bookingCode || bet.code || bet.id)}
                 onCashOut={() => onCashOut(bet)}
                 cashingOut={cashingOut === bet.id}
               />
