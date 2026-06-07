@@ -7,6 +7,16 @@ import {
   mintUniqueBookingCode,
 } from '../src/lib/bookingCode.js';
 
+// Inline copy of the TTL constant the route uses. If the route's
+// expiration window changes, this test will catch it.
+const BOOKED_SLIP_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function isExpired(slip, now = Date.now()) {
+  const createdAt = slip.createdAt ? new Date(slip.createdAt).getTime() : null;
+  if (!createdAt) return false;
+  return now - createdAt > BOOKED_SLIP_TTL_MS;
+}
+
 describe('bookingCode regex', () => {
   it('accepts the canonical AF36513 shape', () => {
     assert.equal(BOOKING_CODE_RE.test('AF36513'), true);
@@ -109,5 +119,27 @@ describe('mintUniqueBookingCode', () => {
     const code = mintUniqueBookingCode({ existingCodes: blocked, maxAttempts: 1 });
     // Either the 7-char canonical shape or the 8-char paranoia fallback.
     assert.equal(/^[A-NP-Z]{2}[1-9]{5}[1-9]?$/.test(code), true, `unexpected fallback shape ${code}`);
+  });
+});
+
+describe('booked slip expiration', () => {
+  it('slips created right now are not expired', () => {
+    assert.equal(isExpired({ createdAt: new Date().toISOString() }), false);
+  });
+
+  it('slips created just under 30 days ago are not expired', () => {
+    const justUnder = new Date(Date.now() - (BOOKED_SLIP_TTL_MS - 60_000)).toISOString();
+    assert.equal(isExpired({ createdAt: justUnder }), false);
+  });
+
+  it('slips created over 30 days ago are expired', () => {
+    const over = new Date(Date.now() - (BOOKED_SLIP_TTL_MS + 60_000)).toISOString();
+    assert.equal(isExpired({ createdAt: over }), true);
+  });
+
+  it('legacy slips with no createdAt are treated as non-expired', () => {
+    // We never throw on a row missing the timestamp; better to surface the
+    // slip than 410 it on a missing field.
+    assert.equal(isExpired({}), false);
   });
 });

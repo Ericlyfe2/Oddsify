@@ -111,6 +111,7 @@ export default function App() {
                   <Route path="/my-bets" element={<BetHistoryPage />} />
                   <Route path="/codehub" element={<CodeHubPage />} />
                   <Route path="/code/:code" element={<CodeHubPage />} />
+                  <Route path="/booking-code/:code" element={<CodeHubPage />} />
                   <Route
                     path="/casino"
                     element={
