@@ -139,13 +139,23 @@ export function OddBetSlip() {
           position: 'fixed',
           left: 0,
           right: 0,
-          bottom: 0,
+          // When the slip is open (or showing the last-placed receipt) it
+          // owns the full bottom area and the bottom nav is hidden anyway.
+          // When in the collapsed empty/peek state we sit ABOVE the bottom
+          // nav so the Wallet/Account icons aren't covered — 88px clears
+          // the nav's height + safe-area padding on every device we ship.
+          bottom: open || lastBet ? 0 : 88,
           background: T.surface,
           color: T.ink,
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
+          // While in the empty peek state, soften the bottom corners too so
+          // the floating bar reads as a pill rather than a sheet.
+          borderBottomLeftRadius: open || lastBet ? 0 : 22,
+          borderBottomRightRadius: open || lastBet ? 0 : 22,
           zIndex: 91,
-          transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1)',
+          transition:
+            'transform 280ms cubic-bezier(0.32, 0.72, 0, 1), bottom 280ms cubic-bezier(0.32, 0.72, 0, 1)',
           transform: open || lastBet ? 'translateY(0)' : 'translateY(calc(100% - 56px))',
           boxShadow: '0 -16px 40px -10px rgba(0,0,0,0.25)',
           maxHeight: '88vh',
