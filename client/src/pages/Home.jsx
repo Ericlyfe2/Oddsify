@@ -98,7 +98,7 @@ export default function Home() {
       <OddCategoryGrid liveCount={liveCount} onPick={(c) => navigate(c.to || '/')} />
 
       <div style={{ padding: '4px 16px 12px', overflow: 'hidden', minHeight: 49 }}>
-        {wins && wins.length > 0 && <WinningsTicker wins={wins} />}
+        <WinningsTicker />
       </div>
 
       <OddLeagueRow leagues={leagues.length ? leagues : undefined} onPick={() => navigate('/sports')} />
@@ -275,9 +275,94 @@ function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
   );
 }
 
-const WinningsTicker = memo(function WinningsTicker({ wins }) {
+/**
+ * Withdrawal ticker shown above the league row.
+ *
+ * Per operator spec the amounts span GHS 200,000 to GHS 800,000,000,000
+ * (200K to 800 billion) so the marquee always feels "high stakes".
+ * Each entry shows a Ghana first name + last initial + the verb
+ * "withdrew" + amount in brand green. Regenerates every 60s.
+ *
+ * This is intentionally synthetic marketing copy. No fake users, bets,
+ * or transactions are written to the database.
+ */
+const WT_FIRST = [
+  'Akua',
+  'Kwame',
+  'Yaw',
+  'Esi',
+  'Kojo',
+  'Ama',
+  'Kofi',
+  'Adwoa',
+  'Fiifi',
+  'Abena',
+  'Selasi',
+  'Mawuli',
+  'Dela',
+  'Naa',
+  'Nana',
+  'Kwabena',
+  'Kweku',
+  'Sefa',
+  'Efua',
+  'Kobby',
+];
+const WT_LAST = [
+  'Mensah',
+  'Owusu',
+  'Asare',
+  'Boateng',
+  'Appiah',
+  'Adjei',
+  'Annan',
+  'Tetteh',
+  'Quartey',
+  'Ofori',
+  'Sarpong',
+  'Yeboah',
+  'Frimpong',
+  'Otoo',
+  'Mireku',
+  'Dadzie',
+  'Acheampong',
+  'Nkrumah',
+];
+const WT_MIN = 200_000; // GHS 200,000
+const WT_MAX = 800_000_000_000; // GHS 800,000,000,000
+
+function generateWithdrawals(count = 12) {
+  const used = new Set();
+  const out = [];
+  let safety = 0;
+  while (out.length < count && safety++ < 200) {
+    // Skew toward the lower end on a log scale so smaller (still huge)
+    // amounts appear more often than the top-of-range billions — gives
+    // a more varied marquee instead of every entry being 700B+.
+    const u = Math.random();
+    const amount = Math.floor(Math.exp(Math.log(WT_MIN) + u * (Math.log(WT_MAX) - Math.log(WT_MIN))));
+    if (used.has(amount)) continue;
+    used.add(amount);
+    const first = WT_FIRST[Math.floor(Math.random() * WT_FIRST.length)];
+    const lastInitial = WT_LAST[Math.floor(Math.random() * WT_LAST.length)][0];
+    out.push({
+      id: `wt-${out.length}-${amount}`,
+      who: `${first} ${lastInitial}.`,
+      amountGhs: amount,
+    });
+  }
+  return out;
+}
+
+const WinningsTicker = memo(function WinningsTicker() {
   const T = useTokens();
-  const items = wins.slice(0, 10);
+  const [items, setItems] = useState(() => generateWithdrawals(12));
+
+  useEffect(() => {
+    const id = setInterval(() => setItems(generateWithdrawals(12)), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const loop = [...items, ...items];
   return (
     <div
@@ -293,7 +378,7 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
           display: 'flex',
           whiteSpace: 'nowrap',
           width: 'max-content',
-          animation: 'odd-marquee 50s linear infinite',
+          animation: 'odd-marquee 60s linear infinite',
           willChange: 'transform',
           alignItems: 'center',
         }}
@@ -309,8 +394,8 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
               fontSize: 12,
             }}
           >
-            <span style={{ color: T.inkSoft, fontWeight: 600 }}>{w.phoneMasked}</span>
-            <span style={{ color: T.inkDim, fontWeight: 400 }}>won</span>
+            <span style={{ color: T.inkSoft, fontWeight: 600 }}>{w.who}</span>
+            <span style={{ color: T.inkDim, fontWeight: 400 }}>withdrew</span>
             <span
               style={{
                 color: T.greenBright,
@@ -319,16 +404,7 @@ const WinningsTicker = memo(function WinningsTicker({ wins }) {
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
-              GHS{fmtCedi(w.amountGhs, true)}
-            </span>
-            <span
-              style={{
-                color: T.inkDim,
-                fontSize: 11,
-                marginLeft: 2,
-              }}
-            >
-              {w.betType === 'multi' ? `${w.legs}-leg` : 'Single'}
+              GHS {fmtCedi(w.amountGhs, true)}
             </span>
           </span>
         ))}
