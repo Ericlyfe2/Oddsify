@@ -110,7 +110,10 @@ export function OddBetSlip() {
     }
   };
 
-  if (!count && !open && !lastBet) return null;
+  // Always render the slip — even with zero picks and no last-placed bet —
+  // so the "Load booking code" input is permanently reachable. When fully
+  // empty the slip collapses to a thin peek bar showing "Load by code →".
+  const emptyState = !count && !lastBet;
 
   return (
     <>
@@ -180,7 +183,7 @@ export function OddBetSlip() {
             <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineStrong, alignSelf: 'center' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.3 }}>
-                {lastBet ? '✅ Bet Placed' : 'Betslip'}
+                {lastBet ? '✅ Bet Placed' : emptyState ? 'Load booking code' : 'Betslip'}
               </span>
               {!lastBet && count > 0 && (
                 <span
@@ -195,6 +198,9 @@ export function OddBetSlip() {
                 >
                   {count}
                 </span>
+              )}
+              {!lastBet && emptyState && (
+                <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>or pick odds</span>
               )}
             </div>
           </div>
@@ -392,17 +398,29 @@ export function OddBetSlip() {
             >
               <input
                 value={codeInput}
-                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                placeholder="Booking code…"
-                maxLength={10}
+                onChange={(e) => {
+                  // Allow only A-Z and 1-9 (no zero, no letter O — same
+                  // alphabet generateBookingCode() uses server-side).
+                  const cleaned = e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z1-9]/g, '')
+                    .slice(0, 7);
+                  setCodeInput(cleaned);
+                }}
+                placeholder="e.g. AF36513"
+                maxLength={7}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') lookupBookingCode(codeInput);
                 }}
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                aria-label="Booking code"
                 style={{
                   flex: 1,
                   background: T.surface,
                   color: T.ink,
-                  border: `1px solid ${T.line}`,
+                  border: `1px solid ${codeInput.length === 7 ? T.greenBright : T.line}`,
                   borderRadius: 8,
                   padding: '8px 10px',
                   fontSize: 13,

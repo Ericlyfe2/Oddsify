@@ -123,6 +123,15 @@ router.post(
       emailVerified: true,
     });
     logActivity(user.id, { kind: 'register', ip: req.ip, country: countryCode });
+    recordAudit({
+      actorId: user.id,
+      action: 'user.register',
+      target: user.id,
+      targetType: 'user',
+      ip: req.ip,
+      userAgent: req.get('user-agent') || '',
+      meta: { email, country: countryCode },
+    });
     log.info(`registered ${email} (${countryCode})`);
     const session = issueSession(user, req);
     res.status(201).json({ ok: true, kind: 'user', account: publicUser(user), ...session });
@@ -181,9 +190,29 @@ router.post(
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
       logActivity(user.id, { kind: 'login_failed', ip: req.ip });
+      recordAudit({
+        actorId: user.id,
+        action: 'user.login.failed',
+        target: user.id,
+        targetType: 'user',
+        severity: 'warning',
+        ip: req.ip,
+        meta: { email, reason: 'bad_password' },
+      });
       throw unauthorized('Incorrect email or password.');
     }
-    if (user.suspended) throw unauthorized('Account suspended. Contact support.');
+    if (user.suspended) {
+      recordAudit({
+        actorId: user.id,
+        action: 'user.login.suspended',
+        target: user.id,
+        targetType: 'user',
+        severity: 'warning',
+        ip: req.ip,
+        meta: { email },
+      });
+      throw unauthorized('Account suspended. Contact support.');
+    }
 
     // Country validation: if user has a country on file, the submitted one must match.
     // If user has no country (legacy account), accept and persist the submitted value.
@@ -197,6 +226,15 @@ router.post(
     const fresh = patch ? updateUser(user.id, patch) : user;
 
     logActivity(fresh.id, { kind: 'login_success', ip: req.ip, userAgent: req.get('user-agent') });
+    recordAudit({
+      actorId: fresh.id,
+      action: 'user.login.success',
+      target: fresh.id,
+      targetType: 'user',
+      ip: req.ip,
+      userAgent: req.get('user-agent') || '',
+      meta: { email },
+    });
     const session = issueSession(fresh, req);
     res.json({ ok: true, kind: 'user', account: publicUser(fresh), ...session });
   }),

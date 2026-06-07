@@ -45,6 +45,13 @@ function expandUser(u) {
     stage: u.stage ?? 0,
     stageUpdatedAt: u.stageUpdatedAt || null,
     stageUpdatedBy: u.stageUpdatedBy || null,
+    stagePromotionRequested: !!u.stagePromotionRequested,
+    stagePromotionRequestedAt: u.stagePromotionRequestedAt || null,
+    stagePromotionRequestedFrom: u.stagePromotionRequestedFrom ?? null,
+    stagePromotionRequestedTo: u.stagePromotionRequestedTo ?? null,
+    stagePromotionRequestedReason: u.stagePromotionRequestedReason || null,
+    stagePromotionApprovedAt: u.stagePromotionApprovedAt || null,
+    stagePromotionApprovedBy: u.stagePromotionApprovedBy || null,
     blocked: !!u.blocked,
     blockedAt: u.blockedAt || null,
     blockedBy: u.blockedBy || null,
@@ -224,6 +231,13 @@ router.patch(
       stageUpdatedAt: new Date().toISOString(),
       stageUpdatedBy: req.admin?.email || req.admin?.id || 'admin',
     };
+    // If this stage change satisfies a previously-requested promotion, clear
+    // the pending flag so the admin queue doesn't keep flagging the user.
+    if (u.stagePromotionRequested && stage === u.stagePromotionRequestedTo) {
+      patch.stagePromotionRequested = false;
+      patch.stagePromotionApprovedAt = new Date().toISOString();
+      patch.stagePromotionApprovedBy = req.admin?.email || req.admin?.id || 'admin';
+    }
     if (stage === 3 && prev !== 3) {
       patch.blocked = true;
       patch.blockedAt = new Date().toISOString();
@@ -245,7 +259,12 @@ router.patch(
       target: u.id,
       targetType: 'user',
       severity: 'info',
-      meta: { from: prev, to: stage, note },
+      meta: {
+        from: prev,
+        to: stage,
+        note,
+        ...(patch.stagePromotionApprovedAt ? { satisfiedPendingRequest: true } : {}),
+      },
     });
     logActivity(u.id, {
       kind: `stage_${stage > prev ? 'promoted' : 'demoted'}_to_${stage}`,

@@ -30,6 +30,7 @@ import { emitAdmin, emitToUser } from '../services/realtime.js';
 import { SYSTEM_TYPES, maxSystemReturn } from '../lib/systemBets.js';
 import * as cashOutEngine from '../services/cashOutEngine.js';
 import { LIVE_BETTING } from '../config/env.js';
+import { log } from '../utils/logger.js';
 
 const router = Router();
 
@@ -304,6 +305,7 @@ router.post(
       createdIp: req.ip,
     };
     bookedSlipsStore.set(code, slip);
+    log.info(`booking_code_created code=${code} by=${req.user?.id || 'anon'} legs=${normalized.length}`);
     const { createdBy, createdIp, ...publicSlip } = slip;
     res.status(201).json({ ok: true, bookingCode: code, slip: publicSlip });
   }),

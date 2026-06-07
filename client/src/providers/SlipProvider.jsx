@@ -167,19 +167,35 @@ export default function SlipProvider({ children }) {
     setBookingCodeLookup(null);
   }, []);
 
+  // Booking codes are 7 characters: 2 uppercase letters + 5 digits 1-9
+  // (no zero, no letter O — see server/src/routes/bet.js:generateBookingCode).
+  // Validate the shape on the client so the user gets immediate feedback
+  // instead of a network round-trip 404.
+  const BOOKING_CODE_RE = /^[A-Z]{2}[1-9]{5}$/;
+
   const lookupBookingCode = useCallback(
-    async (code) => {
-      if (!code || code.trim().length < 2) {
-        toast('Enter a valid booking code.', 'warn');
+    async (rawCode) => {
+      const code = String(rawCode || '').trim().toUpperCase();
+      if (!code) {
+        toast('Enter a booking code first.', 'warn');
+        return;
+      }
+      if (!BOOKING_CODE_RE.test(code)) {
+        toast(
+          'Booking code format is two letters followed by five digits (e.g. AF36513).',
+          'warn',
+          { ttl: 6000 },
+        );
         return;
       }
       setLookupLoading(true);
       setBookingCodeLookup(null);
       try {
-        const data = await fetchBetByCode(code.trim().toUpperCase());
+        const data = await fetchBetByCode(code);
         setBookingCodeLookup(data.bet);
+        toast(`Loaded slip ${code}.`, 'success');
       } catch (err) {
-        toast(err?.body?.error || err?.message || 'Booking code not found.', 'error');
+        toast(err?.body?.error || err?.message || `No slip exists for code ${code}.`, 'error');
         setBookingCodeLookup(null);
       } finally {
         setLookupLoading(false);
