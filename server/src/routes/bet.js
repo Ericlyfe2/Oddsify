@@ -31,30 +31,20 @@ import { SYSTEM_TYPES, maxSystemReturn } from '../lib/systemBets.js';
 import * as cashOutEngine from '../services/cashOutEngine.js';
 import { LIVE_BETTING } from '../config/env.js';
 import { log } from '../utils/logger.js';
+import { mintUniqueBookingCode } from '../lib/bookingCode.js';
 
 const router = Router();
 
-// AF36513 — 2 uppercase letters + 5 digits.
-function generateBookingCode() {
-  const A = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; // dropped 'O' to avoid 0/O confusion
-  const D = '123456789';
-  const letters = A[Math.floor(Math.random() * A.length)] + A[Math.floor(Math.random() * A.length)];
-  let digits = '';
-  for (let i = 0; i < 5; i++) digits += D[Math.floor(Math.random() * D.length)];
-  return letters + digits;
-}
-
 function uniqueBookingCode() {
-  const allBets = betsStore.all();
-  const allBooked = bookedSlipsStore.all();
-  for (let i = 0; i < 25; i++) {
-    const code = generateBookingCode();
-    const takenByBet = Object.values(allBets).some((b) => b.bookingCode === code);
-    const takenByBooked = !!allBooked[code];
-    if (!takenByBet && !takenByBooked) return code;
-  }
-  // 7-char namespace is huge; this is just paranoia.
-  return generateBookingCode() + Math.floor(Math.random() * 9 + 1);
+  // Build the in-use set from both placed-bet codes and standalone
+  // booked-slip codes so the same namespace is never reused.
+  const taken = new Set(
+    Object.values(betsStore.all() || {})
+      .map((b) => b.bookingCode)
+      .filter(Boolean),
+  );
+  for (const code of Object.keys(bookedSlipsStore.all() || {})) taken.add(code);
+  return mintUniqueBookingCode({ existingCodes: taken });
 }
 
 const betsStore = createStore('bets', {}); // { betId: receipt }

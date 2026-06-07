@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import WalletPage from './pages/WalletPage.jsx';
 import BetHistoryPage from './pages/BetHistoryPage.jsx';
+import CodeHubPage from './pages/CodeHubPage.jsx';
 
 import { AdminProvider, AdminGuard } from './providers/AdminProvider.jsx';
 import AdminShell from './layout/AdminShell.jsx';
@@ -108,6 +109,8 @@ export default function App() {
                   <Route path="/sports" element={<SportsPage />} />
                   <Route path="/live" element={<SportsPage />} />
                   <Route path="/my-bets" element={<BetHistoryPage />} />
+                  <Route path="/codehub" element={<CodeHubPage />} />
+                  <Route path="/code/:code" element={<CodeHubPage />} />
                   <Route
                     path="/casino"
                     element={

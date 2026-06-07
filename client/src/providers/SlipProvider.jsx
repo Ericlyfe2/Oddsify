@@ -26,6 +26,7 @@ const EMPTY = {
   lastBooking: null,
   bookingCodeLookup: null,
   lookupLoading: false,
+  recentCodes: [],
   togglePick: () => {},
   removePick: () => {},
   clearSlip: () => {},
@@ -35,11 +36,43 @@ const EMPTY = {
   closeSlip: () => {},
   placeBet: async () => null,
   bookBet: async () => null,
-  lookupBookingCode: async () => {},
+  lookupBookingCode: async () => null,
+  loadFromCode: async () => null,
+  loadFromSlip: () => false,
+  rememberCode: () => {},
+  forgetCode: () => {},
   clearLookup: () => {},
 };
 
 export const useSlip = () => useContext(SlipCtx) || EMPTY;
+
+// Persistent registry of codes the user has interacted with — codes
+// they booked themselves AND codes they've looked up. Capped so it
+// can't grow forever; the cap chosen to fit a long-tail user comfortably.
+const RECENT_CODES_KEY = 'bv_recent_codes';
+const RECENT_CODES_MAX = 12;
+
+function loadRecentCodes() {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(RECENT_CODES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((e) => e && typeof e.code === 'string').slice(0, RECENT_CODES_MAX);
+  } catch {
+    return [];
+  }
+}
+
+function persistRecentCodes(entries) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(RECENT_CODES_KEY, JSON.stringify(entries.slice(0, RECENT_CODES_MAX)));
+  } catch {
+    /* ignore quota errors */
+  }
+}
 
 export default function SlipProvider({ children }) {
   const { refresh } = useAccount();
@@ -51,6 +84,31 @@ export default function SlipProvider({ children }) {
   const [lastBooking, setLastBooking] = useState(null);
   const [bookingCodeLookup, setBookingCodeLookup] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [recentCodes, setRecentCodes] = useState(loadRecentCodes);
+
+  const rememberCode = useCallback((code, meta = {}) => {
+    if (!code) return;
+    const upper = String(code).toUpperCase();
+    setRecentCodes((prev) => {
+      // Dedupe: any existing entry for this code is replaced and moved to top.
+      const next = [{ code: upper, lastSeenAt: Date.now(), ...meta }, ...prev.filter((e) => e.code !== upper)].slice(
+        0,
+        RECENT_CODES_MAX,
+      );
+      persistRecentCodes(next);
+      return next;
+    });
+  }, []);
+
+  const forgetCode = useCallback((code) => {
+    if (!code) return;
+    const upper = String(code).toUpperCase();
+    setRecentCodes((prev) => {
+      const next = prev.filter((e) => e.code !== upper);
+      persistRecentCodes(next);
+      return next;
+    });
+  }, []);
 
   const togglePick = useCallback((match, key, val) => {
     setPicks((cur) => {
@@ -153,6 +211,7 @@ export default function SlipProvider({ children }) {
       };
       const result = await bookBet(payload);
       setLastBooking(result);
+      rememberCode(result.bookingCode, { kind: 'booked', legs: entries.length });
       toast(`Booking code: ${result.bookingCode}`, 'success', { ttl: 8000 });
       return result;
     } catch (err) {
@@ -167,11 +226,10 @@ export default function SlipProvider({ children }) {
     setBookingCodeLookup(null);
   }, []);
 
-  // Booking codes are 7 characters: 2 uppercase letters + 5 digits 1-9
-  // (no zero, no letter O — see server/src/routes/bet.js:generateBookingCode).
-  // Validate the shape on the client so the user gets immediate feedback
-  // instead of a network round-trip 404.
-  const BOOKING_CODE_RE = /^[A-Z]{2}[1-9]{5}$/;
+  // Booking codes are 7 characters: 2 uppercase letters (no O) + 5
+  // digits 1-9 (no zero). Matches server/src/lib/bookingCode.js so the
+  // client gives the same answer the API would, before any round-trip.
+  const BOOKING_CODE_RE = /^[A-NP-Z]{2}[1-9]{5}$/;
 
   const lookupBookingCode = useCallback(
     async (rawCode) => {
@@ -190,16 +248,78 @@ export default function SlipProvider({ children }) {
       setBookingCodeLookup(null);
       try {
         const data = await fetchBetByCode(code);
-        setBookingCodeLookup(data.bet);
-        toast(`Loaded slip ${code}.`, 'success');
+        const slip = data.bet;
+        setBookingCodeLookup(slip);
+        rememberCode(code, {
+          kind: slip?.status === 'booked' ? 'booked' : 'placed',
+          legs: slip?.legs?.length || 0,
+          totalOdds: slip?.totalOdds,
+        });
+        toast(`Booking code loaded successfully.`, 'success');
+        return slip;
       } catch (err) {
-        toast(err?.body?.error || err?.message || `No slip exists for code ${code}.`, 'error');
+        // Surface specific, user-friendly messages per the spec.
+        let message;
+        if (err?.status === 404) message = 'Booking code not found.';
+        else if (err?.status === 410) message = 'This booking code has expired.';
+        else if (err?.status === 409) message = 'This booking code has already been redeemed.';
+        else message = err?.body?.error || err?.message || `No slip exists for code ${code}.`;
+        toast(message, 'error', { ttl: 6000 });
         setBookingCodeLookup(null);
+        return null;
       } finally {
         setLookupLoading(false);
       }
     },
+    [toast, rememberCode],
+  );
+
+  /**
+   * Drop a slip's selections into the active picks state — the
+   * "Rebook" action. Accepts either a slip object returned from the
+   * server (with .legs) or a placed bet from history. Opens the slip
+   * so the user sees what got loaded.
+   */
+  const loadFromSlip = useCallback(
+    (slip) => {
+      if (!slip?.legs?.length) {
+        toast('That slip has no selections to rebook.', 'warn');
+        return false;
+      }
+      const next = {};
+      for (const leg of slip.legs) {
+        if (!leg.matchId) continue;
+        next[leg.matchId] = {
+          match: {
+            id: leg.matchId,
+            home: leg.home,
+            away: leg.away,
+            market: leg.market || '1X2',
+          },
+          key: leg.outcome,
+          val: Number(leg.odds) || 1,
+          market: leg.market || '1X2',
+        };
+      }
+      setPicks(next);
+      setLastBet(null);
+      setLastBooking(null);
+      setOpen(true);
+      const count = Object.keys(next).length;
+      toast(`Loaded ${count} selection${count === 1 ? '' : 's'} into your slip.`, 'success');
+      return true;
+    },
     [toast],
+  );
+
+  /** Look the code up, then load the slip into picks in one motion. */
+  const loadFromCode = useCallback(
+    async (rawCode) => {
+      const slip = await lookupBookingCode(rawCode);
+      if (slip) loadFromSlip(slip);
+      return slip;
+    },
+    [lookupBookingCode, loadFromSlip],
   );
 
   const value = useMemo(() => {
@@ -213,6 +333,7 @@ export default function SlipProvider({ children }) {
       lastBooking,
       bookingCodeLookup,
       lookupLoading,
+      recentCodes,
       count: entries.length,
       totalOdds,
       togglePick,
@@ -225,6 +346,10 @@ export default function SlipProvider({ children }) {
       placeBet: submit,
       bookBet: book,
       lookupBookingCode,
+      loadFromCode,
+      loadFromSlip,
+      rememberCode,
+      forgetCode,
       clearLookup,
     };
   }, [
@@ -235,6 +360,7 @@ export default function SlipProvider({ children }) {
     lastBooking,
     bookingCodeLookup,
     lookupLoading,
+    recentCodes,
     togglePick,
     removePick,
     clearSlip,
@@ -245,6 +371,10 @@ export default function SlipProvider({ children }) {
     submit,
     book,
     lookupBookingCode,
+    loadFromCode,
+    loadFromSlip,
+    rememberCode,
+    forgetCode,
     clearLookup,
   ]);
 

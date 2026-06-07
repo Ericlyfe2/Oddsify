@@ -11,6 +11,7 @@
  * it caps at 88% height and centers in a max-w-md column.
  */
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTokens, fmtCedi } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
 import { TeamLogo } from './teamBranding.jsx';
@@ -73,6 +74,7 @@ export function OddBetSlipFAB() {
 
 export function OddBetSlip() {
   const T = useTokens();
+  const navigate = useNavigate();
   const {
     picks,
     open,
@@ -132,15 +134,16 @@ export function OddBetSlip() {
         />
       )}
 
-      {/* In the empty state we hide the sheet entirely and render a small
-          floating "Load code" button at the right edge — looks and feels
-          like an FAB rather than a full-width bar. Once the user taps it
-          the slip opens and the booking-code input is reachable as normal. */}
+      {/* Empty state FAB. The full Booking Code Hub lives at /codehub —
+          tapping the FAB takes the user there instead of opening the
+          slip, because that's where they can also browse recent codes
+          and share. The in-slip booking-code lookup still exists for
+          the in-flow "load and place from same screen" case. */}
       {emptyState && !open && (
         <button
           type="button"
-          onClick={openSlip}
-          aria-label="Load booking code"
+          onClick={() => navigate('/codehub')}
+          aria-label="Open Booking Code Hub"
           style={{
             position: 'fixed',
             right: 16,
