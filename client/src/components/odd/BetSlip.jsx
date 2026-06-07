@@ -184,11 +184,7 @@ export function OddBetSlip() {
           // "Load code" FAB above instead of a peek bar, so the sheet stays
           // fully translated off-screen until the user opens it.
           transform:
-            open || lastBet
-              ? 'translateY(0)'
-              : emptyState
-                ? 'translateY(100%)'
-                : 'translateY(calc(100% - 56px))',
+            open || lastBet ? 'translateY(0)' : emptyState ? 'translateY(100%)' : 'translateY(calc(100% - 56px))',
           boxShadow: '0 -16px 40px -10px rgba(0,0,0,0.25)',
           maxHeight: '88vh',
           display: 'flex',

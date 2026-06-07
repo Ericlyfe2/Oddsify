@@ -31,30 +31,26 @@ async function main() {
   const banner = DRY_RUN ? '=== DRY RUN — nothing will be deleted ===' : '=== WIPE — destructive ===';
   console.log(banner);
 
-  const userRows = await pool.query(
-    `SELECT key, data FROM kv_store WHERE store_name = 'users'`,
-  );
+  const userRows = await pool.query(`SELECT key, data FROM kv_store WHERE store_name = 'users'`);
   const admins = userRows.rows.filter((r) => r.data?.role === 'admin');
   const nonAdmins = userRows.rows.filter((r) => r.data?.role !== 'admin');
   const nonAdminKeys = new Set(nonAdmins.map((r) => r.key));
 
-  console.log(`Users:      ${userRows.rowCount} total · ${admins.length} admin (kept) · ${nonAdmins.length} non-admin (target)`);
+  console.log(
+    `Users:      ${userRows.rowCount} total · ${admins.length} admin (kept) · ${nonAdmins.length} non-admin (target)`,
+  );
 
   // Cross-reference bets, transactions, refresh tokens that belong to those users.
   const betRows = await pool.query(`SELECT key, data FROM kv_store WHERE store_name = 'bets'`);
   const txRows = await pool.query(`SELECT key, data FROM kv_store WHERE store_name = 'transactions'`);
-  const refreshRows = await pool.query(
-    `SELECT key, data FROM kv_store WHERE store_name = 'refresh_tokens'`,
-  );
-  const bookedRows = await pool.query(
-    `SELECT key, data FROM kv_store WHERE store_name = 'booked_slips'`,
-  );
+  const refreshRows = await pool.query(`SELECT key, data FROM kv_store WHERE store_name = 'refresh_tokens'`);
+  const bookedRows = await pool.query(`SELECT key, data FROM kv_store WHERE store_name = 'booked_slips'`);
 
   const betKeys = betRows.rows.filter((r) => nonAdminKeys.has(r.data?.userId)).map((r) => r.key);
-  const txKeys = txRows.rows.filter((r) => nonAdminKeys.has(r.key) || nonAdminKeys.has(r.data?.userId)).map((r) => r.key);
-  const refreshKeys = refreshRows.rows
-    .filter((r) => nonAdminKeys.has(r.data?.accountId))
+  const txKeys = txRows.rows
+    .filter((r) => nonAdminKeys.has(r.key) || nonAdminKeys.has(r.data?.userId))
     .map((r) => r.key);
+  const refreshKeys = refreshRows.rows.filter((r) => nonAdminKeys.has(r.data?.accountId)).map((r) => r.key);
   // Booked slips don't tie to a user once created, but they're disposable.
   const bookedKeys = bookedRows.rows.map((r) => r.key);
 
@@ -74,24 +70,21 @@ async function main() {
     const deleted = { users: 0, bets: 0, transactions: 0, refresh: 0, booked: 0 };
 
     if (nonAdminKeys.size) {
-      const r = await client.query(
-        `DELETE FROM kv_store WHERE store_name = 'users' AND key = ANY($1::text[])`,
-        [[...nonAdminKeys]],
-      );
+      const r = await client.query(`DELETE FROM kv_store WHERE store_name = 'users' AND key = ANY($1::text[])`, [
+        [...nonAdminKeys],
+      ]);
       deleted.users = r.rowCount;
     }
     if (betKeys.length) {
-      const r = await client.query(
-        `DELETE FROM kv_store WHERE store_name = 'bets' AND key = ANY($1::text[])`,
-        [betKeys],
-      );
+      const r = await client.query(`DELETE FROM kv_store WHERE store_name = 'bets' AND key = ANY($1::text[])`, [
+        betKeys,
+      ]);
       deleted.bets = r.rowCount;
     }
     if (txKeys.length) {
-      const r = await client.query(
-        `DELETE FROM kv_store WHERE store_name = 'transactions' AND key = ANY($1::text[])`,
-        [txKeys],
-      );
+      const r = await client.query(`DELETE FROM kv_store WHERE store_name = 'transactions' AND key = ANY($1::text[])`, [
+        txKeys,
+      ]);
       deleted.transactions = r.rowCount;
     }
     if (refreshKeys.length) {
@@ -102,16 +95,17 @@ async function main() {
       deleted.refresh = r.rowCount;
     }
     if (bookedKeys.length) {
-      const r = await client.query(
-        `DELETE FROM kv_store WHERE store_name = 'booked_slips' AND key = ANY($1::text[])`,
-        [bookedKeys],
-      );
+      const r = await client.query(`DELETE FROM kv_store WHERE store_name = 'booked_slips' AND key = ANY($1::text[])`, [
+        bookedKeys,
+      ]);
       deleted.booked = r.rowCount;
     }
     await client.query('COMMIT');
 
     console.log('--- wipe complete ---');
-    console.log(`Deleted: ${deleted.users} users, ${deleted.bets} bets, ${deleted.transactions} tx rows, ${deleted.refresh} refresh tokens, ${deleted.booked} booked slips`);
+    console.log(
+      `Deleted: ${deleted.users} users, ${deleted.bets} bets, ${deleted.transactions} tx rows, ${deleted.refresh} refresh tokens, ${deleted.booked} booked slips`,
+    );
   } catch (e) {
     await client.query('ROLLBACK');
     throw e;

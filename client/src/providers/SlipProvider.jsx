@@ -175,17 +175,15 @@ export default function SlipProvider({ children }) {
 
   const lookupBookingCode = useCallback(
     async (rawCode) => {
-      const code = String(rawCode || '').trim().toUpperCase();
+      const code = String(rawCode || '')
+        .trim()
+        .toUpperCase();
       if (!code) {
         toast('Enter a booking code first.', 'warn');
         return;
       }
       if (!BOOKING_CODE_RE.test(code)) {
-        toast(
-          'Booking code format is two letters followed by five digits (e.g. AF36513).',
-          'warn',
-          { ttl: 6000 },
-        );
+        toast('Booking code format is two letters followed by five digits (e.g. AF36513).', 'warn', { ttl: 6000 });
         return;
       }
       setLookupLoading(true);

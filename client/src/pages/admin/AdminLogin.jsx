@@ -209,8 +209,8 @@ export default function AdminLogin() {
                   color: 'var(--text-dim)',
                 }}
               >
-                <strong style={{ color: 'var(--text-soft)' }}>Sign-up is invite-only.</strong> Ask a super admin for
-                a link.
+                <strong style={{ color: 'var(--text-soft)' }}>Sign-up is invite-only.</strong> Ask a super admin for a
+                link.
               </div>
             </form>
           ) : (

@@ -5,11 +5,7 @@ import { setAdminTokens } from '../api/adminApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import CountrySelect from '../components/CountrySelect.jsx';
 import PageBack from '../components/PageBack.jsx';
-import {
-  parseIdentifier,
-  autoFormatPhoneInput,
-  E164_PLACEHOLDER,
-} from '../lib/phone.js';
+import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -224,11 +220,7 @@ export default function LoginPage() {
         // wrong case on email). Echoing it here makes the value the
         // user has to remember explicit.
         const storedId = data.account?.email || idValue;
-        toast(
-          `Account created. Sign in next time with ${storedId} — write it down.`,
-          'success',
-          { ttl: 12000 },
-        );
+        toast(`Account created. Sign in next time with ${storedId} — write it down.`, 'success', { ttl: 12000 });
         routeAfterLogin(data);
       } else {
         const data = await login({
@@ -351,7 +343,9 @@ export default function LoginPage() {
                 </div>
 
                 <label htmlFor="auth-phone">Phone or email</label>
-                <div className={`field${phone && !regIdValid && !!parsedPhone.error ? ' invalid' : ''}${phone && regIdValid ? ' valid' : ''}`}>
+                <div
+                  className={`field${phone && !regIdValid && !!parsedPhone.error ? ' invalid' : ''}${phone && regIdValid ? ' valid' : ''}`}
+                >
                   <span className="field-icon">{regIsEmail ? '✉' : regIsPhone ? '📱' : '👤'}</span>
                   <input
                     id="auth-phone"
@@ -366,9 +360,7 @@ export default function LoginPage() {
                     }}
                   />
                 </div>
-                {phone && parsedPhone.error && (
-                  <p className="phone-error">{parsedPhone.error.message}</p>
-                )}
+                {phone && parsedPhone.error && <p className="phone-error">{parsedPhone.error.message}</p>}
 
                 <label htmlFor="auth-pw">Password</label>
                 <div className="field">
@@ -429,7 +421,9 @@ export default function LoginPage() {
             ) : (
               <>
                 <label htmlFor="auth-id">Phone or email</label>
-                <div className={`field${identifier && !idValid && !!parsedId.error ? ' invalid' : ''}${identifier && idValid ? ' valid' : ''}`}>
+                <div
+                  className={`field${identifier && !idValid && !!parsedId.error ? ' invalid' : ''}${identifier && idValid ? ' valid' : ''}`}
+                >
                   <span className="field-icon">{isEmail ? '✉' : isPhone ? '📱' : '👤'}</span>
                   <input
                     id="auth-id"
@@ -444,9 +438,7 @@ export default function LoginPage() {
                     autoFocus
                   />
                 </div>
-                {identifier && parsedId.error && (
-                  <p className="phone-error">{parsedId.error.message}</p>
-                )}
+                {identifier && parsedId.error && <p className="phone-error">{parsedId.error.message}</p>}
 
                 <label htmlFor="auth-pw">Password</label>
                 <div className="field">
