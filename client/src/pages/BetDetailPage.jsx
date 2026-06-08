@@ -205,7 +205,7 @@ export default function BetDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <div style={{ fontSize: 12, color: S.muted, fontWeight: 500 }}>
-                Ticket No.: <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{code}</span>
+                Ticket ID: <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{code}</span>
               </div>
             </div>
             <div style={{ fontSize: 12, color: S.muted, fontFamily: '"JetBrains Mono", monospace' }}>
@@ -216,8 +216,8 @@ export default function BetDetailPage() {
           <div className="flex items-center justify-between" style={{ marginTop: 10, paddingBottom: 12 }}>
             <span style={{ fontSize: 16, fontWeight: 700 }}>{betType}</span>
             <div className="flex items-center" style={{ gap: 6, color: ss.color, fontWeight: 700, fontSize: 15 }}>
-              <span>{ss.label}</span>
               <ss.Icon size={18} color={ss.color} />
+              <span>{ss.label}</span>
             </div>
           </div>
 
@@ -357,6 +357,28 @@ export default function BetDetailPage() {
           <span>Check Transaction History</span>
           <ChevronRight size={14} color={S.muted} />
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Remove this ticket from your records?')) {
+              toast('Settled tickets are kept for your records and cannot be deleted.', 'warn');
+            }
+          }}
+          className="w-full"
+          style={{
+            marginTop: 14,
+            background: 'none',
+            border: 0,
+            color: '#DC2626',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            textAlign: 'center',
+          }}
+        >
+          Delete Ticket
+        </button>
       </div>
     </Frame>
   );
@@ -406,7 +428,7 @@ function Frame({ onBack, children }) {
           </button>
           <div style={{ fontSize: 16, fontWeight: 600 }}>Ticket Details</div>
           <div className="flex items-center" style={{ gap: 12 }}>
-            <Bell size={18} color="#FFFFFF" />
+            <Headphones size={18} color="#FFFFFF" />
             <Home size={18} color="#FFFFFF" />
           </div>
         </div>
@@ -435,26 +457,29 @@ function LegCard({ leg, index }) {
   const matchDate = leg.matchDate || leg.kickoff;
   const odds = Number(leg.odds || 0);
 
+  const showStatus = lr === 'won' || lr === 'lost';
+  const pickBoxBg = lr === 'won' ? '#E6F4EA' : lr === 'lost' ? '#FBEAEA' : '#F9FAFB';
+
   return (
     <div
+      className="flex"
       style={{
+        gap: 12,
         background: S.whiteCard,
         borderRadius: 8,
         padding: '12px 14px',
         marginBottom: 10,
         color: S.bodyText,
+        alignItems: 'stretch',
       }}
     >
-      <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: '#6B7280' }}>
-          Game ID: <span style={{ color: S.bodyText, fontWeight: 600 }}>{code}</span>
-          {matchDate && <span style={{ marginLeft: 6, color: '#9CA3AF' }}>{fmtMatchDate(matchDate)}</span>}
-        </div>
-        {(lr === 'won' || lr === 'lost') && (
+      {/* Status column (left) */}
+      {showStatus && (
+        <div className="flex items-center" style={{ flexShrink: 0 }}>
           <div
             style={{
-              width: 18,
-              height: 18,
+              width: 22,
+              height: 22,
               borderRadius: 999,
               background: lrColor,
               display: 'flex',
@@ -463,52 +488,11 @@ function LegCard({ leg, index }) {
             }}
           >
             {lr === 'won' ? (
-              <CheckCircle2 size={14} color="#FFFFFF" fill={lrColor} />
+              <CheckCircle2 size={16} color="#FFFFFF" fill={lrColor} />
             ) : (
-              <XCircle size={14} color="#FFFFFF" fill={lrColor} />
+              <XCircle size={16} color="#FFFFFF" fill={lrColor} />
             )}
           </div>
-        )}
-      </div>
-
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
-        {leg.home} VS {leg.away}
-      </div>
-
-      <button
-        type="button"
-        className="flex items-center"
-        style={{
-          gap: 4,
-          marginTop: 4,
-          background: 'none',
-          border: 0,
-          padding: 0,
-          color: S.green,
-          fontSize: 12,
-          fontWeight: 500,
-          cursor: 'pointer',
-        }}
-      >
-        Match Tracker <ChevronRight size={12} />
-      </button>
-
-      {(leg.scoreHome != null || leg.scoreAway != null) && (
-        <div
-          style={{
-            background: '#F9FAFB',
-            borderRadius: 6,
-            padding: '8px 10px',
-            marginTop: 8,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#6B7280' }}>FT Score</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
-            {leg.scoreHome ?? '?'}:{leg.scoreAway ?? '?'}
-          </span>
         </div>
       )}
 
@@ -522,15 +506,48 @@ function LegCard({ leg, index }) {
               {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
               {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
             </span>
-          }
-          valueColor={lrColor}
-        />
-        <LegRow label="Market" value={leg.market || 'Match Result'} />
-        <LegRow
-          label="Outcome"
-          value={leg.outcomeLabel || leg.market || 'Match Result'}
-          valueColor={lr === 'won' ? S.green : lr === 'lost' ? '#DC2626' : '#374151'}
-        />
+          </div>
+        )}
+
+        {/* Pick / Market / Outcome box (tinted by result) */}
+        <div
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            background: pickBoxBg,
+            borderRadius: 6,
+            padding: '8px 10px',
+            marginTop: 8,
+          }}
+        >
+          {lr === 'won' && (
+            <Trophy
+              size={56}
+              color={S.green}
+              style={{ position: 'absolute', right: 6, bottom: -6, opacity: 0.14, pointerEvents: 'none' }}
+            />
+          )}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <LegRow
+              label="Pick"
+              value={
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {leg.pickLabel || leg.label || leg.pick || leg.key}
+                  {odds > 0 && <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}
+                  {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
+                  {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
+                </span>
+              }
+              valueColor={lrColor}
+            />
+            <LegRow label="Market" value={leg.market || 'Match Result'} />
+            <LegRow
+              label="Outcome"
+              value={leg.outcomeLabel || leg.market || 'Match Result'}
+              valueColor={lr === 'won' ? S.green : lr === 'lost' ? '#DC2626' : '#374151'}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
