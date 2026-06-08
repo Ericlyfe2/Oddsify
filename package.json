@@ -27,5 +27,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "prettier": "^3.2.5",
     "sharp": "^0.33.5"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0"
   }
 }
