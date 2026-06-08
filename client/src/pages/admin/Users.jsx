@@ -1415,6 +1415,34 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
           </span>
         }
       >
+        {/* Pending promotion banner — shown when deposit triggered a review request */}
+        {user.stagePromotionRequested && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 138, 61, 0.06))',
+              border: '1px solid rgba(255, 209, 102, 0.35)',
+              color: '#ffd166',
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 16 }}>⏳</span>
+            <div>
+              <div>Promotion pending — Stage {user.stagePromotionRequestedFrom} → {user.stagePromotionRequestedTo}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 400, color: 'var(--text-dim)', marginTop: 2 }}>
+                {user.stagePromotionRequestedReason || 'Awaiting admin review.'}
+                {user.stagePromotionRequestedAt ? ` Requested ${ago(user.stagePromotionRequestedAt)}.` : ''}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {current < 4 ? (
             <button

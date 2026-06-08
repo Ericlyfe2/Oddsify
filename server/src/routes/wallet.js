@@ -8,15 +8,14 @@ import { updateUser, logActivity } from '../db/users.js';
 import { createStore } from '../db/store.js';
 import { emitToUser, emitAdmin } from '../services/realtime.js';
 
-// Auto-promotion ladder. A SINGLE deposit at or above the threshold moves
-// the player up one stage. Cumulative top-ups never qualify. Stage 3 → 4 is
-// ALWAYS manual: admins must promote the player from the user drawer.
+// Deposit threshold that triggers a stage-promotion request. A single deposit
+// at or above this amount flags the user for admin review. ALL promotions are
+// manual — the admin must approve via the user drawer in the admin panel.
 //
-//   Stage 0 → Stage 1 : single deposit ≥ STAGE_PROMOTE_THRESHOLD
-//   Stage 1 → Stage 2 : single deposit ≥ STAGE_PROMOTE_THRESHOLD
-//   Stage 2 → Stage 3 : single deposit ≥ STAGE_PROMOTE_THRESHOLD (auto-blocks)
-//   Stage 3 blocked → unblocked : single deposit ≥ STAGE3_UNBLOCK_THRESHOLD
-//   Stage 3 → Stage 4 : admin only
+//   Stage 0 → 1 : deposit ≥ STAGE_PROMOTE_THRESHOLD → flags pending review
+//   Stage 1 → 2 : deposit ≥ STAGE_PROMOTE_THRESHOLD → flags pending review
+//   Stage 2 → 3 : deposit ≥ STAGE_PROMOTE_THRESHOLD → flags pending review
+//   Stage 3 → 4 : admin only (no deposit trigger)
 export const STAGE_PROMOTE_THRESHOLD = 1000;
 export const STAGE3_UNBLOCK_THRESHOLD = 2000;
 // Back-compat alias — STAGE0_PROMOTION_THRESHOLD is still imported elsewhere.

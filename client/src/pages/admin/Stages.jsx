@@ -37,7 +37,7 @@ const STAGES = [
     title: 'Stage 0',
     name: 'New',
     description:
-      'Brand-new account · "Account not verified" banner is shown. Auto-promotes to Stage 1 the moment lifetime deposits hit GHS 1,000.',
+      'Brand-new account · "Account not verified" banner is shown. A single deposit of GHS 1,000+ flags the user for admin review.',
     accent: '#94a3b8',
     gradient: 'linear-gradient(135deg, #475569 0%, #94a3b8 100%)',
   },
@@ -45,7 +45,7 @@ const STAGES = [
     id: 1,
     title: 'Stage 1',
     name: 'Registered',
-    description: 'Deposit-verified by the system. Verify the user manually to promote them to Stage 2.',
+    description: 'Deposit-verified and awaiting admin review. Manually promote them to Stage 2 from the user drawer.',
     accent: '#7c5cff',
     gradient: 'linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%)',
   },
@@ -183,7 +183,7 @@ export default function StagesPage() {
         <div>
           <h1>Player stages</h1>
           <p>
-            Every new account starts in <strong>Stage 1</strong>. Verify them to move up — one stage at a time.
+            Every new account starts in <strong>Stage 0</strong>. All promotions require admin approval — one stage at a time.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

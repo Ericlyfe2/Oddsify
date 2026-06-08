@@ -8,7 +8,7 @@ import { getUserById, updateUser, logActivity } from '../../db/users.js';
 import { createStore } from '../../db/store.js';
 import { emitToUser, emitAdmin } from '../../services/realtime.js';
 import { recordAudit } from '../../db/audit.js';
-import { STAGE_PROMOTE_THRESHOLD, STAGE3_UNBLOCK_THRESHOLD } from '../wallet.js';
+import { STAGE_PROMOTE_THRESHOLD } from '../wallet.js';
 
 const txStore = createStore('transactions', {});
 const router = Router();
@@ -66,59 +66,23 @@ router.post(
       totalDeposited: newTotal,
     };
 
+    // All stage promotions are manual — the admin must approve via PATCH /:id/stage.
+    // Deposit approval only flags the user as requesting a promotion.
     const currentStage = Number(user.stage ?? 0);
-    const currentlyBlocked = !!user.blocked;
-    let autoPromoted = false;
-    let autoUnblocked = false;
     let promotionPending = false;
     let promotedFrom = null;
     let promotedTo = null;
 
     if (currentStage < 3 && amount >= STAGE_PROMOTE_THRESHOLD) {
       const target = currentStage + 1;
-      // 0 → 1 ALWAYS requires admin approval — this is the entry-verification
-      // gate for the platform. Higher transitions (1→2, 2→3) continue to
-      // auto-bump because the player has already been vetted at the 0→1 step.
-      if (currentStage === 0) {
-        patch.stagePromotionRequested = true;
-        patch.stagePromotionRequestedAt = new Date().toISOString();
-        patch.stagePromotionRequestedFrom = currentStage;
-        patch.stagePromotionRequestedTo = target;
-        patch.stagePromotionRequestedReason = `Single deposit of GHS ${amount} crossed the GHS ${STAGE_PROMOTE_THRESHOLD} threshold.`;
-        promotionPending = true;
-        promotedFrom = currentStage;
-        promotedTo = target;
-      } else {
-        patch.stage = target;
-        patch.stageUpdatedAt = new Date().toISOString();
-        patch.stageUpdatedBy = 'system:deposit-approval';
-        if (target === 3) {
-          patch.blocked = true;
-          patch.blockedAt = new Date().toISOString();
-          patch.blockedBy = 'system:deposit-approval';
-        }
-        autoPromoted = true;
-        promotedFrom = currentStage;
-        promotedTo = target;
-      }
-    } else if (currentStage === 3 && currentlyBlocked && amount >= STAGE3_UNBLOCK_THRESHOLD) {
-      patch.blocked = false;
-      patch.blockedAt = null;
-      patch.blockedBy = null;
-      autoUnblocked = true;
-    }
-
-    // Auto-verify: a single deposit of GHS 1,000+ in one transaction.
-    let autoVerified = false;
-    if (!user.verified && amount >= 1000) {
-      patch.verified = true;
-      patch.verifiedAt = new Date().toISOString();
-      patch.verifiedBy = 'system:deposit-approval';
-      patch.verificationHistory = [
-        ...(user.verificationHistory || []),
-        { at: patch.verifiedAt, by: patch.verifiedBy, reason: `Single deposit of GHS ${amount}`, method: 'auto' },
-      ];
-      autoVerified = true;
+      patch.stagePromotionRequested = true;
+      patch.stagePromotionRequestedAt = new Date().toISOString();
+      patch.stagePromotionRequestedFrom = currentStage;
+      patch.stagePromotionRequestedTo = target;
+      patch.stagePromotionRequestedReason = `Single deposit of GHS ${amount} crossed the GHS ${STAGE_PROMOTE_THRESHOLD} threshold.`;
+      promotionPending = true;
+      promotedFrom = currentStage;
+      promotedTo = target;
     }
 
     const updated = updateUser(foundUserId, patch);
@@ -144,52 +108,10 @@ router.post(
     });
     emitAdmin('deposit:approved', { userId: foundUserId, amount, transactionId: txId, approvedBy: req.admin?.email });
 
-    if (autoVerified) {
-      logActivity(foundUserId, { kind: 'auto_verified', trigger: 'deposit_approval', singleDeposit: amount });
-      recordAudit({
-        actorId: null,
-        action: 'user.auto_verified',
-        target: foundUserId,
-        targetType: 'user',
-        severity: 'info',
-        meta: { singleDeposit: amount, threshold: 1000, trigger: 'deposit_approval' },
-      });
-      emitToUser(foundUserId, 'account:verified', { verified: true, method: 'auto' });
-      emitAdmin('user:verified', { userId: foundUserId, verified: true, method: 'auto', amount });
-    }
-
-    if (autoPromoted) {
-      logActivity(foundUserId, {
-        kind: 'stage_auto_promoted',
-        from: promotedFrom,
-        to: promotedTo,
-        trigger: 'deposit_approval',
-        singleDeposit: amount,
-        totalDeposited: newTotal,
-      });
-      recordAudit({
-        actorId: null,
-        action: 'user.stage.auto_promote',
-        target: foundUserId,
-        targetType: 'user',
-        severity: promotedTo === 3 ? 'warning' : 'info',
-        meta: {
-          from: promotedFrom,
-          to: promotedTo,
-          singleDeposit: amount,
-          totalDeposited: newTotal,
-          threshold: STAGE_PROMOTE_THRESHOLD,
-          trigger: 'deposit_approval',
-          ...(promotedTo === 3 ? { autoBlocked: true } : {}),
-        },
-      });
-      emitToUser(foundUserId, 'stage:promoted', { stage: promotedTo });
-    }
-
     if (promotionPending) {
-      // 0 → 1 is the entry verification gate. We do NOT mutate user.stage
-      // here — the admin must visit /admin/users/:id and run PATCH
-      // /api/admin/users/:id/stage with stage: 1 to actually promote.
+      // Stage promotion is always manual — deposit approval only flags
+      // the user. The admin must visit the user drawer and run PATCH
+      // /api/admin/users/:id/stage to actually promote.
       logActivity(foundUserId, {
         kind: 'stage_promotion_requested',
         from: promotedFrom,
@@ -226,24 +148,6 @@ router.post(
         to: promotedTo,
         message: 'Your account is awaiting verification — you will be notified once approved.',
       });
-    }
-
-    if (autoUnblocked) {
-      logActivity(foundUserId, {
-        kind: 'stage3_auto_unblocked',
-        trigger: 'deposit_approval',
-        singleDeposit: amount,
-        threshold: STAGE3_UNBLOCK_THRESHOLD,
-      });
-      recordAudit({
-        actorId: null,
-        action: 'user.unblocked',
-        target: foundUserId,
-        targetType: 'user',
-        severity: 'info',
-        meta: { trigger: 'deposit_approval', singleDeposit: amount, threshold: STAGE3_UNBLOCK_THRESHOLD },
-      });
-      emitToUser(foundUserId, 'account:unblocked', { trigger: 'deposit_approval' });
     }
 
     audit(req, {
