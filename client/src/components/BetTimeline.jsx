@@ -9,15 +9,20 @@ function fmt(iso) {
 function fmtFull(iso) {
   if (!iso) return null;
   const d = new Date(iso);
-  return d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short' }) + ', ' +
-    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' });
+  return (
+    d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short' }) +
+    ', ' +
+    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
 export default function BetTimeline({ bet, T: theme }) {
   const T = theme || useTokens();
 
   const legs = bet.legs || bet.selections || [];
-  const allFinished = legs.length > 0 && legs.every((l) => l.status === 'won' || l.status === 'lost' || l.won === true || l.won === false);
+  const allFinished =
+    legs.length > 0 &&
+    legs.every((l) => l.status === 'won' || l.status === 'lost' || l.won === true || l.won === false);
   const hasLiveLeg = legs.some((l) => l.isLive || l.status === 'live');
   const isSettled = bet.status !== 'open';
   const isCashedOut = bet.status === 'cashed_out';
@@ -78,68 +83,74 @@ export default function BetTimeline({ bet, T: theme }) {
   ];
 
   return (
-    <div style={{
-      padding: '16px 8px',
-      borderRadius: 12,
-      background: T.surfaceAlt,
-      border: `1px solid ${T.line}`,
-    }}>
+    <div
+      style={{
+        padding: '16px 8px',
+        borderRadius: 12,
+        background: T.surfaceAlt,
+        border: `1px solid ${T.line}`,
+      }}
+    >
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 0 }}>
         {events.map((evt, i) => {
           const isLast = i === events.length - 1;
           return (
             <div key={evt.key} style={{ display: 'flex', gap: 12, alignItems: 'stretch', minHeight: 44 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 24, flexShrink: 0 }}>
-                <div style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: evt.highlight
-                    ? (bet.status === 'won' || bet.status === 'cashed_out' ? '#16a34a' : '#2563eb')
-                    : evt.done
-                      ? T.greenBright
-                      : evt.active
-                        ? '#2563eb'
-                        : T.line,
-                  color: evt.done || evt.highlight || evt.active ? '#fff' : T.inkDim,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                  position: 'relative',
-                  zIndex: 1,
-                  transition: 'all 300ms',
-                  animation: evt.active ? 'pulse 2s infinite' : 'none',
-                }}>
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: evt.highlight
+                      ? bet.status === 'won' || bet.status === 'cashed_out'
+                        ? '#16a34a'
+                        : '#2563eb'
+                      : evt.done
+                        ? T.greenBright
+                        : evt.active
+                          ? '#2563eb'
+                          : T.line,
+                    color: evt.done || evt.highlight || evt.active ? '#fff' : T.inkDim,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    position: 'relative',
+                    zIndex: 1,
+                    transition: 'all 300ms',
+                    animation: evt.active ? 'pulse 2s infinite' : 'none',
+                  }}
+                >
                   <TimelineIcon name={evt.icon} />
                 </div>
                 {!isLast && (
-                  <div style={{
-                    flex: 1,
-                    width: 2,
-                    background: evt.done ? T.greenBright : T.line,
-                    opacity: evt.done ? 1 : 0.3,
-                    marginTop: 2,
-                    transition: 'background 300ms',
-                  }} />
+                  <div
+                    style={{
+                      flex: 1,
+                      width: 2,
+                      background: evt.done ? T.greenBright : T.line,
+                      opacity: evt.done ? 1 : 0.3,
+                      marginTop: 2,
+                      transition: 'background 300ms',
+                    }}
+                  />
                 )}
               </div>
               <div style={{ flex: 1, paddingBottom: isLast ? 0 : 4 }}>
-                <div style={{
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  color: evt.done || evt.highlight ? T.ink : T.inkDim,
-                  transition: 'color 300ms',
-                }}>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: evt.done || evt.highlight ? T.ink : T.inkDim,
+                    transition: 'color 300ms',
+                  }}
+                >
                   {evt.label}
                 </div>
-                {evt.time && (
-                  <div style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 1 }}>
-                    {evt.time}
-                  </div>
-                )}
+                {evt.time && <div style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 1 }}>{evt.time}</div>}
               </div>
             </div>
           );
@@ -156,12 +167,22 @@ function TimelineIcon({ name }) {
     play: 'M5 3l14 9-14 9V3z',
     square: 'M6 6h12v12H6z',
     dollar: 'M12 1v22m-6-6h8a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2z',
-    credit: 'M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H3V6h18v12zM7 8h10v2H7V8zm0 4h6v2H7v-2z',
+    credit:
+      'M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H3V6h18v12zM7 8h10v2H7V8zm0 4h6v2H7v-2z',
     flag: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
   };
 
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d={paths[name] || paths.check} />
     </svg>
   );

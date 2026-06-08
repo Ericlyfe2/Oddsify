@@ -34,10 +34,18 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
   const isProfit = profit >= 0;
   const ts = bet.cashOutAt
     ? new Date(bet.cashOutAt).toLocaleString('en-GH', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       })
     : new Date().toLocaleString('en-GH', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
 
   return (
@@ -52,26 +60,34 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
 
       <div className="cso-confetti-layer" aria-hidden>
         {Array.from({ length: 50 }).map((_, i) => (
-          <span key={i} className="cso-confetti-piece" style={{
-            '--x': `${Math.random() * 100}%`,
-            '--d': `${Math.random() * 1.6}s`,
-            '--r': `${Math.random() * 360}deg`,
-            '--c': ['#4ade80','#22c55e','#16a34a','#ffd76d','#ffb800','#86efac','#bbf7d0'][i % 7],
-            '--w': `${5 + Math.random() * 6}px`,
-            '--h': `${8 + Math.random() * 12}px`,
-            '--tx': `${-40 + Math.random() * 80}px`,
-          }} />
+          <span
+            key={i}
+            className="cso-confetti-piece"
+            style={{
+              '--x': `${Math.random() * 100}%`,
+              '--d': `${Math.random() * 1.6}s`,
+              '--r': `${Math.random() * 360}deg`,
+              '--c': ['#4ade80', '#22c55e', '#16a34a', '#ffd76d', '#ffb800', '#86efac', '#bbf7d0'][i % 7],
+              '--w': `${5 + Math.random() * 6}px`,
+              '--h': `${8 + Math.random() * 12}px`,
+              '--tx': `${-40 + Math.random() * 80}px`,
+            }}
+          />
         ))}
       </div>
 
       <div className="cso-particle-layer" aria-hidden>
         {Array.from({ length: 20 }).map((_, i) => (
-          <span key={i} className="cso-particle" style={{
-            '--x': `${20 + Math.random() * 60}%`,
-            '--d': `${Math.random() * 2}s`,
-            '--s': `${3 + Math.random() * 5}px`,
-            '--c': ['#4ade80','#22c55e','#86efac'][i % 3],
-          }} />
+          <span
+            key={i}
+            className="cso-particle"
+            style={{
+              '--x': `${20 + Math.random() * 60}%`,
+              '--d': `${Math.random() * 2}s`,
+              '--s': `${3 + Math.random() * 5}px`,
+              '--c': ['#4ade80', '#22c55e', '#86efac'][i % 3],
+            }}
+          />
         ))}
       </div>
 
@@ -80,7 +96,15 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
           <span className="cso-badge">CASHOUT SUCCESSFUL</span>
           {canClose && (
             <button type="button" className="cso-x" onClick={handleClose} aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
@@ -93,7 +117,9 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
 
         <div className="cso-glow" aria-hidden />
 
-        <h2 id="cso-title" className="cso-title">Cashout Successful!</h2>
+        <h2 id="cso-title" className="cso-title">
+          Cashout Successful!
+        </h2>
         <p className="cso-sub">Your cash-out has been credited to your wallet.</p>
 
         <div className="cso-amount">
@@ -128,7 +154,14 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
         </div>
 
         <div className="cso-actions">
-          <button type="button" className="cso-btn cso-btn-primary" onClick={() => { onViewBets?.(); handleClose(); }}>
+          <button
+            type="button"
+            className="cso-btn cso-btn-primary"
+            onClick={() => {
+              onViewBets?.();
+              handleClose();
+            }}
+          >
             View My Bets
           </button>
           <button type="button" className="cso-btn cso-btn-ghost" onClick={handleClose}>
@@ -166,7 +199,10 @@ function TrophyBadge({ isProfit }) {
         <path d="M28 46 H36 V52 H28 Z" fill="#7a3f00" />
         <path d="M22 52 H42 V55 H22 Z" fill="#3a1f00" />
         <circle cx="32" cy="26" r="6" fill="#fff3b8" opacity=".75" />
-        <path d="M32 22 l1.6 3.2 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5 z" fill="#a86200" />
+        <path
+          d="M32 22 l1.6 3.2 3.6 .5 -2.6 2.5 .6 3.6 -3.2 -1.7 -3.2 1.7 .6 -3.6 -2.6 -2.5 3.6 -.5 z"
+          fill="#a86200"
+        />
       </svg>
     </div>
   );

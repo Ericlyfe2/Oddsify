@@ -183,7 +183,8 @@ export default function StagesPage() {
         <div>
           <h1>Player stages</h1>
           <p>
-            Every new account starts in <strong>Stage 0</strong>. All promotions require admin approval — one stage at a time.
+            Every new account starts in <strong>Stage 0</strong>. All promotions require admin approval — one stage at a
+            time.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

@@ -16,24 +16,62 @@ const bet = {
   type: 'Multiple',
   selections: [
     { pick: 'Home', odds: 1.19, market: '1X2', match: 'Ecuador vs Guatemala', datetime: '07/06 20:00' },
-    { pick: 'Home', odds: 1.20, market: '1X2', match: 'Colombia vs Jordan', datetime: '07/06 23:00' },
+    { pick: 'Home', odds: 1.2, market: '1X2', match: 'Colombia vs Jordan', datetime: '07/06 23:00' },
   ],
-  stake: 0.10,
+  stake: 0.1,
   potentialWin: 0.14,
-  cashoutAmount: 0.10,
+  cashoutAmount: 0.1,
   currency: 'GHS',
   balance: 0.01,
 };
 
 const S = {
   tabBar: { height: 48, background: '#0B1F3A' },
-  tabActive: { background: '#FFFFFF', color: '#0B1F3A', fontWeight: 600, fontSize: 15, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, border: 0, outline: 'none' },
-  tabInactive: { background: '#0B1F3A', color: '#FFFFFF', fontWeight: 500, fontSize: 15, borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, border: 0, outline: 'none' },
-  balancePill: { background: '#1FAA4A', padding: '4px 10px', borderRadius: 999, color: '#FFFFFF', fontSize: 12, fontWeight: 600 },
+  tabActive: {
+    background: '#FFFFFF',
+    color: '#0B1F3A',
+    fontWeight: 600,
+    fontSize: 15,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    border: 0,
+    outline: 'none',
+  },
+  tabInactive: {
+    background: '#0B1F3A',
+    color: '#FFFFFF',
+    fontWeight: 500,
+    fontSize: 15,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    border: 0,
+    outline: 'none',
+  },
+  balancePill: {
+    background: '#1FAA4A',
+    padding: '4px 10px',
+    borderRadius: 999,
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 600,
+  },
   chipActive: { background: '#0B1F3A', color: '#FFFFFF' },
   chipInactive: { background: '#F2F4F7', color: '#3A4A5C' },
   card: { background: '#FFFFFF', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', padding: '14px 16px' },
-  cashoutBtn: { background: '#1FAA4A', borderRadius: 8, border: 0, outline: 'none', color: '#FFFFFF', fontSize: 15, fontWeight: 700, letterSpacing: 0.2 },
+  cashoutBtn: {
+    background: '#1FAA4A',
+    borderRadius: 8,
+    border: 0,
+    outline: 'none',
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+  },
   divider: { borderTop: '1px solid #E5E7EB' },
   green: '#1FAA4A',
   navy: '#0B1F3A',
@@ -51,7 +89,11 @@ function SkeletonPulse() {
         <div style={{ width: 120, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
       </div>
       {[1, 2].map((i) => (
-        <div key={i} className="flex items-start" style={{ gap: 12, padding: '12px 0', borderBottom: i < 2 ? '1px solid #E5E7EB' : 'none' }}>
+        <div
+          key={i}
+          className="flex items-start"
+          style={{ gap: 12, padding: '12px 0', borderBottom: i < 2 ? '1px solid #E5E7EB' : 'none' }}
+        >
           <div style={{ width: 18, height: 18, background: '#E5E7EB', borderRadius: 999, flexShrink: 0 }} />
           <div className="flex-1 space-y-2">
             <div style={{ width: '60%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
@@ -109,14 +151,27 @@ export default function OpenBetsScreen() {
 
   return (
     <div className="min-h-screen flex items-start justify-center" style={{ background: '#0B1F3A' }}>
-      <div className="w-full flex flex-col" style={{ maxWidth: 414, minHeight: '100vh', background: S.pageBg, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <div
+        className="w-full flex flex-col"
+        style={{
+          maxWidth: 414,
+          minHeight: '100vh',
+          background: S.pageBg,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        }}
+      >
         {/* ── Top tab bar ── */}
         <div className="relative flex" style={S.tabBar}>
           <button {...tabProps('open')}>Open Bets (1)</button>
           <button {...tabProps('history')}>Bet History</button>
-          <div className="absolute flex items-center gap-1 cursor-default" style={{ top: 8, right: 12, ...S.balancePill }}>
+          <div
+            className="absolute flex items-center gap-1 cursor-default"
+            style={{ top: 8, right: 12, ...S.balancePill }}
+          >
             <Wallet size={12} />
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{bet.currency} {bet.balance.toFixed(2)}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {bet.currency} {bet.balance.toFixed(2)}
+            </span>
           </div>
         </div>
 
@@ -150,7 +205,12 @@ export default function OpenBetsScreen() {
               );
             })}
           </div>
-          <button type="button" className="cursor-pointer" style={{ background: 'none', border: 0, padding: 0, outline: 'none' }} aria-label="Toggle view">
+          <button
+            type="button"
+            className="cursor-pointer"
+            style={{ background: 'none', border: 0, padding: 0, outline: 'none' }}
+            aria-label="Toggle view"
+          >
             <LayoutGrid size={20} color="#6B7280" />
           </button>
         </div>
@@ -206,13 +266,23 @@ export default function OpenBetsScreen() {
                     <div className="flex-1" style={{ minWidth: 0 }}>
                       <div className="flex items-center" style={{ gap: 6 }}>
                         <Crosshair size={14} color={S.navy} />
-                        <span style={{ fontWeight: 700, fontSize: 14, color: S.navy, fontVariantNumeric: 'tabular-nums' }}>
+                        <span
+                          style={{ fontWeight: 700, fontSize: 14, color: S.navy, fontVariantNumeric: 'tabular-nums' }}
+                        >
                           {sel.pick} @ {sel.odds.toFixed(2)}
                         </span>
                         <span style={{ fontWeight: 400, fontSize: 12, color: S.lightMuted }}>{sel.market}</span>
                       </div>
                       <div style={{ marginTop: 4 }}>
-                        <span style={{ color: S.navy, fontSize: 14, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                        <span
+                          style={{
+                            color: S.navy,
+                            fontSize: 14,
+                            fontWeight: 500,
+                            textDecoration: 'underline',
+                            textUnderlineOffset: 2,
+                          }}
+                        >
                           {sel.match}
                         </span>
                       </div>
@@ -241,7 +311,14 @@ export default function OpenBetsScreen() {
                     }}
                   >
                     {showDetails ? 'Hide Match Details' : 'Show Match Details'}
-                    <ChevronUp size={14} color={S.green} style={{ transition: 'transform 200ms', transform: showDetails ? 'rotate(0deg)' : 'rotate(180deg)' }} />
+                    <ChevronUp
+                      size={14}
+                      color={S.green}
+                      style={{
+                        transition: 'transform 200ms',
+                        transform: showDetails ? 'rotate(0deg)' : 'rotate(180deg)',
+                      }}
+                    />
                   </button>
                 </div>
 
@@ -253,7 +330,9 @@ export default function OpenBetsScreen() {
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between" style={{ padding: '4px 0' }}>
                       <span style={{ color: S.bodyText, fontSize: 13, fontWeight: 500 }}>{label}</span>
-                      <span style={{ color: S.navy, fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                      <span
+                        style={{ color: S.navy, fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                      >
                         {value.toFixed(2)}
                       </span>
                     </div>
