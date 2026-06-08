@@ -8,7 +8,9 @@
 // In dev, leave VITE_API_BASE unset — Vite proxies /api to the local server.
 // In production (Vercel), set VITE_API_BASE to the deployed backend, e.g.
 //   VITE_API_BASE=https://oddsify-api.onrender.com
-const API_BASE = (import.meta.env.VITE_API_BASE || '') + '/api';
+// If unset in production, falls back to the Render backend automatically.
+const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify-api.onrender.com' : '';
+const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_PROD_API) + '/api';
 const ACCESS_KEY = 'bv_access';
 const REFRESH_KEY = 'bv_refresh';
 
