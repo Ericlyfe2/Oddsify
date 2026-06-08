@@ -27,7 +27,7 @@ import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
-import { useTokens, fmtCedi } from './odd/tokens.jsx';
+import { useTokens, fmtCedi } from '../components/odd/tokens.jsx';
 import { useTheme } from '../providers/ThemeProvider.jsx';
 import CashoutConfirmModal from '../components/CashoutConfirmModal.jsx';
 import CashoutSuccessOverlay from '../components/CashoutSuccessOverlay.jsx';
