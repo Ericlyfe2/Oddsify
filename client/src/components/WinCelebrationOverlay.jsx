@@ -66,7 +66,14 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
   const stake = Number(focus.stake || 0);
   const profit = showPayout - stake;
   const legs = focus.legs?.length || 1;
-  const modeLbl = focus.mode === 'single' ? 'Single' : focus.mode === 'multiple' ? 'Multiple' : focus.mode === 'system' ? 'System' : focus.mode || 'Bet';
+  const modeLbl =
+    focus.mode === 'single'
+      ? 'Single'
+      : focus.mode === 'multiple'
+        ? 'Multiple'
+        : focus.mode === 'system'
+          ? 'System'
+          : focus.mode || 'Bet';
   const slipCode = focus.bookingCode || toBookingCode(focus.id);
   const paidAt = paidAtLabel(focus.settledAt || focus.placedAt);
   const badgeLabel = isCashOut ? 'CASH-OUT CONFIRMED' : 'WIN CONFIRMED';
@@ -86,12 +93,20 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
 
       <div className="wco-fireworks" aria-hidden>
         {Array.from({ length: 3 }).map((_, burst) => (
-          <div key={burst} className="wco-burst" style={{ '--d': `${burst * 1.2}s`, '--x': `${30 + burst * 20}%`, '--y': `${25 + burst * 15}%` }}>
+          <div
+            key={burst}
+            className="wco-burst"
+            style={{ '--d': `${burst * 1.2}s`, '--x': `${30 + burst * 20}%`, '--y': `${25 + burst * 15}%` }}
+          >
             {Array.from({ length: 8 }).map((_, p) => (
-              <span key={p} className="wco-burst-particle" style={{
-                '--a': `${p * 45}deg`,
-                '--c': ['#ffd76d','#ffb800','#ff9f1c','#ffe28a','#ffcc33','#f7c948','#d4a857','#fff3b8'][p],
-              }} />
+              <span
+                key={p}
+                className="wco-burst-particle"
+                style={{
+                  '--a': `${p * 45}deg`,
+                  '--c': ['#ffd76d', '#ffb800', '#ff9f1c', '#ffe28a', '#ffcc33', '#f7c948', '#d4a857', '#fff3b8'][p],
+                }}
+              />
             ))}
           </div>
         ))}
@@ -99,30 +114,59 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
 
       <div className="wco-confetti-layer" aria-hidden>
         {Array.from({ length: 60 }).map((_, i) => (
-          <span key={i} className="wco-confetti-piece" style={{
-            '--x': `${Math.random() * 100}%`,
-            '--d': `${Math.random() * 1.8}s`,
-            '--r': `${Math.random() * 360}deg`,
-            '--c': ['#ffd76d','#ffb800','#ffd54f','#d4a857','#ffcc33','#ff9f1c','#f7c948','#ffe28a','#ff5b78','#ffb347'][i % 10],
-            '--w': `${5 + Math.random() * 7}px`,
-            '--h': `${8 + Math.random() * 12}px`,
-            '--tx': `${-50 + Math.random() * 100}px`,
-          }} />
+          <span
+            key={i}
+            className="wco-confetti-piece"
+            style={{
+              '--x': `${Math.random() * 100}%`,
+              '--d': `${Math.random() * 1.8}s`,
+              '--r': `${Math.random() * 360}deg`,
+              '--c': [
+                '#ffd76d',
+                '#ffb800',
+                '#ffd54f',
+                '#d4a857',
+                '#ffcc33',
+                '#ff9f1c',
+                '#f7c948',
+                '#ffe28a',
+                '#ff5b78',
+                '#ffb347',
+              ][i % 10],
+              '--w': `${5 + Math.random() * 7}px`,
+              '--h': `${8 + Math.random() * 12}px`,
+              '--tx': `${-50 + Math.random() * 100}px`,
+            }}
+          />
         ))}
       </div>
 
       <div className="wco-coin-layer" aria-hidden>
         {Array.from({ length: 12 }).map((_, i) => (
-          <span key={i} className="wco-coin" style={{
-            '--x': `${10 + Math.random() * 80}%`,
-            '--d': `${Math.random() * 3}s`,
-            '--dr': `${2 + Math.random() * 2}s`,
-            '--s': `${16 + Math.random() * 12}px`,
-            '--delay': `${Math.random() * 2}s`,
-          }}>
+          <span
+            key={i}
+            className="wco-coin"
+            style={{
+              '--x': `${10 + Math.random() * 80}%`,
+              '--d': `${Math.random() * 3}s`,
+              '--dr': `${2 + Math.random() * 2}s`,
+              '--s': `${16 + Math.random() * 12}px`,
+              '--delay': `${Math.random() * 2}s`,
+            }}
+          >
             <svg viewBox="0 0 24 24" width="100%" height="100%">
               <circle cx="12" cy="12" r="10" fill="#ffd76d" stroke="#f3a01a" strokeWidth="1.5" />
-              <text x="12" y="16" textAnchor="middle" fill="#a86200" fontSize="12" fontWeight="900" fontFamily="sans-serif">¢</text>
+              <text
+                x="12"
+                y="16"
+                textAnchor="middle"
+                fill="#a86200"
+                fontSize="12"
+                fontWeight="900"
+                fontFamily="sans-serif"
+              >
+                ¢
+              </text>
             </svg>
           </span>
         ))}
@@ -130,30 +174,40 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
 
       <div className="wco-particle-layer" aria-hidden>
         {Array.from({ length: 30 }).map((_, i) => (
-          <span key={i} className="wco-particle" style={{
-            '--x': `${20 + Math.random() * 60}%`,
-            '--d': `${Math.random() * 2.5}s`,
-            '--s': `${3 + Math.random() * 5}px`,
-            '--c': ['#ffd76d','#ffc44d','#fff3b8','#f3a01a','#ff9f1c'][i % 5],
-          }} />
+          <span
+            key={i}
+            className="wco-particle"
+            style={{
+              '--x': `${20 + Math.random() * 60}%`,
+              '--d': `${Math.random() * 2.5}s`,
+              '--s': `${3 + Math.random() * 5}px`,
+              '--c': ['#ffd76d', '#ffc44d', '#fff3b8', '#f3a01a', '#ff9f1c'][i % 5],
+            }}
+          />
         ))}
       </div>
 
       <div className="wco-sparkle-layer" aria-hidden>
         {Array.from({ length: 20 }).map((_, i) => (
-          <span key={i} className="wco-sparkle" style={{
-            '--y': `${5 + Math.random() * 90}%`,
-            '--x': `${5 + Math.random() * 90}%`,
-            '--d': `${Math.random() * 3}s`,
-            '--s': `${2 + Math.random() * 4}px`,
-          }} />
+          <span
+            key={i}
+            className="wco-sparkle"
+            style={{
+              '--y': `${5 + Math.random() * 90}%`,
+              '--x': `${5 + Math.random() * 90}%`,
+              '--d': `${Math.random() * 3}s`,
+              '--s': `${2 + Math.random() * 4}px`,
+            }}
+          />
         ))}
       </div>
 
       <div className="wco-card" onClick={(e) => e.stopPropagation()}>
         <header className="wco-head">
           <span className="wco-badge">{badgeLabel}</span>
-          <button type="button" className="wco-x" onClick={handleClose} aria-label="Close">&times;</button>
+          <button type="button" className="wco-x" onClick={handleClose} aria-label="Close">
+            &times;
+          </button>
         </header>
 
         <div className="wco-emblem" aria-hidden>
@@ -162,10 +216,10 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
 
         <div className="wco-glow" aria-hidden />
 
-        <h2 id="wco-title" className="wco-title">CONGRATULATIONS!</h2>
-        <p className="wco-sub">
-          {isCashOut ? 'Cash-out confirmed & credited!' : 'YOU WON!'}
-        </p>
+        <h2 id="wco-title" className="wco-title">
+          CONGRATULATIONS!
+        </h2>
+        <p className="wco-sub">{isCashOut ? 'Cash-out confirmed & credited!' : 'YOU WON!'}</p>
 
         <div className="wco-amount">
           <span className="wco-cur">GHS</span>
@@ -212,15 +266,26 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
         {wins.length > 1 && (
           <div className="wco-pager">
             {wins.map((_, i) => (
-              <button key={i} type="button" aria-label={`Show winning ticket ${i + 1}`}
+              <button
+                key={i}
+                type="button"
+                aria-label={`Show winning ticket ${i + 1}`}
                 className={`wco-dot${i === index ? ' active' : ''}`}
-                onClick={() => setIndex(i)} />
+                onClick={() => setIndex(i)}
+              />
             ))}
           </div>
         )}
 
         <div className="wco-actions">
-          <button type="button" className="wco-btn wco-btn-primary" onClick={() => { onViewSlip?.(focus); handleClose(); }}>
+          <button
+            type="button"
+            className="wco-btn wco-btn-primary"
+            onClick={() => {
+              onViewSlip?.(focus);
+              handleClose();
+            }}
+          >
             View Slip
           </button>
           <button type="button" className="wco-btn wco-btn-ghost" onClick={handleClose}>
@@ -262,12 +327,31 @@ function GiantTrophy() {
           <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
         </circle>
         <path d="M26 22 H94 V60 C94 78 80 88 60 88 C40 88 26 78 26 60 Z" fill="url(#wtCupBody)">
-          <animateTransform attributeName="transform" type="scale" values="1;1.03;1" dur="1.8s" repeatCount="indefinite" additive="sum" />
+          <animateTransform
+            attributeName="transform"
+            type="scale"
+            values="1;1.03;1"
+            dur="1.8s"
+            repeatCount="indefinite"
+            additive="sum"
+          />
         </path>
         <ellipse cx="60" cy="22" rx="34" ry="7" fill="#ffe28a" />
         <rect x="28" y="20" width="64" height="6" rx="2" fill="url(#wtCupShine)" />
-        <path d="M26 34 Q12 34 13 44 Q14 54 28 54" fill="none" stroke="#cc7a00" strokeWidth="4.5" strokeLinecap="round" />
-        <path d="M94 34 Q108 34 107 44 Q106 54 92 54" fill="none" stroke="#cc7a00" strokeWidth="4.5" strokeLinecap="round" />
+        <path
+          d="M26 34 Q12 34 13 44 Q14 54 28 54"
+          fill="none"
+          stroke="#cc7a00"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M94 34 Q108 34 107 44 Q106 54 92 54"
+          fill="none"
+          stroke="#cc7a00"
+          strokeWidth="4.5"
+          strokeLinecap="round"
+        />
         <path d="M52 88 H68 V96 H52 Z" fill="url(#wtCupBase)" />
         <path d="M40 96 H80 V100 H40 Z" fill="url(#wtCupBase)" />
         <circle cx="60" cy="48" r="12" fill="#fff3b8" opacity=".65" />

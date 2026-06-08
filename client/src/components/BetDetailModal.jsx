@@ -28,8 +28,11 @@ function getStatusStyle(status) {
 function fmtFull(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
-    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' });
+  return (
+    d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ', ' +
+    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
 function legResult(leg) {
@@ -48,17 +51,25 @@ export default function BetDetailModal({ bet, open, onClose }) {
 
   useEffect(() => {
     if (open) {
-      requestAnimationFrame(() => { setVisible(true); setExiting(false); });
+      requestAnimationFrame(() => {
+        setVisible(true);
+        setExiting(false);
+      });
       setActiveTab('overview');
     } else {
       setExiting(true);
-      setTimeout(() => { setVisible(false); setExiting(false); }, 250);
+      setTimeout(() => {
+        setVisible(false);
+        setExiting(false);
+      }, 250);
     }
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    const handleEsc = (e) => { if (e.key === 'Escape') onClose?.(); };
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose]);
@@ -79,7 +90,11 @@ export default function BetDetailModal({ bet, open, onClose }) {
   const cashoutHistory = bet.cashoutHistory || [];
   const profitLoss = isWon ? payout - stake : 0;
 
-  const copyText = async (text) => { try { await navigator.clipboard.writeText(text); } catch {} };
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {}
+  };
 
   const handleRebook = () => {
     navigate(`/code/${code}?rebook=1`);
@@ -93,75 +108,132 @@ export default function BetDetailModal({ bet, open, onClose }) {
   ];
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9998,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16,
-      background: 'rgba(0,0,0,0.7)',
-      backdropFilter: 'blur(6px)',
-      WebkitBackdropFilter: 'blur(6px)',
-      opacity: exiting ? 0 : 1,
-      transition: 'opacity 250ms',
-    }} onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div style={{
-        width: '100%', maxWidth: 560, maxHeight: '92vh',
-        display: 'flex', flexDirection: 'column',
-        background: T.surface, borderRadius: 20,
-        border: `1px solid ${T.line}`,
-        boxShadow: '0 25px 80px rgba(0,0,0,0.6)',
-        transform: exiting ? 'scale(0.95) translateY(10px)' : 'scale(1) translateY(0)',
-        transition: 'transform 250ms, opacity 250ms',
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9998,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
         opacity: exiting ? 0 : 1,
-      }}>
+        transition: 'opacity 250ms',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 560,
+          maxHeight: '92vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: T.surface,
+          borderRadius: 20,
+          border: `1px solid ${T.line}`,
+          boxShadow: '0 25px 80px rgba(0,0,0,0.6)',
+          transform: exiting ? 'scale(0.95) translateY(10px)' : 'scale(1) translateY(0)',
+          transition: 'transform 250ms, opacity 250ms',
+          opacity: exiting ? 0 : 1,
+        }}
+      >
         {/* ── Header ── */}
-        <div style={{
-          padding: '18px 18px 12px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: `1px solid ${T.line}`,
-          flexShrink: 0,
-        }}>
+        <div
+          style={{
+            padding: '18px 18px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${T.line}`,
+            flexShrink: 0,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '4px 12px', borderRadius: 999,
-              background: ss.bg, color: '#fff',
-              fontWeight: 700, fontSize: 12, letterSpacing: 0.4,
-            }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 12px',
+                borderRadius: 999,
+                background: ss.bg,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: 0.4,
+              }}
+            >
               {ss.label}
             </span>
-            <span style={{
-              fontSize: 12, fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-              color: T.inkDim, fontWeight: 600, letterSpacing: 0.3,
-            }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                color: T.inkDim,
+                fontWeight: 600,
+                letterSpacing: 0.3,
+              }}
+            >
               #{code}
             </span>
           </div>
-          <button type="button" onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 999, border: 0,
-            background: T.surfaceAlt, color: T.ink, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, fontWeight: 700, lineHeight: 1,
-          }}>×</button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 999,
+              border: 0,
+              background: T.surfaceAlt,
+              color: T.ink,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
         </div>
 
         {/* ── Tab nav ── */}
-        <div style={{
-          display: 'flex', gap: 2, padding: '8px 18px 0',
-          borderBottom: `1px solid ${T.line}`, flexShrink: 0,
-          overflowX: 'auto',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: 2,
+            padding: '8px 18px 0',
+            borderBottom: `1px solid ${T.line}`,
+            flexShrink: 0,
+            overflowX: 'auto',
+          }}
+        >
           {sections.map((s) => (
             <button
               key={s.key}
               type="button"
               onClick={() => setActiveTab(s.key)}
               style={{
-                padding: '8px 14px', border: 0, borderRadius: '8px 8px 0 0',
+                padding: '8px 14px',
+                border: 0,
+                borderRadius: '8px 8px 0 0',
                 background: activeTab === s.key ? T.surfaceAlt : 'transparent',
                 color: activeTab === s.key ? T.ink : T.inkDim,
-                fontWeight: 700, fontSize: 11.5, cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: 11.5,
+                cursor: 'pointer',
                 borderBottom: activeTab === s.key ? `2px solid ${T.greenBright}` : '2px solid transparent',
-                transition: 'all 120ms', whiteSpace: 'nowrap',
+                transition: 'all 120ms',
+                whiteSpace: 'nowrap',
               }}
             >
               {s.label}
@@ -172,15 +244,27 @@ export default function BetDetailModal({ bet, open, onClose }) {
         {/* ── Scrollable content ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }}>
           {activeTab === 'overview' && (
-            <OverviewTab bet={bet} legs={legs} code={code} odds={odds} stake={stake}
-              potential={potential} payout={payout} isSettled={isSettled} isWon={isWon}
-              isCashedOut={isCashedOut} profitLoss={profitLoss} ss={ss}
-              copyText={copyText} onClose={onClose} T={T} cashoutHistory={cashoutHistory} />
+            <OverviewTab
+              bet={bet}
+              legs={legs}
+              code={code}
+              odds={odds}
+              stake={stake}
+              potential={potential}
+              payout={payout}
+              isSettled={isSettled}
+              isWon={isWon}
+              isCashedOut={isCashedOut}
+              profitLoss={profitLoss}
+              ss={ss}
+              copyText={copyText}
+              onClose={onClose}
+              T={T}
+              cashoutHistory={cashoutHistory}
+            />
           )}
 
-          {activeTab === 'matches' && (
-            <MatchesTab bet={bet} legs={legs} T={T} />
-          )}
+          {activeTab === 'matches' && <MatchesTab bet={bet} legs={legs} T={T} />}
 
           {activeTab === 'timeline' && (
             <div style={{ padding: '4px 0' }}>
@@ -189,18 +273,36 @@ export default function BetDetailModal({ bet, open, onClose }) {
           )}
 
           {activeTab === 'finance' && (
-            <FinanceTab bet={bet} stake={stake} payout={payout} isWon={isWon}
-              isCashedOut={isCashedOut} profitLoss={profitLoss} T={T} />
+            <FinanceTab
+              bet={bet}
+              stake={stake}
+              payout={payout}
+              isWon={isWon}
+              isCashedOut={isCashedOut}
+              profitLoss={profitLoss}
+              T={T}
+            />
           )}
         </div>
 
         {/* ── Close button ── */}
         <div style={{ padding: '0 18px 16px', flexShrink: 0 }}>
-          <button type="button" onClick={onClose} style={{
-            width: '100%', padding: '13px 0', borderRadius: 12,
-            background: T.greenBright, color: T.goldDark, border: 0,
-            cursor: 'pointer', fontWeight: 800, fontSize: 14, letterSpacing: 0.3,
-          }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: '100%',
+              padding: '13px 0',
+              borderRadius: 12,
+              background: T.greenBright,
+              color: T.goldDark,
+              border: 0,
+              cursor: 'pointer',
+              fontWeight: 800,
+              fontSize: 14,
+              letterSpacing: 0.3,
+            }}
+          >
             Close
           </button>
         </div>
@@ -209,7 +311,24 @@ export default function BetDetailModal({ bet, open, onClose }) {
   );
 }
 
-function OverviewTab({ bet, legs, code, odds, stake, potential, payout, isSettled, isWon, isCashedOut, profitLoss, ss, copyText, onClose, T, cashoutHistory }) {
+function OverviewTab({
+  bet,
+  legs,
+  code,
+  odds,
+  stake,
+  potential,
+  payout,
+  isSettled,
+  isWon,
+  isCashedOut,
+  profitLoss,
+  ss,
+  copyText,
+  onClose,
+  T,
+  cashoutHistory,
+}) {
   const navigate = useNavigate();
   const codeUpper = (code || '').toUpperCase();
 
@@ -221,42 +340,66 @@ function OverviewTab({ bet, legs, code, odds, stake, potential, payout, isSettle
         <InfoRow label="Booking Code" value={codeUpper} mono T={T} />
         <InfoRow label="Stake" value={`GHS ${fmtCedi(stake)}`} T={T} />
         <InfoRow label="Total Odds" value={`${odds.toFixed(2)}x`} T={T} />
-        <InfoRow label={isSettled ? 'Actual Winnings' : 'Potential Winnings'}
+        <InfoRow
+          label={isSettled ? 'Actual Winnings' : 'Potential Winnings'}
           value={`GHS ${fmtCedi(isSettled ? payout : potential)}`}
-          color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright} T={T} />
-        <InfoRow label="Profit / Loss"
+          color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright}
+          T={T}
+        />
+        <InfoRow
+          label="Profit / Loss"
           value={`${isWon ? '+' : ''}GHS ${fmtCedi(profitLoss)}`}
-          color={isWon ? '#16a34a' : '#dc2626'} T={T} />
+          color={isWon ? '#16a34a' : '#dc2626'}
+          T={T}
+        />
         <InfoRow label="Bet Type" value={bet.type || (legs.length > 1 ? 'Multiple' : 'Single')} T={T} />
         <InfoRow label="Selections" value={`${legs.length} leg${legs.length > 1 ? 's' : ''}`} T={T} />
         <InfoRow label="Status" value={<span style={{ color: ss.bg, fontWeight: 700 }}>{ss.label}</span>} T={T} />
         <InfoRow label="Placed" value={fmtFull(bet.placedAt || bet.createdAt)} T={T} />
         {isSettled && <InfoRow label="Settled" value={fmtFull(bet.settledAt || bet.cashOutAt)} T={T} />}
         {bet.cashOutAt && <InfoRow label="Cashout At" value={fmtFull(bet.cashOutAt)} T={T} />}
-        {bet.cashOut != null && <InfoRow label="Cashout Amount" value={`GHS ${fmtCedi(Number(bet.cashOut))}`} color="#2563eb" T={T} />}
+        {bet.cashOut != null && (
+          <InfoRow label="Cashout Amount" value={`GHS ${fmtCedi(Number(bet.cashOut))}`} color="#2563eb" T={T} />
+        )}
       </InfoPanel>
 
       {/* Booking Code */}
       <SectionTitle text="Booking Code" T={T} />
-      <div style={{
-        textAlign: 'center', padding: '14px 0', borderRadius: 12,
-        background: T.surfaceAlt, border: `1px solid ${T.line}`, marginBottom: 16,
-      }}>
-        <div style={{
-          fontSize: 18, fontWeight: 800,
-          fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-          letterSpacing: 2, color: T.ink, marginBottom: 12,
-        }}>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '14px 0',
+          borderRadius: 12,
+          background: T.surfaceAlt,
+          border: `1px solid ${T.line}`,
+          marginBottom: 16,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 800,
+            fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+            letterSpacing: 2,
+            color: T.ink,
+            marginBottom: 12,
+          }}
+        >
           {codeUpper}
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           <ActionBtn label="Copy Code" onClick={() => copyText(codeUpper)} T={T} />
           <ActionBtn label="Rebook" onClick={() => navigate(`/code/${code}?rebook=1`)} T={T} primary />
-          <ActionBtn label="Share" onClick={() => {
-            const url = typeof window !== 'undefined' ? `${window.location.origin}/code/${code}` : `/code/${code}`;
-            if (navigator.share) navigator.share({ title: 'Oddsify code', text: `Code ${codeUpper}`, url }).catch(() => {});
-            else navigator.clipboard?.writeText(url);
-          }} T={T} />
+          <ActionBtn
+            label="Share"
+            onClick={() => {
+              const url = typeof window !== 'undefined' ? `${window.location.origin}/code/${code}` : `/code/${code}`;
+              if (navigator.share)
+                navigator.share({ title: 'Oddsify code', text: `Code ${codeUpper}`, url }).catch(() => {});
+              else navigator.clipboard?.writeText(url);
+            }}
+            T={T}
+          />
           <ActionBtn label="Load Bet" onClick={() => navigate(`/code/${code}`)} T={T} />
         </div>
       </div>
@@ -267,11 +410,18 @@ function OverviewTab({ bet, legs, code, odds, stake, potential, payout, isSettle
           <SectionTitle text="Cashout History" T={T} />
           <div style={{ marginBottom: 16 }}>
             {cashoutHistory.map((ch, i) => (
-              <div key={i} style={{
-                padding: '10px 12px', marginBottom: 4, borderRadius: 10,
-                background: T.surfaceAlt, border: `1px solid ${T.line}`,
-                display: 'flex', justifyContent: 'space-between',
-              }}>
+              <div
+                key={i}
+                style={{
+                  padding: '10px 12px',
+                  marginBottom: 4,
+                  borderRadius: 10,
+                  background: T.surfaceAlt,
+                  border: `1px solid ${T.line}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                }}
+              >
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>
                     {ch.type === 'partial' ? 'Partial Cashout' : 'Full Cashout'}
@@ -283,9 +433,7 @@ function OverviewTab({ bet, legs, code, odds, stake, potential, payout, isSettle
                     GHS {fmtCedi(ch.amount || 0)}
                   </div>
                   {ch.remainingStake > 0 && (
-                    <div style={{ fontSize: 10, color: T.inkSoft }}>
-                      Remaining: GHS {fmtCedi(ch.remainingStake)}
-                    </div>
+                    <div style={{ fontSize: 10, color: T.inkSoft }}>Remaining: GHS {fmtCedi(ch.remainingStake)}</div>
                   )}
                 </div>
               </div>
@@ -300,11 +448,18 @@ function OverviewTab({ bet, legs, code, odds, stake, potential, payout, isSettle
           <SectionTitle text="Settlement Details" T={T} />
           <InfoPanel T={T}>
             <InfoRow label="Settled At" value={fmtFull(bet.settledAt)} T={T} />
-            <InfoRow label={isCashedOut ? 'Cashout At' : 'Settled'} value={fmtFull(bet.cashOutAt || bet.settledAt)} T={T} />
+            <InfoRow
+              label={isCashedOut ? 'Cashout At' : 'Settled'}
+              value={fmtFull(bet.cashOutAt || bet.settledAt)}
+              T={T}
+            />
             <InfoRow label="Payout" value={`GHS ${fmtCedi(payout)}`} T={T} />
-            <InfoRow label="Net Result"
+            <InfoRow
+              label="Net Result"
               value={`${isWon ? '+' : ''}GHS ${fmtCedi(profitLoss)}`}
-              color={isWon ? '#16a34a' : '#dc2626'} T={T} />
+              color={isWon ? '#16a34a' : '#dc2626'}
+              T={T}
+            />
           </InfoPanel>
         </>
       )}
@@ -324,10 +479,16 @@ function MatchesTab({ bet, legs, T }) {
         const hasOddsMovement = leg.initialOdds && Math.abs(oddsChange) > 0.001;
 
         return (
-          <div key={i} style={{
-            padding: '12px', marginBottom: 10, borderRadius: 14,
-            background: T.surfaceAlt, border: `1px solid ${T.line}`,
-          }}>
+          <div
+            key={i}
+            style={{
+              padding: '12px',
+              marginBottom: 10,
+              borderRadius: 14,
+              background: T.surfaceAlt,
+              border: `1px solid ${T.line}`,
+            }}
+          >
             {/* Match header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -342,7 +503,9 @@ function MatchesTab({ bet, legs, T }) {
             </div>
 
             {/* League & country */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 11, color: T.inkSoft }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 11, color: T.inkSoft }}
+            >
               {leg.league && (
                 <>
                   <LeagueLogo name={leg.league} logoUrl={leg.leagueLogo} size={14} />
@@ -355,46 +518,98 @@ function MatchesTab({ bet, legs, T }) {
 
             {/* Score */}
             {(leg.scoreHome != null || leg.scoreAway != null) && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 10,
-                padding: '4px 14px', borderRadius: 8, background: T.bg,
-                fontSize: 16, fontWeight: 800, color: T.ink, fontVariantNumeric: 'tabular-nums',
-              }}>
-                <span>{leg.home}: {leg.scoreHome ?? '?'}</span>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginBottom: 10,
+                  padding: '4px 14px',
+                  borderRadius: 8,
+                  background: T.bg,
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: T.ink,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                <span>
+                  {leg.home}: {leg.scoreHome ?? '?'}
+                </span>
                 <span style={{ color: T.inkDim }}>-</span>
-                <span>{leg.away}: {leg.scoreAway ?? '?'}</span>
+                <span>
+                  {leg.away}: {leg.scoreAway ?? '?'}
+                </span>
               </div>
             )}
 
             {/* Selection details grid */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px',
-              padding: '10px 12px', borderRadius: 10,
-              background: T.bg, border: `1px solid ${T.line}`,
-            }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px 12px',
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: T.bg,
+                border: `1px solid ${T.line}`,
+              }}
+            >
               <DetailItem label="Market" value={leg.market || 'Match Result'} T={T} />
-              <DetailItem label="Selection" value={<span style={{ color: T.greenBright, fontWeight: 700 }}>{leg.pickLabel || leg.label || leg.pick || leg.key}</span>} T={T} />
-              <DetailItem label="Odds at Placement" value={oddsAtPlacement > 0 ? oddsAtPlacement.toFixed(2) : '—'} mono T={T} />
+              <DetailItem
+                label="Selection"
+                value={
+                  <span style={{ color: T.greenBright, fontWeight: 700 }}>
+                    {leg.pickLabel || leg.label || leg.pick || leg.key}
+                  </span>
+                }
+                T={T}
+              />
+              <DetailItem
+                label="Odds at Placement"
+                value={oddsAtPlacement > 0 ? oddsAtPlacement.toFixed(2) : '—'}
+                mono
+                T={T}
+              />
               <DetailItem label="Current Odds" value={currentOdds > 0 ? currentOdds.toFixed(2) : '—'} mono T={T} />
               {hasOddsMovement && (
-                <DetailItem label="Odds Change" value={
-                  <span style={{ color: oddsChange > 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
-                    {oddsChange > 0 ? '+' : ''}{oddsChange.toFixed(2)} {oddsChange > 0 ? '↑' : '↓'}
-                  </span>
-                } T={T} />
+                <DetailItem
+                  label="Odds Change"
+                  value={
+                    <span style={{ color: oddsChange > 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                      {oddsChange > 0 ? '+' : ''}
+                      {oddsChange.toFixed(2)} {oddsChange > 0 ? '↑' : '↓'}
+                    </span>
+                  }
+                  T={T}
+                />
               )}
-              <DetailItem label="Status" value={
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  color: LEG_STATUS_COLORS[lr] || T.inkDim, fontWeight: 700,
-                }}>
-                  <span style={{
-                    display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-                    background: LEG_STATUS_COLORS[lr] || T.inkDim,
-                  }} />
-                  {lr.toUpperCase()}
-                </span>
-              } T={T} />
+              <DetailItem
+                label="Status"
+                value={
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      color: LEG_STATUS_COLORS[lr] || T.inkDim,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: LEG_STATUS_COLORS[lr] || T.inkDim,
+                      }}
+                    />
+                    {lr.toUpperCase()}
+                  </span>
+                }
+                T={T}
+              />
             </div>
           </div>
         );
@@ -417,9 +632,12 @@ function FinanceTab({ bet, stake, payout, isWon, isCashedOut, profitLoss, T }) {
         {isCashedOut && bet.cashOut != null && (
           <InfoRow label="Cashout Credited" value={`+GHS ${fmtCedi(Number(bet.cashOut))}`} color="#2563eb" T={T} />
         )}
-        <InfoRow label="Net Profit / Loss"
+        <InfoRow
+          label="Net Profit / Loss"
           value={`${isWon ? '+' : ''}GHS ${fmtCedi(profitLoss)}`}
-          color={isWon ? '#16a34a' : '#dc2626'} T={T} />
+          color={isWon ? '#16a34a' : '#dc2626'}
+          T={T}
+        />
         {walletAfter != null && <InfoRow label="Wallet After" value={`GHS ${fmtCedi(walletAfter)}`} T={T} />}
         {bet.transactionRef && <InfoRow label="Transaction ID" value={bet.transactionRef} mono T={T} />}
         {bet.paymentRef && <InfoRow label="Payment Reference" value={bet.paymentRef} mono T={T} />}
@@ -431,11 +649,18 @@ function FinanceTab({ bet, stake, payout, isWon, isCashedOut, profitLoss, T }) {
           <SectionTitle text="Cashout History" T={T} />
           <div style={{ marginBottom: 16 }}>
             {(bet.cashoutHistory || []).map((ch, i) => (
-              <div key={i} style={{
-                padding: '10px 12px', marginBottom: 4, borderRadius: 10,
-                background: T.surfaceAlt, border: `1px solid ${T.line}`,
-                display: 'flex', justifyContent: 'space-between',
-              }}>
+              <div
+                key={i}
+                style={{
+                  padding: '10px 12px',
+                  marginBottom: 4,
+                  borderRadius: 10,
+                  background: T.surfaceAlt,
+                  border: `1px solid ${T.line}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                }}
+              >
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>
                     {ch.type === 'partial' ? 'Partial Cashout' : 'Full Cashout'}
@@ -458,10 +683,16 @@ function FinanceTab({ bet, stake, payout, isWon, isCashedOut, profitLoss, T }) {
 
 function SectionTitle({ text, T }) {
   return (
-    <div style={{
-      fontSize: 10.5, color: T.inkDim, fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8,
-    }}>
+    <div
+      style={{
+        fontSize: 10.5,
+        color: T.inkDim,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+        marginBottom: 8,
+      }}
+    >
       {text}
     </div>
   );
@@ -469,10 +700,15 @@ function SectionTitle({ text, T }) {
 
 function InfoPanel({ children, T }) {
   return (
-    <div style={{
-      padding: '12px 14px', borderRadius: 12, marginBottom: 16,
-      background: T.surfaceAlt, border: `1px solid ${T.line}`,
-    }}>
+    <div
+      style={{
+        padding: '12px 14px',
+        borderRadius: 12,
+        marginBottom: 16,
+        background: T.surfaceAlt,
+        border: `1px solid ${T.line}`,
+      }}
+    >
       {children}
     </div>
   );
@@ -480,17 +716,30 @@ function InfoPanel({ children, T }) {
 
 function InfoRow({ label, value, color, mono, T }) {
   return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '6px 0',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+      }}
+    >
       <span style={{ fontSize: 11.5, color: T.inkDim, fontWeight: 500 }}>{label}</span>
-      <span style={{
-        fontSize: 12, fontWeight: 700, color: color || T.ink,
-        fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
-        fontVariantNumeric: 'tabular-nums', textAlign: 'right',
-        maxWidth: '55%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: color || T.ink,
+          fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
+          fontVariantNumeric: 'tabular-nums',
+          textAlign: 'right',
+          maxWidth: '55%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
         {value}
       </span>
     </div>
@@ -501,11 +750,15 @@ function DetailItem({ label, value, mono, T }) {
   return (
     <div>
       <div style={{ fontSize: 10, color: T.inkDim, fontWeight: 600, marginBottom: 2 }}>{label}</div>
-      <div style={{
-        fontSize: 12, fontWeight: 600, color: T.ink,
-        fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
-        fontVariantNumeric: 'tabular-nums',
-      }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: T.ink,
+          fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {value}
       </div>
     </div>
@@ -515,14 +768,24 @@ function DetailItem({ label, value, mono, T }) {
 function ActionBtn({ label, onClick, primary, T }) {
   const [h, setH] = useState(false);
   return (
-    <button type="button" onClick={onClick}
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
       style={{
-        padding: '8px 16px', borderRadius: 8, border: 0,
+        padding: '8px 16px',
+        borderRadius: 8,
+        border: 0,
         background: primary ? T.greenBright : h ? `${T.greenBright}20` : T.surfaceAlt,
         color: primary ? T.goldDark : h ? T.greenBright : T.ink,
-        fontWeight: 700, fontSize: 11.5, cursor: 'pointer', transition: 'all 120ms',
+        fontWeight: 700,
+        fontSize: 11.5,
+        cursor: 'pointer',
+        transition: 'all 120ms',
       }}
-    >{label}</button>
+    >
+      {label}
+    </button>
   );
 }

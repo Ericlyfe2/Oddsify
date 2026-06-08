@@ -1434,7 +1434,9 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
           >
             <span style={{ fontSize: 16 }}>⏳</span>
             <div>
-              <div>Promotion pending — Stage {user.stagePromotionRequestedFrom} → {user.stagePromotionRequestedTo}</div>
+              <div>
+                Promotion pending — Stage {user.stagePromotionRequestedFrom} → {user.stagePromotionRequestedTo}
+              </div>
               <div style={{ fontSize: 11.5, fontWeight: 400, color: 'var(--text-dim)', marginTop: 2 }}>
                 {user.stagePromotionRequestedReason || 'Awaiting admin review.'}
                 {user.stagePromotionRequestedAt ? ` Requested ${ago(user.stagePromotionRequestedAt)}.` : ''}

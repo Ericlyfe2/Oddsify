@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 export function toBookingCode(id = '') {
-  const s = String(id).replace(/[^a-z0-9]/gi, '').toUpperCase();
+  const s = String(id)
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase();
   if (!s) return 'XX00000';
   const letters = (s.match(/[A-Z]/g) || ['X', 'X']).slice(0, 2).join('').padEnd(2, 'X');
   const digits = (s.match(/[0-9]/g) || ['0']).slice(-5).join('').padStart(5, '0');
@@ -12,7 +14,16 @@ function fmt(n) {
   return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function BetSuccessOverlay({ bet, onClose, onViewBet, onGoHistory, onCopy, onShare, onRebook, onReturn }) {
+export default function BetSuccessOverlay({
+  bet,
+  onClose,
+  onViewBet,
+  onGoHistory,
+  onCopy,
+  onShare,
+  onRebook,
+  onReturn,
+}) {
   const [canClose, setCanClose] = useState(false);
   const [visible, setVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -42,7 +53,11 @@ export default function BetSuccessOverlay({ bet, onClose, onViewBet, onGoHistory
   const code = bet.bookingCode || toBookingCode(bet.id);
   const ts = bet.placedAt
     ? new Date(bet.placedAt).toLocaleString('en-GH', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       })
     : '—';
 
@@ -116,7 +131,9 @@ export default function BetSuccessOverlay({ bet, onClose, onViewBet, onGoHistory
 
         <div className="bso-glow-ring" aria-hidden />
 
-        <h2 id="bso-title" className="bso-title">Congratulations!</h2>
+        <h2 id="bso-title" className="bso-title">
+          Congratulations!
+        </h2>
         <p className="bso-sub">Your Bet Has Been Successfully Placed</p>
 
         <div className="bso-amount">
@@ -125,7 +142,8 @@ export default function BetSuccessOverlay({ bet, onClose, onViewBet, onGoHistory
         </div>
 
         <div className="bso-odds-row">
-          {bet.totalOdds ? `${bet.totalOdds.toFixed(2)}x` : ''} odds &middot; {bet.mode || 'single'} &middot; {bet.legs?.length || 1} selection{(bet.legs?.length || 1) > 1 ? 's' : ''}
+          {bet.totalOdds ? `${bet.totalOdds.toFixed(2)}x` : ''} odds &middot; {bet.mode || 'single'} &middot;{' '}
+          {bet.legs?.length || 1} selection{(bet.legs?.length || 1) > 1 ? 's' : ''}
         </div>
 
         <div className="bso-details">
@@ -152,29 +170,63 @@ export default function BetSuccessOverlay({ bet, onClose, onViewBet, onGoHistory
         </div>
 
         <div className="bso-actions">
-          <button type="button" className="bso-btn bso-btn-primary" onClick={() => { onViewBet?.(); handleClose(); }}>
+          <button
+            type="button"
+            className="bso-btn bso-btn-primary"
+            onClick={() => {
+              onViewBet?.();
+              handleClose();
+            }}
+          >
             View Bet
           </button>
-          <button type="button" className="bso-btn bso-btn-ghost" onClick={() => { onGoHistory?.(); handleClose(); }}>
+          <button
+            type="button"
+            className="bso-btn bso-btn-ghost"
+            onClick={() => {
+              onGoHistory?.();
+              handleClose();
+            }}
+          >
             Bet History
           </button>
           <button type="button" className="bso-btn bso-btn-ghost" onClick={() => onCopy?.(code)}>
             Copy Code
           </button>
-          <button type="button" className="bso-btn bso-btn-ghost" onClick={() => {
-            if (typeof navigator !== 'undefined' && navigator.share) {
-              navigator.share({ title: 'Oddsify booking code', text: `Booking code ${code} on Oddsify`, url: shareUrl }).catch(() => {});
-            } else {
-              navigator.clipboard?.writeText(shareUrl);
-            }
-            onShare?.(code);
-          }}>
+          <button
+            type="button"
+            className="bso-btn bso-btn-ghost"
+            onClick={() => {
+              if (typeof navigator !== 'undefined' && navigator.share) {
+                navigator
+                  .share({ title: 'Oddsify booking code', text: `Booking code ${code} on Oddsify`, url: shareUrl })
+                  .catch(() => {});
+              } else {
+                navigator.clipboard?.writeText(shareUrl);
+              }
+              onShare?.(code);
+            }}
+          >
             Share Bet
           </button>
-          <button type="button" className="bso-btn bso-btn-ghost" onClick={() => { onRebook?.(); handleClose(); }}>
+          <button
+            type="button"
+            className="bso-btn bso-btn-ghost"
+            onClick={() => {
+              onRebook?.();
+              handleClose();
+            }}
+          >
             Rebook
           </button>
-          <button type="button" className="bso-btn bso-btn-ghost" onClick={() => { onReturn?.(); handleClose(); }}>
+          <button
+            type="button"
+            className="bso-btn bso-btn-ghost"
+            onClick={() => {
+              onReturn?.();
+              handleClose();
+            }}
+          >
             Sports
           </button>
         </div>

@@ -6,14 +6,17 @@ import { io } from 'socket.io-client';
 import { getAdminAccess } from './adminApi.js';
 
 const devUrl = 'http://127.0.0.1:4000';
+const prodUrl = 'https://oddsify-api.onrender.com';
 const URL =
   import.meta.env.VITE_API_BASE ||
   (typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? devUrl
-    : typeof window !== 'undefined'
-      ? window.location.origin
-      : devUrl);
+    : import.meta.env.PROD
+      ? prodUrl
+      : typeof window !== 'undefined'
+        ? window.location.origin
+        : devUrl);
 
 let socket = null;
 

@@ -102,8 +102,11 @@ function placedAt(iso) {
 function formatFullDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
-    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' });
+  return (
+    d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ', ' +
+    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
 function legResult(leg) {
@@ -234,18 +237,20 @@ export default function BetHistoryPage() {
         title="My Bets"
         subtitle="Open bets & history"
         right={
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 12px 8px 10px',
-            borderRadius: 999,
-            background: T.greenBright,
-            color: T.goldDark,
-            fontWeight: 700,
-            fontSize: 13,
-            fontVariantNumeric: 'tabular-nums',
-          }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 12px 8px 10px',
+              borderRadius: 999,
+              background: T.greenBright,
+              color: T.goldDark,
+              fontWeight: 700,
+              fontSize: 13,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             GHS {fmtCedi(account.balance)}
           </div>
         }
@@ -265,26 +270,27 @@ export default function BetHistoryPage() {
 
       <div style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {tab === 'open' && FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFilter(f.value)}
-              style={{
-                padding: '7px 14px',
-                borderRadius: 999,
-                border: 0,
-                background: filter === f.value ? T.greenBright : T.surfaceAlt,
-                color: filter === f.value ? T.goldDark : T.inkSoft,
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: 'pointer',
-                transition: 'all 120ms',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
+          {tab === 'open' &&
+            FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setFilter(f.value)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 999,
+                  border: 0,
+                  background: filter === f.value ? T.greenBright : T.surfaceAlt,
+                  color: filter === f.value ? T.goldDark : T.inkSoft,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  transition: 'all 120ms',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
           <div style={{ flex: 1, minWidth: 120, position: 'relative' }}>
             <input
               type="text"
@@ -304,8 +310,19 @@ export default function BetHistoryPage() {
                 boxSizing: 'border-box',
               }}
             />
-            <svg style={{ position: 'absolute', left: 8, top: 8, pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.inkDim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            <svg
+              style={{ position: 'absolute', left: 8, top: 8, pointerEvents: 'none' }}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={T.inkDim}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
             </svg>
           </div>
         </div>
@@ -340,15 +357,32 @@ export default function BetHistoryPage() {
       {loading ? (
         <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
           {[0, 1].map((i) => (
-            <div key={i} style={{ height: 220, borderRadius: 16, background: T.surface, border: `1px solid ${T.line}`, opacity: 0.6 + i * 0.2 }} />
+            <div
+              key={i}
+              style={{
+                height: 220,
+                borderRadius: 16,
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                opacity: 0.6 + i * 0.2,
+              }}
+            />
           ))}
         </div>
       ) : tab === 'open' ? (
         filteredOpen.length === 0 ? (
           <EmptyState
             icon="ticket"
-            title={search ? 'No bets match your search' : filter !== 'all' ? 'No bets match this filter' : 'No open bets'}
-            hint={search ? 'Try a different search term.' : filter !== 'all' ? 'Try switching to All bets.' : 'Tap odds on a match to build a slip.'}
+            title={
+              search ? 'No bets match your search' : filter !== 'all' ? 'No bets match this filter' : 'No open bets'
+            }
+            hint={
+              search
+                ? 'Try a different search term.'
+                : filter !== 'all'
+                  ? 'Try switching to All bets.'
+                  : 'Tap odds on a match to build a slip.'
+            }
           />
         ) : (
           <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
@@ -394,7 +428,10 @@ export default function BetHistoryPage() {
         bet={cashoutTarget}
         cashoutValue={cashoutOffer}
         open={!!cashoutTarget}
-        onClose={() => { setCashoutTarget(null); setCashoutOffer(null); }}
+        onClose={() => {
+          setCashoutTarget(null);
+          setCashoutOffer(null);
+        }}
         onConfirm={confirmCashout}
         busy={cashingOut === cashoutTarget?.id}
       />
@@ -404,19 +441,28 @@ export default function BetHistoryPage() {
         cashoutAmount={cashoutSuccessAmount}
         open={!!cashoutSuccess}
         onClose={() => setCashoutSuccess(null)}
-        onViewBets={() => { setCashoutSuccess(null); navigate('/my-bets'); }}
+        onViewBets={() => {
+          setCashoutSuccess(null);
+          navigate('/my-bets');
+        }}
       />
 
-      <BetDetailModal
-        bet={detailBet}
-        open={!!detailBet}
-        onClose={() => setDetailBet(null)}
-      />
+      <BetDetailModal bet={detailBet} open={!!detailBet} onClose={() => setDetailBet(null)} />
     </div>
   );
 }
 
-function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashOut, cashingOut, onViewDetails, onViewFullPage }) {
+function ExpandableBetCard({
+  bet,
+  expanded,
+  onToggle,
+  liveOffer,
+  onCopy,
+  onCashOut,
+  cashingOut,
+  onViewDetails,
+  onViewFullPage,
+}) {
   const T = useTokens();
   const { loadFromSlip, rememberCode } = useSlip();
   const { toast } = useToast();
@@ -459,15 +505,17 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
   };
 
   return (
-    <div style={{
-      background: T.surface,
-      borderRadius: 16,
-      border: `1px solid ${T.line}`,
-      overflow: 'hidden',
-      transition: 'box-shadow 200ms, border-color 200ms',
-      boxShadow: expanded ? `0 0 0 2px ${ss.bg}20` : 'none',
-      borderColor: expanded ? `${ss.bg}40` : T.line,
-    }}>
+    <div
+      style={{
+        background: T.surface,
+        borderRadius: 16,
+        border: `1px solid ${T.line}`,
+        overflow: 'hidden',
+        transition: 'box-shadow 200ms, border-color 200ms',
+        boxShadow: expanded ? `0 0 0 2px ${ss.bg}20` : 'none',
+        borderColor: expanded ? `${ss.bg}40` : T.line,
+      }}
+    >
       <div style={{ height: 4, background: ss.bg }} />
 
       {/* ── Collapsed header ── */}
@@ -481,61 +529,69 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '3px 10px',
-              borderRadius: 999,
-              background: ss.bg,
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 11,
-              letterSpacing: 0.4,
-            }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '3px 10px',
+                borderRadius: 999,
+                background: ss.bg,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: 11,
+                letterSpacing: 0.4,
+              }}
+            >
               {ss.label}
             </span>
-            <span style={{
-              fontSize: 11,
-              color: T.inkDim,
-              fontWeight: 600,
-              fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-              letterSpacing: 0.3,
-              cursor: 'pointer',
-            }} onClick={(e) => { e.stopPropagation(); onCopy?.(); }} title="Copy booking code">
+            <span
+              style={{
+                fontSize: 11,
+                color: T.inkDim,
+                fontWeight: 600,
+                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                letterSpacing: 0.3,
+                cursor: 'pointer',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopy?.();
+              }}
+              title="Copy booking code"
+            >
               #{code}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 10.5, color: T.inkSoft }}>
-              {placedAt(bet.placedAt || bet.createdAt)}
-            </span>
+            <span style={{ fontSize: 10.5, color: T.inkSoft }}>{placedAt(bet.placedAt || bet.createdAt)}</span>
             <ExpandChevron expanded={expanded} T={T} />
           </div>
         </div>
 
         {legs.map((leg, i) => (
-          <div key={i} style={{
-            padding: '7px 0',
-            borderTop: i > 0 ? `1px solid ${T.line}` : 'none',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 8,
-            alignItems: 'flex-start',
-          }}>
+          <div
+            key={i}
+            style={{
+              padding: '7px 0',
+              borderTop: i > 0 ? `1px solid ${T.line}` : 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 8,
+              alignItems: 'flex-start',
+            }}
+          >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <TeamLogo name={leg.home} logoUrl={leg.homeLogo} size={16} />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>
-                  {leg.home}
-                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>{leg.home}</span>
                 <span style={{ color: T.inkDim, fontWeight: 500, fontSize: 11 }}>vs</span>
                 <TeamLogo name={leg.away} logoUrl={leg.awayLogo} size={16} />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>
-                  {leg.away}
-                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>{leg.away}</span>
               </div>
-              <div style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              <div
+                style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}
+              >
                 {leg.league && <span style={{ color: T.inkDim }}>{leg.league}</span>}
                 <span>{leg.market || 'Match Result'}</span>
                 <span style={{ color: T.greenBright, fontWeight: 600 }}>
@@ -573,15 +629,17 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
           })}
         </div>
 
-        <div style={{
-          marginTop: 8,
-          paddingTop: 10,
-          borderTop: `1px solid ${T.line}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingBottom: expanded ? 0 : 10,
-        }}>
+        <div
+          style={{
+            marginTop: 8,
+            paddingTop: 10,
+            borderTop: `1px solid ${T.line}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingBottom: expanded ? 0 : 10,
+          }}
+        >
           <BetMeta label="Stake" value={`GHS ${fmtCedi(stake)}`} color={T.ink} T={T} />
           <BetMeta label="Odds" value={`${odds.toFixed(2)}x`} color={T.ink} T={T} />
           <BetMeta
@@ -595,12 +653,14 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
       </div>
 
       {/* ── Expanded panel (animated) ── */}
-      <div style={{
-        overflow: 'hidden',
-        maxHeight: expandHeight,
-        transition: 'max-height 450ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms',
-        opacity: expanded ? 1 : 0,
-      }}>
+      <div
+        style={{
+          overflow: 'hidden',
+          maxHeight: expandHeight,
+          transition: 'max-height 450ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms',
+          opacity: expanded ? 1 : 0,
+        }}
+      >
         <div ref={expandRef} style={{ padding: '0 14px 14px' }}>
           <div style={{ height: 1, background: T.line, margin: '0 0 12px' }} />
 
@@ -647,15 +707,36 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
               <InfoItem label="Booking Code" value={code} mono T={T} />
               <InfoItem label="Stake" value={`GHS ${fmtCedi(stake)}`} T={T} />
               <InfoItem label="Total Odds" value={`${odds.toFixed(2)}x`} T={T} />
-              <InfoItem label={isSettled ? (isWon ? 'Actual Win' : 'Return') : 'Potential Win'} value={`GHS ${fmtCedi(isSettled ? payout : potential)}`} color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright} T={T} />
-              <InfoItem label="Profit/Loss" value={`${isWon ? '+' : ''}GHS ${fmtCedi(isWon ? payout - stake : 0)}`} color={isWon ? '#16a34a' : '#dc2626'} T={T} />
-              <InfoItem label="Status" value={<span style={{ color: ss.bg, fontWeight: 700 }}>{ss.label}</span>} T={T} />
+              <InfoItem
+                label={isSettled ? (isWon ? 'Actual Win' : 'Return') : 'Potential Win'}
+                value={`GHS ${fmtCedi(isSettled ? payout : potential)}`}
+                color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright}
+                T={T}
+              />
+              <InfoItem
+                label="Profit/Loss"
+                value={`${isWon ? '+' : ''}GHS ${fmtCedi(isWon ? payout - stake : 0)}`}
+                color={isWon ? '#16a34a' : '#dc2626'}
+                T={T}
+              />
+              <InfoItem
+                label="Status"
+                value={<span style={{ color: ss.bg, fontWeight: 700 }}>{ss.label}</span>}
+                T={T}
+              />
               <InfoItem label="Bet Type" value={betType} T={T} />
               <InfoItem label="Selections" value={`${legs.length} leg${legs.length > 1 ? 's' : ''}`} T={T} />
               <InfoItem label="Placed" value={formatFullDate(bet.placedAt || bet.createdAt)} T={T} />
               {isSettled && <InfoItem label="Settled" value={formatFullDate(bet.settledAt || bet.cashOutAt)} T={T} />}
               {bet.cashOutAt && <InfoItem label="Cashout At" value={formatFullDate(bet.cashOutAt)} T={T} />}
-              {bet.cashOut && <InfoItem label="Cashout Amount" value={`GHS ${fmtCedi(Number(bet.cashOut))}`} color={T.greenBright} T={T} />}
+              {bet.cashOut && (
+                <InfoItem
+                  label="Cashout Amount"
+                  value={`GHS ${fmtCedi(Number(bet.cashOut))}`}
+                  color={T.greenBright}
+                  T={T}
+                />
+              )}
             </InfoGrid>
           </DetailSection>
 
@@ -663,13 +744,16 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
           {legs.length > 0 && (
             <DetailSection title="Match Details" T={T}>
               {legs.map((leg, i) => (
-                <div key={i} style={{
-                  padding: '10px 12px',
-                  marginBottom: 6,
-                  borderRadius: 12,
-                  background: T.surfaceAlt,
-                  border: `1px solid ${T.line}`,
-                }}>
+                <div
+                  key={i}
+                  style={{
+                    padding: '10px 12px',
+                    marginBottom: 6,
+                    borderRadius: 12,
+                    background: T.surfaceAlt,
+                    border: `1px solid ${T.line}`,
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <TeamLogo name={leg.home} logoUrl={leg.homeLogo} size={20} />
                     <div style={{ flex: 1 }}>
@@ -678,7 +762,16 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
                         <span style={{ color: T.inkDim, fontWeight: 500, margin: '0 6px' }}>vs</span>
                         {leg.away}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 11, color: T.inkSoft }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          marginTop: 2,
+                          fontSize: 11,
+                          color: T.inkSoft,
+                        }}
+                      >
                         {leg.league && (
                           <>
                             <LeagueLogo name={leg.league} logoUrl={leg.leagueLogo} size={14} />
@@ -690,28 +783,32 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
                       </div>
                     </div>
                     {(leg.scoreHome != null || leg.scoreAway != null) && (
-                      <div style={{
-                        padding: '4px 10px',
-                        borderRadius: 8,
-                        background: T.bg,
-                        fontSize: 15,
-                        fontWeight: 800,
-                        fontVariantNumeric: 'tabular-nums',
-                        color: T.ink,
-                      }}>
+                      <div
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 8,
+                          background: T.bg,
+                          fontSize: 15,
+                          fontWeight: 800,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: T.ink,
+                        }}
+                      >
                         {leg.scoreHome ?? '?'} - {leg.scoreAway ?? '?'}
                       </div>
                     )}
                   </div>
 
-                  <div style={{
-                    padding: '8px 10px',
-                    borderRadius: 8,
-                    background: T.bg,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}>
+                  <div
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      background: T.bg,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <div>
                       <div style={{ fontSize: 10.5, color: T.inkDim, fontWeight: 600 }}>Market</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>{leg.market || 'Match Result'}</div>
@@ -728,11 +825,13 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 10.5, color: T.inkDim, fontWeight: 600 }}>Status</div>
-                      <div style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: LEG_STATUS_COLORS[legResult(leg)] || T.inkDim,
-                      }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: LEG_STATUS_COLORS[legResult(leg)] || T.inkDim,
+                        }}
+                      >
                         {legResult(leg).toUpperCase()}
                         {legResult(leg) === 'live' && leg.minute != null && ` ${leg.minute}'`}
                       </div>
@@ -751,11 +850,24 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
           {/* ── Transaction Details ── */}
           <DetailSection title="Transaction Details" T={T}>
             <InfoGrid T={T}>
-              {bet.walletBefore != null && <InfoItem label="Wallet Before" value={`GHS ${fmtCedi(bet.walletBefore)}`} T={T} />}
+              {bet.walletBefore != null && (
+                <InfoItem label="Wallet Before" value={`GHS ${fmtCedi(bet.walletBefore)}`} T={T} />
+              )}
               <InfoItem label="Stake Debited" value={`-GHS ${fmtCedi(stake)}`} color="#dc2626" T={T} />
-              {isWon && payout > 0 && <InfoItem label="Winnings Credited" value={`+GHS ${fmtCedi(payout)}`} color="#16a34a" T={T} />}
-              {bet.cashOut != null && <InfoItem label="Cashout Credited" value={`+GHS ${fmtCedi(Number(bet.cashOut))}`} color="#2563eb" T={T} />}
-              {bet.walletAfter != null && <InfoItem label="Wallet After" value={`GHS ${fmtCedi(bet.walletAfter)}`} T={T} />}
+              {isWon && payout > 0 && (
+                <InfoItem label="Winnings Credited" value={`+GHS ${fmtCedi(payout)}`} color="#16a34a" T={T} />
+              )}
+              {bet.cashOut != null && (
+                <InfoItem
+                  label="Cashout Credited"
+                  value={`+GHS ${fmtCedi(Number(bet.cashOut))}`}
+                  color="#2563eb"
+                  T={T}
+                />
+              )}
+              {bet.walletAfter != null && (
+                <InfoItem label="Wallet After" value={`GHS ${fmtCedi(bet.walletAfter)}`} T={T} />
+              )}
               {bet.transactionRef && <InfoItem label="Transaction Ref" value={bet.transactionRef} mono T={T} />}
               {bet.paymentRef && <InfoItem label="Payment Ref" value={bet.paymentRef} mono T={T} />}
             </InfoGrid>
@@ -763,25 +875,36 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
 
           {/* ── Booking Code ── */}
           <DetailSection title="Booking Code" T={T}>
-            <div style={{
-              textAlign: 'center',
-              padding: '14px 0',
-              background: T.surfaceAlt,
-              borderRadius: 12,
-              border: `1px solid ${T.line}`,
-            }}>
-              <div style={{
-                fontSize: 18,
-                fontWeight: 800,
-                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                letterSpacing: 2,
-                color: T.ink,
-                marginBottom: 12,
-              }}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '14px 0',
+                background: T.surfaceAlt,
+                borderRadius: 12,
+                border: `1px solid ${T.line}`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                  letterSpacing: 2,
+                  color: T.ink,
+                  marginBottom: 12,
+                }}
+              >
                 {code}
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <CodeActionBtn label="Copy Code" onClick={() => { navigator.clipboard?.writeText(code); toast?.('Copied!'); }} T={T} />
+                <CodeActionBtn
+                  label="Copy Code"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(code);
+                    toast?.('Copied!');
+                  }}
+                  T={T}
+                />
                 <CodeActionBtn label="Rebook" onClick={handleRebook} T={T} primary />
                 <CodeActionBtn label="Share" onClick={() => shareCode(code, toast)} T={T} />
                 <CodeActionBtn label="Load Bet" onClick={() => navigate(`/code/${code}`)} T={T} />
@@ -793,11 +916,18 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
           {(bet.cashoutHistory || []).length > 0 && (
             <DetailSection title="Cashout History" T={T}>
               {(bet.cashoutHistory || []).map((ch, i) => (
-                <div key={i} style={{
-                  padding: '10px 12px', marginBottom: 4, borderRadius: 10,
-                  background: T.surfaceAlt, border: `1px solid ${T.line}`,
-                  display: 'flex', justifyContent: 'space-between',
-                }}>
+                <div
+                  key={i}
+                  style={{
+                    padding: '10px 12px',
+                    marginBottom: 4,
+                    borderRadius: 10,
+                    background: T.surfaceAlt,
+                    border: `1px solid ${T.line}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>
                       {ch.type === 'partial' ? 'Partial Cashout' : 'Full Cashout'}
@@ -809,9 +939,7 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
                       GHS {fmtCedi(ch.amount || 0)}
                     </div>
                     {ch.remainingStake > 0 && (
-                      <div style={{ fontSize: 10, color: T.inkSoft }}>
-                        Remaining: GHS {fmtCedi(ch.remainingStake)}
-                      </div>
+                      <div style={{ fontSize: 10, color: T.inkSoft }}>Remaining: GHS {fmtCedi(ch.remainingStake)}</div>
                     )}
                   </div>
                 </div>
@@ -822,13 +950,21 @@ function ExpandableBetCard({ bet, expanded, onToggle, liveOffer, onCopy, onCashO
       </div>
 
       {/* ── Action bar ── */}
-      <div style={{
-        display: 'flex',
-        gap: 4,
-        padding: '8px 14px 10px',
-        borderTop: expanded ? `1px solid ${T.line}` : 'none',
-      }}>
-        <ActionBtn icon="chevDown" label={expanded ? 'Collapse' : 'Expand'} onClick={onToggle} active={expanded} T={T} />
+      <div
+        style={{
+          display: 'flex',
+          gap: 4,
+          padding: '8px 14px 10px',
+          borderTop: expanded ? `1px solid ${T.line}` : 'none',
+        }}
+      >
+        <ActionBtn
+          icon="chevDown"
+          label={expanded ? 'Collapse' : 'Expand'}
+          onClick={onToggle}
+          active={expanded}
+          T={T}
+        />
         {onViewDetails && <ActionBtn icon="info" label="Details" onClick={onViewDetails} T={T} />}
         {onViewFullPage && <ActionBtn icon="external" label="Full View" onClick={onViewFullPage} T={T} />}
         <ActionBtn icon="refresh" label="Rebook" onClick={handleRebook} T={T} />
@@ -864,25 +1000,29 @@ function SelectionDot({ status }) {
   const color = LEG_STATUS_COLORS[status] || '#374151';
   if (status === 'live') {
     return (
-      <span style={{
+      <span
+        style={{
+          display: 'inline-block',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: color,
+          animation: 'pulse 1.5s infinite',
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      style={{
         display: 'inline-block',
         width: 8,
         height: 8,
         borderRadius: '50%',
         background: color,
-        animation: 'pulse 1.5s infinite',
-      }} />
-    );
-  }
-  return (
-    <span style={{
-      display: 'inline-block',
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      background: color,
-      opacity: status === 'pending' ? 0.4 : 1,
-    }} />
+        opacity: status === 'pending' ? 0.4 : 1,
+      }}
+    />
   );
 }
 
@@ -890,9 +1030,7 @@ function BetMeta({ label, value, color, T }) {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ fontSize: 9, color: T.inkDim, fontWeight: 600, marginBottom: 1 }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
-        {value}
-      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
     </div>
   );
 }
@@ -900,14 +1038,16 @@ function BetMeta({ label, value, color, T }) {
 function DetailSection({ title, children, T }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{
-        fontSize: 10.5,
-        color: T.inkDim,
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: 0.6,
-        marginBottom: 8,
-      }}>
+      <div
+        style={{
+          fontSize: 10.5,
+          color: T.inkDim,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: 0.6,
+          marginBottom: 8,
+        }}
+      >
         {title}
       </div>
       {children}
@@ -917,12 +1057,14 @@ function DetailSection({ title, children, T }) {
 
 function InfoGrid({ children, T }) {
   return (
-    <div style={{
-      padding: '12px 14px',
-      borderRadius: 12,
-      background: T.surfaceAlt,
-      border: `1px solid ${T.line}`,
-    }}>
+    <div
+      style={{
+        padding: '12px 14px',
+        borderRadius: 12,
+        background: T.surfaceAlt,
+        border: `1px solid ${T.line}`,
+      }}
+    >
       {children}
     </div>
   );
@@ -930,26 +1072,30 @@ function InfoGrid({ children, T }) {
 
 function InfoItem({ label, value, color, mono, T }) {
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '6px 0',
-      borderBottom: '1px solid rgba(255,255,255,0.04)',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '6px 0',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+      }}
+    >
       <span style={{ fontSize: 11.5, color: T.inkDim, fontWeight: 500 }}>{label}</span>
-      <span style={{
-        fontSize: 12,
-        fontWeight: 700,
-        color: color || T.ink,
-        fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
-        fontVariantNumeric: 'tabular-nums',
-        textAlign: 'right',
-        maxWidth: '55%',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: color || T.ink,
+          fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
+          fontVariantNumeric: 'tabular-nums',
+          textAlign: 'right',
+          maxWidth: '55%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
         {value}
       </span>
     </div>
@@ -968,15 +1114,18 @@ function OddsDisplay({ initial, current, T }) {
   const isUp = change > 0;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ fontSize: 11, color: T.inkDim, textDecoration: 'line-through' }}>
-        {initial.toFixed(2)}
-      </span>
-      <span style={{ fontSize: 12, fontWeight: 700, color: isUp ? '#16a34a' : '#dc2626', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontSize: 11, color: T.inkDim, textDecoration: 'line-through' }}>{initial.toFixed(2)}</span>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: isUp ? '#16a34a' : '#dc2626',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {current.toFixed(2)}
       </span>
-      <span style={{ fontSize: 10, fontWeight: 700, color: isUp ? '#16a34a' : '#dc2626' }}>
-        {isUp ? '↑' : '↓'}
-      </span>
+      <span style={{ fontSize: 10, fontWeight: 700, color: isUp ? '#16a34a' : '#dc2626' }}>{isUp ? '↑' : '↓'}</span>
     </div>
   );
 }
@@ -988,7 +1137,8 @@ function ActionBtn({ icon, label, onClick, active, T }) {
     chevDown: 'M6 9l6 6 6-6',
     info: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v2h2V7Zm0 4h-2v6h2v-6Z',
     external: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6v6m-11 5L21 3',
-    refresh: 'M17.65 6.35A7.96 7.96 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z',
+    refresh:
+      'M17.65 6.35A7.96 7.96 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z',
     copy: 'M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z',
     upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5-5 5 5m-5 7V5',
   };
@@ -1016,7 +1166,17 @@ function ActionBtn({ icon, label, onClick, active, T }) {
         transition: 'all 120ms',
       }}
     >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
         <path d={icons[icon] || icons.info} />
       </svg>
       {label}
@@ -1053,7 +1213,19 @@ function EmptyState({ icon, title, hint }) {
   const T = useTokens();
   return (
     <div style={{ padding: '40px 24px', textAlign: 'center' }}>
-      <div style={{ width: 60, height: 60, borderRadius: 999, background: T.surface, border: `1px solid ${T.line}`, margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: 999,
+          background: T.surface,
+          border: `1px solid ${T.line}`,
+          margin: '0 auto 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <OddIcon name={icon} size={26} color={T.inkDim} />
       </div>
       <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{title}</div>
@@ -1074,9 +1246,15 @@ function SignedOutState({ navigate }) {
           type="button"
           onClick={() => navigate('/login?next=/my-bets')}
           style={{
-            marginTop: 16, padding: '12px 24px', borderRadius: 999,
-            background: T.greenBright, color: T.goldDark, fontWeight: 700,
-            fontSize: 13, border: 0, cursor: 'pointer',
+            marginTop: 16,
+            padding: '12px 24px',
+            borderRadius: 999,
+            background: T.greenBright,
+            color: T.goldDark,
+            fontWeight: 700,
+            fontSize: 13,
+            border: 0,
+            cursor: 'pointer',
           }}
         >
           Sign in

@@ -5,7 +5,9 @@
  */
 
 // See betApi.js — set VITE_API_BASE in production to point at the backend host.
-const API_BASE = (import.meta.env.VITE_API_BASE || '') + '/api/admin';
+// If unset in production, falls back to the Render backend automatically.
+const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify-api.onrender.com' : '';
+const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_PROD_API) + '/api/admin';
 const ACCESS = 'sp_admin_access';
 const REFRESH = 'sp_admin_refresh';
 
