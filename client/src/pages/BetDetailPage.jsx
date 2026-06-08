@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ChevronLeft,
-  Bell,
-  Home,
-  Trophy,
-  XCircle,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-} from 'lucide-react';
+import { ChevronLeft, Bell, Home, Trophy, XCircle, CheckCircle2, ChevronRight, Clock } from 'lucide-react';
 import { fetchBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
@@ -127,7 +118,9 @@ export default function BetDetailPage() {
     const code = bet.bookingCode || bet.code || bet.id;
     const url = `${window.location.origin}/code/${code}`;
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title: 'Oddsify Winning Slip', text: `Check out my winning slip: ${code}`, url }).catch(() => {});
+      navigator
+        .share({ title: 'Oddsify Winning Slip', text: `Check out my winning slip: ${code}`, url })
+        .catch(() => {});
     } else {
       navigator.clipboard?.writeText(url);
       toast('Share link copied!', 'success');
@@ -289,10 +282,7 @@ export default function BetDetailPage() {
       </div>
 
       {/* ── Verify Code: Bet Details ── */}
-      <div
-        className="flex items-center justify-between"
-        style={{ padding: '14px 16px 8px', color: '#FFFFFF' }}
-      >
+      <div className="flex items-center justify-between" style={{ padding: '14px 16px 8px', color: '#FFFFFF' }}>
         <span style={{ fontSize: 12, color: S.muted }}>
           Verify Code: <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{code}</span>
         </span>
@@ -528,9 +518,7 @@ function LegCard({ leg, index }) {
           value={
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               {leg.pickLabel || leg.label || leg.pick || leg.key}
-              {odds > 0 && (
-                <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>
-              )}
+              {odds > 0 && <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}
               {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
               {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
             </span>
