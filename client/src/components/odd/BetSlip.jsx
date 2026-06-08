@@ -17,7 +17,7 @@ import OddIcon from './Icon.jsx';
 import { TeamLogo } from './teamBranding.jsx';
 import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
-import BetSuccessModal from '../BetSuccessModal.jsx';
+import BetSuccessOverlay from '../BetSuccessOverlay.jsx';
 
 export function OddBetSlipFAB() {
   const T = useTokens();
@@ -993,8 +993,8 @@ export function OddBetSlip() {
           </>
         ) : null}
       </div>
-      {/* Premium fullscreen success celebration */}
-      <BetSuccessModal
+      {/* Fullscreen success celebration overlay */}
+      <BetSuccessOverlay
         bet={successBet}
         onClose={clearSuccessModal}
         onViewBet={() => {

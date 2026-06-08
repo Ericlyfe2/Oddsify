@@ -11,7 +11,7 @@ import {
   acknowledgeBet,
 } from '../api/betApi.js';
 import { onLive, refreshAuth, disconnectSocket } from '../api/socketClient.js';
-import WinTrophyModal from '../components/WinTrophyModal.jsx';
+import WinCelebrationOverlay from '../components/WinCelebrationOverlay.jsx';
 import DepositResultModal from '../components/DepositResultModal.jsx';
 import TxHeader from '../components/TxHeader.jsx';
 import PaybillInstructions from '../components/PaybillInstructions.jsx';
@@ -488,7 +488,7 @@ export default function AppProviders({ children }) {
       <ToastCtx.Provider value={{ toast }}>
         {children}
 
-        <WinTrophyModal wins={wins} onClose={dismissWins} onViewSlip={() => navigate('/my-bets')} />
+        <WinCelebrationOverlay wins={wins} onClose={dismissWins} onViewSlip={() => navigate('/my-bets')} />
 
         <DepositResultModal
           result={depositResults[0] || null}
