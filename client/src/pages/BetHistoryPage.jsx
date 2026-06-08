@@ -1,41 +1,86 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Clock,
+  RotateCcw,
+  Play,
+  Share2,
+  Pencil,
+  ChevronUp,
+  ChevronDown,
+  LayoutGrid,
+  Wallet,
+  Crosshair,
+  ChevronRight,
+  Trophy,
+  XCircle,
+  CheckCircle2,
+  Calendar,
+  X,
+} from 'lucide-react';
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
-import {
-  fmtCedi,
-  useTokens,
-  OddPageHeader,
-  OddSegmented,
-  OddStatusChip,
-  OddIcon,
-} from '../components/odd/primitives.jsx';
-import { TeamLogo, LeagueLogo } from '../components/odd/teamBranding.jsx';
 import CashoutConfirmModal from '../components/CashoutConfirmModal.jsx';
 import CashoutSuccessOverlay from '../components/CashoutSuccessOverlay.jsx';
-import BetDetailModal from '../components/BetDetailModal.jsx';
-import BetTimeline from '../components/BetTimeline.jsx';
 
-const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'cashout', label: 'Cashout Available' },
-  { value: 'live', label: 'Live Games' },
-];
-
-const STATUS_STYLE = {
-  won: { bg: '#16a34a', label: 'Won', icon: 'check' },
-  lost: { bg: '#dc2626', label: 'Lost', icon: 'x' },
-  pending: { bg: '#d97706', label: 'Pending', icon: 'clock' },
-  cashed_out: { bg: '#2563eb', label: 'Cashed Out', icon: 'dollar' },
-  void: { bg: '#4b5563', label: 'Void', icon: 'slash' },
-  open: { bg: '#d97706', label: 'Open', icon: 'clock' },
-  cancelled: { bg: '#6b7280', label: 'Cancelled', icon: 'slash' },
+const S = {
+  navy: '#0B1F3A',
+  green: '#1FAA4A',
+  greenSoft: '#16a34a',
+  red: '#DC2626',
+  dateRed: '#E11E2C',
+  blue: '#2563EB',
+  amber: '#D97706',
+  bodyText: '#3A4A5C',
+  muted: '#6B7280',
+  lightMuted: '#9CA3AF',
+  pageBg: '#F2F4F7',
+  pageDark: '#2A3441',
+  cardBg: '#FFFFFF',
+  cardStrip: '#1C2531',
+  divider: '#E5E7EB',
+  filterChip: '#3A4654',
+  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
 };
 
-function getStatusStyle(status) {
-  return STATUS_STYLE[status] || STATUS_STYLE.pending;
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'cashout', label: 'Cashout Available' },
+  { key: 'live', label: 'Live Games' },
+];
+
+const STATUS = {
+  won: { color: S.green, label: 'Won' },
+  lost: { color: S.red, label: 'Lost' },
+  cashed_out: { color: S.blue, label: 'Cashed Out' },
+  pending: { color: S.amber, label: 'Pending' },
+  open: { color: S.amber, label: 'Open' },
+  void: { color: S.muted, label: 'Void' },
+  cancelled: { color: S.muted, label: 'Cancelled' },
+};
+
+function fmtMoney(n) {
+  const v = Number(n || 0);
+  return v.toFixed(2);
+}
+
+function fmtDateShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm} ${hh}:${mi}`;
+}
+
+function legResult(leg) {
+  if (leg.status === 'won' || leg.won) return 'won';
+  if (leg.status === 'lost' || leg.won === false) return 'lost';
+  if (leg.isLive || leg.status === 'live') return 'live';
+  return 'pending';
 }
 
 function filterBets(bets, filter) {
@@ -51,101 +96,24 @@ function filterBets(bets, filter) {
   });
 }
 
-function filterBySearch(bets, query) {
-  if (!query) return bets;
-  const q = query.toLowerCase();
-  return bets.filter((b) => {
-    const code = (b.bookingCode || b.code || '').toLowerCase();
-    const id = (b.id || '').toLowerCase();
-    const legs = b.legs || b.selections || [];
-    const matchNames = legs.map((l) => `${l.home || ''} ${l.away || ''}`.toLowerCase()).join(' ');
-    return code.includes(q) || id.includes(q) || matchNames.includes(q);
-  });
-}
-
-function makeShareUrl(code) {
-  if (typeof window === 'undefined') return `/code/${code}`;
-  return `${window.location.origin}/code/${code}`;
-}
-
-function shareCode(code, toast) {
-  const url = makeShareUrl(code);
-  if (typeof navigator !== 'undefined' && navigator.share) {
-    navigator.share({ title: 'Oddsify booking code', text: `Booking code ${code} on Oddsify`, url }).catch(() => {});
-    return;
-  }
-  try {
-    navigator.clipboard?.writeText(url);
-    toast('Copied share link.', 'success');
-  } catch {
-    toast('Share unsupported.', 'warn');
-  }
-}
-
-function copyCode(code, toast) {
-  try {
-    navigator.clipboard?.writeText(code);
-    toast(`Copied ${code}.`, 'success');
-  } catch {
-    toast('Copy failed.', 'warn');
-  }
-}
-
-function placedAt(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const dt = d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short' });
-  const tm = d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' });
-  return `${dt}, ${tm}`;
-}
-
-function formatFullDate(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return (
-    d.toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' }) +
-    ', ' +
-    d.toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })
-  );
-}
-
-function legResult(leg) {
-  if (leg.status === 'won' || leg.won) return 'won';
-  if (leg.status === 'lost' || leg.won === false) return 'lost';
-  if (leg.isLive || leg.status === 'live') return 'live';
-  return 'pending';
-}
-
-const LEG_STATUS_COLORS = {
-  won: '#16a34a',
-  lost: '#dc2626',
-  pending: '#d97706',
-  live: '#2563eb',
-};
-
 export default function BetHistoryPage() {
-  const T = useTokens();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { account, refresh } = useAccount();
   const { toast } = useToast();
   const { cashoutOffers, updateCashoutOffer } = useSlip();
-  const initialTab = searchParams.get('tab') === 'hist' ? 'hist' : 'open';
+  const initialTab = searchParams.get('tab') === 'hist' ? 'history' : 'open';
   const [tab, setTab] = useState(initialTab);
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [cashingOut, setCashingOut] = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
 
   const [cashoutTarget, setCashoutTarget] = useState(null);
   const [cashoutOffer, setCashoutOffer] = useState(null);
   const cashoutBusyRef = useRef(false);
+  const [cashingOut, setCashingOut] = useState(null);
   const [cashoutSuccess, setCashoutSuccess] = useState(null);
   const [cashoutSuccessAmount, setCashoutSuccessAmount] = useState(0);
-
-  const [detailBet, setDetailBet] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -165,12 +133,6 @@ export default function BetHistoryPage() {
   }, [account, load]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.__oddsifyOpenCount = bets.filter((b) => b.status === 'open').length;
-    }
-  }, [bets]);
-
-  useEffect(() => {
     if (!account) return;
     const off = onLive('cashout:offer', (payload) => {
       if (payload?.betId && typeof payload.cashOut === 'number') {
@@ -182,22 +144,13 @@ export default function BetHistoryPage() {
 
   const openBets = useMemo(() => bets.filter((b) => b.status === 'open'), [bets]);
   const settledBets = useMemo(() => bets.filter((b) => b.status !== 'open'), [bets]);
-  const filteredOpen = useMemo(() => {
-    let f = filterBets(openBets, filter);
-    if (search) f = filterBySearch(f, search);
-    return f;
-  }, [openBets, filter, search]);
-  const filteredHistory = useMemo(() => {
-    let h = settledBets;
-    if (search) h = filterBySearch(h, search);
-    return h;
-  }, [settledBets, search]);
+  const filteredOpen = useMemo(() => filterBets(openBets, filter), [openBets, filter]);
 
   const openCashoutConfirm = (bet) => {
     const offer = cashoutOffers[bet.id];
     const value = offer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
     if (value <= 0) {
-      toast('Cash-out not currently available for this bet.', 'warn');
+      toast('Cash-out not currently available.', 'warn');
       return;
     }
     setCashoutTarget(bet);
@@ -209,220 +162,164 @@ export default function BetHistoryPage() {
     cashoutBusyRef.current = true;
     setCashingOut(cashoutTarget.id);
     try {
-      const result = await cashOutBet(cashoutTarget.id, cashoutOffer);
-      const bet = result?.bet || cashoutTarget;
-      setCashoutSuccess(bet);
+      await cashOutBet(cashoutTarget.id, cashoutOffer);
+      setCashoutSuccess(cashoutTarget);
       setCashoutSuccessAmount(cashoutOffer);
       setCashoutTarget(null);
       setCashoutOffer(null);
       await refresh();
       await load();
     } catch (e) {
-      toast(e?.body?.error || e?.message || 'Cash-out failed. Please try again.', 'error');
+      toast(e?.body?.error || e?.message || 'Cash-out failed.', 'error');
     } finally {
       setCashingOut(null);
       cashoutBusyRef.current = false;
     }
   };
 
-  const toggleExpand = (id) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
-
   if (!account) return <SignedOutState navigate={navigate} />;
 
+  const balance = Number(account.balance || 0);
+
+  const isHistory = tab === 'history';
+  const bodyBg = isHistory ? S.pageDark : S.pageBg;
+
   return (
-    <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
-      <OddPageHeader
-        title="My Bets"
-        subtitle="Open bets & history"
-        right={
+    <div className="min-h-screen flex items-start justify-center" style={{ background: S.navy }}>
+      <div
+        className="w-full flex flex-col"
+        style={{ maxWidth: 414, minHeight: '100vh', background: bodyBg, fontFamily: S.font, paddingBottom: 88 }}
+      >
+        {/* ── Top tab bar ── */}
+        <div className="relative flex" style={{ height: 48, background: S.navy }}>
+          <TabBtn
+            active={tab === 'open'}
+            onClick={() => setTab('open')}
+            label={`Open Bets (${openBets.length})`}
+          />
+          <TabBtn
+            active={tab === 'history'}
+            onClick={() => setTab('history')}
+            label="Bet History"
+          />
           <div
+            className="absolute flex items-center gap-1"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 12px 8px 10px',
+              top: 8,
+              right: 12,
+              background: S.green,
+              padding: '4px 10px',
               borderRadius: 999,
-              background: T.greenBright,
-              color: T.goldDark,
-              fontWeight: 700,
-              fontSize: 13,
-              fontVariantNumeric: 'tabular-nums',
+              color: '#FFFFFF',
+              fontSize: 12,
+              fontWeight: 600,
             }}
           >
-            GHS {fmtCedi(account.balance)}
+            <Wallet size={12} />
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>GHS {fmtMoney(balance)}</span>
           </div>
-        }
-      />
+        </div>
 
-      <div style={{ padding: '14px 16px 8px' }}>
-        <OddSegmented
-          full
-          options={[
-            { value: 'open', label: `Open Bets · ${openBets.length}` },
-            { value: 'hist', label: `History · ${settledBets.length}` },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
-      </div>
-
-      <div style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {tab === 'open' &&
-            FILTERS.map((f) => (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => setFilter(f.value)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 999,
-                  border: 0,
-                  background: filter === f.value ? T.greenBright : T.surfaceAlt,
-                  color: filter === f.value ? T.goldDark : T.inkSoft,
-                  fontWeight: 700,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  transition: 'all 120ms',
-                }}
-              >
-                {f.label}
-              </button>
-            ))}
-          <div style={{ flex: 1, minWidth: 120, position: 'relative' }}>
-            <input
-              type="text"
-              placeholder="Search by code or team..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '7px 10px 7px 28px',
-                borderRadius: 999,
-                border: 0,
-                background: T.surfaceAlt,
-                color: T.ink,
-                fontSize: 12,
-                fontWeight: 600,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-            <svg
-              style={{ position: 'absolute', left: 8, top: 8, pointerEvents: 'none' }}
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={T.inkDim}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {/* ── Filter row (Open Bets only) ── */}
+        {tab === 'open' && (
+          <div
+            className="flex items-center justify-between"
+            style={{ background: '#FFFFFF', padding: '12px 16px' }}
+          >
+            <div className="flex items-center" style={{ gap: 8 }}>
+              {FILTERS.map(({ key, label }) => {
+                const active = filter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFilter(key)}
+                    style={{
+                      background: active ? S.navy : '#F2F4F7',
+                      color: active ? '#FFFFFF' : S.bodyText,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      padding: '6px 14px',
+                      borderRadius: 16,
+                      border: 0,
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              style={{ background: 'none', border: 0, padding: 0, outline: 'none', cursor: 'pointer' }}
+              aria-label="Toggle view"
             >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
+              <LayoutGrid size={20} color={S.muted} />
+            </button>
           </div>
-        </div>
-      </div>
+        )}
 
-      <div style={{ padding: '0 16px 8px' }}>
-        <button
-          type="button"
-          onClick={() => navigate('/codehub')}
-          style={{
-            width: '100%',
-            padding: '12px 14px',
-            borderRadius: 12,
-            background: T.surfaceAlt,
-            border: `1px dashed ${T.lineStrong}`,
-            color: T.ink,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            cursor: 'pointer',
-          }}
-        >
-          <OddIcon name="ticket" size={16} color={T.greenBright} />
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700 }}>Booking Code Hub</div>
-            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 1 }}>Load any code, see recent codes, share.</div>
+        {/* ── Filter row (Bet History) ── */}
+        {tab === 'history' && (
+          <div
+            className="flex items-center justify-between"
+            style={{ background: S.pageDark, padding: '10px 14px' }}
+          >
+            <div className="flex items-center" style={{ gap: 8 }}>
+              <FilterChip label="Settled" />
+              <FilterChip label="Bet Result" />
+            </div>
+            <div className="flex items-center" style={{ gap: 14 }}>
+              <button
+                type="button"
+                aria-label="Pick date"
+                style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
+              >
+                <Calendar size={20} color="#FFFFFF" />
+              </button>
+              <button
+                type="button"
+                aria-label="Clear filters"
+                style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
+              >
+                <X size={20} color="#FFFFFF" />
+              </button>
+            </div>
           </div>
-          <OddIcon name="chevR" size={14} color={T.inkDim} />
-        </button>
-      </div>
+        )}
 
-      {loading ? (
-        <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
-          {[0, 1].map((i) => (
-            <div
-              key={i}
-              style={{
-                height: 220,
-                borderRadius: 16,
-                background: T.surface,
-                border: `1px solid ${T.line}`,
-                opacity: 0.6 + i * 0.2,
-              }}
-            />
-          ))}
-        </div>
-      ) : tab === 'open' ? (
-        filteredOpen.length === 0 ? (
-          <EmptyState
-            icon="ticket"
-            title={
-              search ? 'No bets match your search' : filter !== 'all' ? 'No bets match this filter' : 'No open bets'
-            }
-            hint={
-              search
-                ? 'Try a different search term.'
-                : filter !== 'all'
-                  ? 'Try switching to All bets.'
-                  : 'Tap odds on a match to build a slip.'
-            }
-          />
-        ) : (
-          <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 12 }}>
-            {filteredOpen.map((bet) => (
-              <ExpandableBetCard
-                key={bet.id}
-                bet={bet}
-                expanded={expandedId === bet.id}
-                onToggle={() => toggleExpand(bet.id)}
-                liveOffer={cashoutOffers[bet.id] || null}
-                onCopy={() => copyCode(bet.bookingCode || bet.code || bet.id, toast)}
-                onCashOut={() => openCashoutConfirm(bet)}
-                cashingOut={cashingOut === bet.id}
-                onViewDetails={() => setDetailBet(bet)}
-                onViewFullPage={() => navigate(`/bets/${bet.id}`)}
+        {/* ── Body ── */}
+        <div style={{ padding: '12px 12px 16px' }}>
+          {loading ? (
+            <SkeletonCard />
+          ) : tab === 'open' ? (
+            filteredOpen.length === 0 ? (
+              <EmptyState
+                title={filter === 'all' ? 'No open bets' : 'No bets match this filter'}
+                hint={filter === 'all' ? 'Tap odds on a match to build a slip.' : 'Try switching to All bets.'}
+                onAction={() => navigate('/')}
               />
-            ))}
-          </div>
-        )
-      ) : filteredHistory.length === 0 ? (
-        <EmptyState
-          icon="ticket"
-          title={search ? 'No bets match your search' : 'No bet history yet'}
-          hint={search ? 'Try a different search term.' : 'Settled bets will appear here.'}
-        />
-      ) : (
-        <div className="odd-cardgrid" style={{ padding: '4px 16px', gap: 10 }}>
-          {filteredHistory.map((h) => (
-            <ExpandableBetCard
-              key={h.id}
-              bet={h}
-              expanded={expandedId === h.id}
-              onToggle={() => toggleExpand(h.id)}
-              onCopy={() => copyCode(h.bookingCode || h.code || h.id, toast)}
-              onViewDetails={() => setDetailBet(h)}
-              onViewFullPage={() => navigate(`/bets/${h.id}`)}
-            />
-          ))}
+            ) : (
+              filteredOpen.map((bet) => (
+                <OpenBetCard
+                  key={bet.id}
+                  bet={bet}
+                  liveOffer={cashoutOffers[bet.id] || null}
+                  cashingOut={cashingOut === bet.id}
+                  onCashOut={() => openCashoutConfirm(bet)}
+                  onDetails={() => navigate(`/bets/${bet.id}`)}
+                />
+              ))
+            )
+          ) : settledBets.length === 0 ? (
+            <EmptyState title="No bet history yet" hint="Settled bets will appear here." onAction={() => navigate('/')} />
+          ) : (
+            settledBets.map((bet) => <HistoryBetCard key={bet.id} bet={bet} onClick={() => navigate(`/bets/${bet.id}`)} />)
+          )}
         </div>
-      )}
+      </div>
 
       <CashoutConfirmModal
         bet={cashoutTarget}
@@ -441,63 +338,243 @@ export default function BetHistoryPage() {
         cashoutAmount={cashoutSuccessAmount}
         open={!!cashoutSuccess}
         onClose={() => setCashoutSuccess(null)}
-        onViewBets={() => {
-          setCashoutSuccess(null);
-          navigate('/my-bets');
-        }}
+        onViewBets={() => setCashoutSuccess(null)}
       />
-
-      <BetDetailModal bet={detailBet} open={!!detailBet} onClose={() => setDetailBet(null)} />
     </div>
   );
 }
 
-function ExpandableBetCard({
-  bet,
-  expanded,
-  onToggle,
-  liveOffer,
-  onCopy,
-  onCashOut,
-  cashingOut,
-  onViewDetails,
-  onViewFullPage,
-}) {
-  const T = useTokens();
+function TabBtn({ active, onClick, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex-1 flex items-center justify-center"
+      style={{
+        background: active ? '#FFFFFF' : S.navy,
+        color: active ? S.navy : '#FFFFFF',
+        fontWeight: active ? 600 : 500,
+        fontSize: 15,
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
+        border: 0,
+        outline: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails }) {
+  const [showDetails, setShowDetails] = useState(true);
+  const legs = bet.legs || bet.selections || [];
+  const stake = Number(bet.stake || 0);
+  const odds = Number(bet.totalOdds || bet.odds || 1);
+  const potential = Number(bet.potentialReturn || bet.win || stake * odds);
+  const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
+  const offer = liveOffer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
+
+  return (
+    <div
+      style={{
+        background: S.cardBg,
+        borderRadius: 10,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+        padding: '14px 16px',
+        marginBottom: 12,
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <span style={{ fontWeight: 700, fontSize: 15, color: S.navy }}>{betType}</span>
+        <div className="flex items-center" style={{ gap: 14 }}>
+          {[
+            { icon: RotateCcw, label: 'Rebet' },
+            { icon: Play, label: 'SIM', fill: true },
+            { icon: Share2 },
+            { icon: Pencil, label: 'Edit Bet' },
+          ].map(({ icon: Icon, label, fill }, i) => (
+            <button
+              key={i}
+              type="button"
+              className="flex items-center gap-1"
+              style={{ background: 'none', border: 0, padding: 0, outline: 'none', cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (label === 'Edit Bet') onDetails?.();
+              }}
+              aria-label={label || 'action'}
+            >
+              <Icon size={14} color={S.green} {...(fill ? { fill: S.green } : {})} />
+              {label && <span style={{ color: S.green, fontSize: 12, fontWeight: 500 }}>{label}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Legs */}
+      {showDetails &&
+        legs.map((leg, i) => (
+          <div
+            key={i}
+            className="flex"
+            style={{
+              gap: 12,
+              padding: '12px 0',
+              borderBottom: i < legs.length - 1 ? `1px solid ${S.divider}` : 'none',
+            }}
+          >
+            <div style={{ flexShrink: 0, paddingTop: 2 }}>
+              <Clock size={18} color={S.muted} />
+            </div>
+            <div className="flex-1" style={{ minWidth: 0 }}>
+              <div className="flex items-center" style={{ gap: 6 }}>
+                <Crosshair size={14} color={S.navy} />
+                <span
+                  style={{ fontWeight: 700, fontSize: 14, color: S.navy, fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {leg.pickLabel || leg.label || leg.pick || leg.key} @ {Number(leg.odds || 0).toFixed(2)}
+                </span>
+                <span style={{ fontWeight: 400, fontSize: 12, color: S.lightMuted }}>
+                  {leg.market || '1X2'}
+                </span>
+              </div>
+              <div style={{ marginTop: 4 }}>
+                <span
+                  style={{
+                    color: S.navy,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  {leg.home} vs {leg.away}
+                </span>
+              </div>
+              <div style={{ marginTop: 4, color: S.lightMuted, fontSize: 12, fontWeight: 400 }}>
+                {fmtDateShort(leg.matchDate || leg.kickoff)}
+              </div>
+            </div>
+          </div>
+        ))}
+
+      {/* Toggle details */}
+      <div style={{ borderTop: `1px solid ${S.divider}` }}>
+        <button
+          type="button"
+          onClick={() => setShowDetails(!showDetails)}
+          className="flex items-center justify-end w-full"
+          style={{
+            gap: 4,
+            padding: '10px 0',
+            background: 'none',
+            border: 0,
+            outline: 'none',
+            color: S.green,
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          {showDetails ? 'Hide Match Details' : 'Show Match Details'}
+          <ChevronUp
+            size={14}
+            color={S.green}
+            style={{ transition: 'transform 200ms', transform: showDetails ? 'rotate(0deg)' : 'rotate(180deg)' }}
+          />
+        </button>
+      </div>
+
+      {/* Stake / Pot. Win */}
+      <div>
+        <Row label="Stake" value={fmtMoney(stake)} />
+        <Row label="Pot. Win" value={fmtMoney(potential)} />
+      </div>
+
+      {/* Cashout button */}
+      {offer > 0 && (
+        <button
+          type="button"
+          onClick={onCashOut}
+          disabled={cashingOut}
+          className="w-full flex items-center justify-center"
+          style={{
+            marginTop: 12,
+            background: S.green,
+            borderRadius: 8,
+            border: 0,
+            outline: 'none',
+            color: '#FFFFFF',
+            fontSize: 15,
+            fontWeight: 700,
+            letterSpacing: 0.2,
+            padding: '12px 0',
+            cursor: cashingOut ? 'wait' : 'pointer',
+            opacity: cashingOut ? 0.7 : 1,
+            gap: 8,
+          }}
+        >
+          {cashingOut ? 'Cashing out…' : `Cashout GHS ${fmtMoney(offer)}`}
+          {!cashingOut && <ChevronRight size={16} />}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FilterChip({ label }) {
+  return (
+    <button
+      type="button"
+      className="flex items-center"
+      style={{
+        gap: 6,
+        background: S.filterChip,
+        color: '#FFFFFF',
+        padding: '6px 12px',
+        borderRadius: 4,
+        border: 0,
+        outline: 'none',
+        fontSize: 13,
+        fontWeight: 500,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+      <ChevronDown size={14} color="#FFFFFF" />
+    </button>
+  );
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function HistoryBetCard({ bet, onClick }) {
   const { loadFromSlip, rememberCode } = useSlip();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const expandRef = useRef(null);
-  const [expandHeight, setExpandHeight] = useState(0);
 
   const legs = bet.legs || bet.selections || [];
-  const code = bet.bookingCode || bet.code || bet.id?.slice(-8) || '—';
-  const status = bet.status || 'open';
-  const ss = getStatusStyle(status);
-  const isOpen = status === 'open';
-  const isSettled = !isOpen;
-  const odds = Number(bet.totalOdds || bet.odds || 1);
   const stake = Number(bet.stake || 0);
-  const potential = Number(bet.potentialReturn || bet.win || stake * odds);
   const payout = Number(bet.payout || bet.winAmount || bet.cashOut || bet.win || 0);
-  const isWon = status === 'won' || status === 'cashed_out';
+  const status = bet.status || 'pending';
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
+  const isWon = status === 'won' || status === 'cashed_out';
+  const isLost = status === 'lost';
 
-  const displayOffer = liveOffer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
-  const showCashout = displayOffer > 0 && isOpen;
-  const offerStale = liveOffer && !liveOffer.cashOut;
+  const placed = new Date(bet.placedAt || bet.createdAt || Date.now());
+  const day = placed.getDate();
+  const month = MONTHS[placed.getMonth()];
 
-  useEffect(() => {
-    if (expanded && expandRef.current) {
-      const h = expandRef.current.scrollHeight;
-      setExpandHeight(h);
-    } else {
-      setExpandHeight(0);
-    }
-  }, [expanded, legs, bet]);
+  const visibleMatches = legs.slice(0, 3);
+  const overflow = Math.max(0, legs.length - visibleMatches.length);
 
-  const handleRebook = () => {
-    if (!legs.length) return toast('No selections to rebook on this slip.', 'warn');
+  const handleRebook = (e) => {
+    e.stopPropagation();
+    if (!legs.length) return toast('No selections to rebook.', 'warn');
+    const code = bet.bookingCode || bet.code || bet.id;
     if (loadFromSlip({ bookingCode: code, legs, mode: bet.mode })) {
       if (bet.bookingCode) rememberCode(bet.bookingCode, { kind: 'placed', legs: legs.length });
       navigate('/');
@@ -505,760 +582,272 @@ function ExpandableBetCard({
   };
 
   return (
-    <div
-      style={{
-        background: T.surface,
-        borderRadius: 16,
-        border: `1px solid ${T.line}`,
-        overflow: 'hidden',
-        transition: 'box-shadow 200ms, border-color 200ms',
-        boxShadow: expanded ? `0 0 0 2px ${ss.bg}20` : 'none',
-        borderColor: expanded ? `${ss.bg}40` : T.line,
-      }}
-    >
-      <div style={{ height: 4, background: ss.bg }} />
-
-      {/* ── Collapsed header ── */}
+    <div className="flex" style={{ gap: 10, marginBottom: 12, alignItems: 'flex-start' }}>
+      {/* Date column */}
       <div
-        onClick={onToggle}
         style={{
-          padding: '14px 14px 0',
-          cursor: 'pointer',
-          userSelect: 'none',
+          width: 32,
+          flexShrink: 0,
+          textAlign: 'center',
+          color: S.dateRed,
+          paddingTop: 4,
+          lineHeight: 1,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '3px 10px',
-                borderRadius: 999,
-                background: ss.bg,
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: 11,
-                letterSpacing: 0.4,
-              }}
-            >
-              {ss.label}
-            </span>
-            <span
-              style={{
-                fontSize: 11,
-                color: T.inkDim,
-                fontWeight: 600,
-                fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                letterSpacing: 0.3,
-                cursor: 'pointer',
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onCopy?.();
-              }}
-              title="Copy booking code"
-            >
-              #{code}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 10.5, color: T.inkSoft }}>{placedAt(bet.placedAt || bet.createdAt)}</span>
-            <ExpandChevron expanded={expanded} T={T} />
-          </div>
-        </div>
-
-        {legs.map((leg, i) => (
-          <div
-            key={i}
-            style={{
-              padding: '7px 0',
-              borderTop: i > 0 ? `1px solid ${T.line}` : 'none',
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 8,
-              alignItems: 'flex-start',
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <TeamLogo name={leg.home} logoUrl={leg.homeLogo} size={16} />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>{leg.home}</span>
-                <span style={{ color: T.inkDim, fontWeight: 500, fontSize: 11 }}>vs</span>
-                <TeamLogo name={leg.away} logoUrl={leg.awayLogo} size={16} />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>{leg.away}</span>
-              </div>
-              <div
-                style={{ fontSize: 10.5, color: T.inkSoft, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}
-              >
-                {leg.league && <span style={{ color: T.inkDim }}>{leg.league}</span>}
-                <span>{leg.market || 'Match Result'}</span>
-                <span style={{ color: T.greenBright, fontWeight: 600 }}>
-                  {leg.pickLabel || leg.label || leg.pick || leg.key}
-                </span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
-                {Number(leg.odds || 0).toFixed(2)}
-              </span>
-              <SelectionDot status={legResult(leg)} />
-            </div>
-          </div>
-        ))}
-
-        {/* ── Selection progress bar ── */}
-        <div style={{ marginTop: 6, display: 'flex', gap: 3 }}>
-          {legs.map((leg, i) => {
-            const lr = legResult(leg);
-            return (
-              <div
-                key={i}
-                title={`${leg.home || ''} vs ${leg.away || ''}: ${lr}`}
-                style={{
-                  flex: 1,
-                  height: 3,
-                  borderRadius: 2,
-                  background: LEG_STATUS_COLORS[lr] || '#374151',
-                  opacity: lr === 'pending' ? 0.4 : 1,
-                  transition: 'all 300ms',
-                }}
-              />
-            );
-          })}
-        </div>
-
-        <div
-          style={{
-            marginTop: 8,
-            paddingTop: 10,
-            borderTop: `1px solid ${T.line}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingBottom: expanded ? 0 : 10,
-          }}
-        >
-          <BetMeta label="Stake" value={`GHS ${fmtCedi(stake)}`} color={T.ink} T={T} />
-          <BetMeta label="Odds" value={`${odds.toFixed(2)}x`} color={T.ink} T={T} />
-          <BetMeta
-            label={isSettled ? (isWon ? 'Payout' : 'Return') : 'Pot. Win'}
-            value={`GHS ${fmtCedi(isSettled ? payout : potential)}`}
-            color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright}
-            T={T}
-          />
-          <BetMeta label="Type" value={betType} color={T.inkSoft} T={T} />
-        </div>
+        <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{day}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{month}</div>
       </div>
 
-      {/* ── Expanded panel (animated) ── */}
+      {/* Card */}
       <div
+        onClick={onClick}
         style={{
+          flex: 1,
+          minWidth: 0,
+          background: S.cardBg,
+          borderRadius: 6,
           overflow: 'hidden',
-          maxHeight: expandHeight,
-          transition: 'max-height 450ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms',
-          opacity: expanded ? 1 : 0,
+          cursor: 'pointer',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.18)',
         }}
       >
-        <div ref={expandRef} style={{ padding: '0 14px 14px' }}>
-          <div style={{ height: 1, background: T.line, margin: '0 0 12px' }} />
+        {/* Navy strip */}
+        <div
+          className="flex items-center justify-between"
+          style={{ background: S.cardStrip, padding: '8px 12px', color: '#FFFFFF' }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{betType}</span>
+          <div className="flex items-center" style={{ gap: 4 }}>
+            {isWon ? (
+              <>
+                <Trophy size={14} color={S.green} fill={S.green} />
+                <span style={{ color: S.green, fontSize: 13, fontWeight: 700 }}>Won</span>
+              </>
+            ) : isLost ? (
+              <>
+                <XCircle size={14} color="#FFFFFF" />
+                <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}>Lost</span>
+              </>
+            ) : (
+              <>
+                <Clock size={14} color={S.amber} />
+                <span style={{ color: S.amber, fontSize: 13, fontWeight: 700 }}>Pending</span>
+              </>
+            )}
+            <ChevronRight size={14} color="#FFFFFF" />
+          </div>
+        </div>
 
-          {/* Cashout button for open bets */}
-          {showCashout && (
+        {/* White body */}
+        <div style={{ padding: '10px 12px 12px', color: S.bodyText }}>
+          <div className="flex justify-between" style={{ fontSize: 12 }}>
+            <span style={{ color: S.muted }}>Total Stake(GHS)</span>
+            <span style={{ color: S.navy, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+              {fmtMoney(stake)}
+            </span>
+          </div>
+          <div className="flex justify-between" style={{ fontSize: 12, marginTop: 3 }}>
+            <span style={{ color: S.muted }}>Total Return</span>
+            <span
+              style={{
+                color: isWon ? S.green : S.navy,
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {fmtMoney(payout)}
+            </span>
+          </div>
+
+          <div
+            className="flex items-end justify-between"
+            style={{ marginTop: 10, gap: 10 }}
+          >
+            <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: S.bodyText, lineHeight: 1.55 }}>
+              {visibleMatches.map((leg, i) => (
+                <div
+                  key={i}
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {leg.home} v {leg.away}
+                </div>
+              ))}
+              {overflow > 0 && (
+                <div style={{ color: S.muted }}>
+                  …(and {overflow} other matches)
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
-              onClick={onCashOut}
-              disabled={cashingOut}
+              onClick={handleRebook}
               style={{
-                width: '100%',
-                padding: '13px 14px',
-                borderRadius: 12,
-                background: T.greenBright,
-                color: T.goldDark,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                fontWeight: 800,
-                fontSize: 14,
+                background: S.green,
+                color: '#FFFFFF',
                 border: 0,
-                cursor: cashingOut ? 'wait' : 'pointer',
-                opacity: cashingOut ? 0.7 : 1,
-                letterSpacing: 0.3,
-                marginBottom: 12,
-                transition: 'opacity 120ms',
+                borderRadius: 4,
+                padding: '7px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                flexShrink: 0,
+                outline: 'none',
               }}
             >
-              {cashingOut ? 'Cashing out…' : `CASHOUT GHS ${fmtCedi(displayOffer)}`}
+              Remix Bet
             </button>
-          )}
-
-          {!showCashout && offerStale && (
-            <div style={{ marginBottom: 10, fontSize: 11, color: T.warn, textAlign: 'center', fontWeight: 600 }}>
-              Cash-out temporarily unavailable.
-            </div>
-          )}
-
-          {/* ── General Info ── */}
-          <DetailSection title="General Information" T={T}>
-            <InfoGrid T={T}>
-              <InfoItem label="Bet ID" value={bet.id || '—'} mono T={T} />
-              <InfoItem label="Booking Code" value={code} mono T={T} />
-              <InfoItem label="Stake" value={`GHS ${fmtCedi(stake)}`} T={T} />
-              <InfoItem label="Total Odds" value={`${odds.toFixed(2)}x`} T={T} />
-              <InfoItem
-                label={isSettled ? (isWon ? 'Actual Win' : 'Return') : 'Potential Win'}
-                value={`GHS ${fmtCedi(isSettled ? payout : potential)}`}
-                color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright}
-                T={T}
-              />
-              <InfoItem
-                label="Profit/Loss"
-                value={`${isWon ? '+' : ''}GHS ${fmtCedi(isWon ? payout - stake : 0)}`}
-                color={isWon ? '#16a34a' : '#dc2626'}
-                T={T}
-              />
-              <InfoItem
-                label="Status"
-                value={<span style={{ color: ss.bg, fontWeight: 700 }}>{ss.label}</span>}
-                T={T}
-              />
-              <InfoItem label="Bet Type" value={betType} T={T} />
-              <InfoItem label="Selections" value={`${legs.length} leg${legs.length > 1 ? 's' : ''}`} T={T} />
-              <InfoItem label="Placed" value={formatFullDate(bet.placedAt || bet.createdAt)} T={T} />
-              {isSettled && <InfoItem label="Settled" value={formatFullDate(bet.settledAt || bet.cashOutAt)} T={T} />}
-              {bet.cashOutAt && <InfoItem label="Cashout At" value={formatFullDate(bet.cashOutAt)} T={T} />}
-              {bet.cashOut && (
-                <InfoItem
-                  label="Cashout Amount"
-                  value={`GHS ${fmtCedi(Number(bet.cashOut))}`}
-                  color={T.greenBright}
-                  T={T}
-                />
-              )}
-            </InfoGrid>
-          </DetailSection>
-
-          {/* ── Match Details ── */}
-          {legs.length > 0 && (
-            <DetailSection title="Match Details" T={T}>
-              {legs.map((leg, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '10px 12px',
-                    marginBottom: 6,
-                    borderRadius: 12,
-                    background: T.surfaceAlt,
-                    border: `1px solid ${T.line}`,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <TeamLogo name={leg.home} logoUrl={leg.homeLogo} size={20} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>
-                        {leg.home}
-                        <span style={{ color: T.inkDim, fontWeight: 500, margin: '0 6px' }}>vs</span>
-                        {leg.away}
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          marginTop: 2,
-                          fontSize: 11,
-                          color: T.inkSoft,
-                        }}
-                      >
-                        {leg.league && (
-                          <>
-                            <LeagueLogo name={leg.league} logoUrl={leg.leagueLogo} size={14} />
-                            <span>{leg.league}</span>
-                          </>
-                        )}
-                        {leg.country && <span>· {leg.country}</span>}
-                        {leg.matchDate && <span>· {formatFullDate(leg.matchDate)}</span>}
-                      </div>
-                    </div>
-                    {(leg.scoreHome != null || leg.scoreAway != null) && (
-                      <div
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: 8,
-                          background: T.bg,
-                          fontSize: 15,
-                          fontWeight: 800,
-                          fontVariantNumeric: 'tabular-nums',
-                          color: T.ink,
-                        }}
-                      >
-                        {leg.scoreHome ?? '?'} - {leg.scoreAway ?? '?'}
-                      </div>
-                    )}
-                  </div>
-
-                  <div
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: T.bg,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 10.5, color: T.inkDim, fontWeight: 600 }}>Market</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>{leg.market || 'Match Result'}</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 10.5, color: T.inkDim, fontWeight: 600 }}>Selection</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: T.greenBright }}>
-                        {leg.pickLabel || leg.label || leg.pick || leg.key}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 10.5, color: T.inkDim, fontWeight: 600 }}>Odds</div>
-                      <OddsDisplay initial={leg.initialOdds || leg.odds} current={leg.odds} T={T} />
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 10.5, color: T.inkDim, fontWeight: 600 }}>Status</div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: LEG_STATUS_COLORS[legResult(leg)] || T.inkDim,
-                        }}
-                      >
-                        {legResult(leg).toUpperCase()}
-                        {legResult(leg) === 'live' && leg.minute != null && ` ${leg.minute}'`}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </DetailSection>
-          )}
-
-          {/* ── Bet Timeline ── */}
-          <DetailSection title="Bet Timeline" T={T}>
-            <BetTimeline bet={bet} T={T} />
-          </DetailSection>
-
-          {/* ── Transaction Details ── */}
-          <DetailSection title="Transaction Details" T={T}>
-            <InfoGrid T={T}>
-              {bet.walletBefore != null && (
-                <InfoItem label="Wallet Before" value={`GHS ${fmtCedi(bet.walletBefore)}`} T={T} />
-              )}
-              <InfoItem label="Stake Debited" value={`-GHS ${fmtCedi(stake)}`} color="#dc2626" T={T} />
-              {isWon && payout > 0 && (
-                <InfoItem label="Winnings Credited" value={`+GHS ${fmtCedi(payout)}`} color="#16a34a" T={T} />
-              )}
-              {bet.cashOut != null && (
-                <InfoItem
-                  label="Cashout Credited"
-                  value={`+GHS ${fmtCedi(Number(bet.cashOut))}`}
-                  color="#2563eb"
-                  T={T}
-                />
-              )}
-              {bet.walletAfter != null && (
-                <InfoItem label="Wallet After" value={`GHS ${fmtCedi(bet.walletAfter)}`} T={T} />
-              )}
-              {bet.transactionRef && <InfoItem label="Transaction Ref" value={bet.transactionRef} mono T={T} />}
-              {bet.paymentRef && <InfoItem label="Payment Ref" value={bet.paymentRef} mono T={T} />}
-            </InfoGrid>
-          </DetailSection>
-
-          {/* ── Booking Code ── */}
-          <DetailSection title="Booking Code" T={T}>
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '14px 0',
-                background: T.surfaceAlt,
-                borderRadius: 12,
-                border: `1px solid ${T.line}`,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 800,
-                  fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                  letterSpacing: 2,
-                  color: T.ink,
-                  marginBottom: 12,
-                }}
-              >
-                {code}
-              </div>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <CodeActionBtn
-                  label="Copy Code"
-                  onClick={() => {
-                    navigator.clipboard?.writeText(code);
-                    toast?.('Copied!');
-                  }}
-                  T={T}
-                />
-                <CodeActionBtn label="Rebook" onClick={handleRebook} T={T} primary />
-                <CodeActionBtn label="Share" onClick={() => shareCode(code, toast)} T={T} />
-                <CodeActionBtn label="Load Bet" onClick={() => navigate(`/code/${code}`)} T={T} />
-              </div>
-            </div>
-          </DetailSection>
-
-          {/* ── Cashout History ── */}
-          {(bet.cashoutHistory || []).length > 0 && (
-            <DetailSection title="Cashout History" T={T}>
-              {(bet.cashoutHistory || []).map((ch, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '10px 12px',
-                    marginBottom: 4,
-                    borderRadius: 10,
-                    background: T.surfaceAlt,
-                    border: `1px solid ${T.line}`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>
-                      {ch.type === 'partial' ? 'Partial Cashout' : 'Full Cashout'}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: T.inkSoft }}>{formatFullDate(ch.createdAt)}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.greenBright }}>
-                      GHS {fmtCedi(ch.amount || 0)}
-                    </div>
-                    {ch.remainingStake > 0 && (
-                      <div style={{ fontSize: 10, color: T.inkSoft }}>Remaining: GHS {fmtCedi(ch.remainingStake)}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </DetailSection>
-          )}
+          </div>
         </div>
       </div>
-
-      {/* ── Action bar ── */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 4,
-          padding: '8px 14px 10px',
-          borderTop: expanded ? `1px solid ${T.line}` : 'none',
-        }}
-      >
-        <ActionBtn
-          icon="chevDown"
-          label={expanded ? 'Collapse' : 'Expand'}
-          onClick={onToggle}
-          active={expanded}
-          T={T}
-        />
-        {onViewDetails && <ActionBtn icon="info" label="Details" onClick={onViewDetails} T={T} />}
-        {onViewFullPage && <ActionBtn icon="external" label="Full View" onClick={onViewFullPage} T={T} />}
-        <ActionBtn icon="refresh" label="Rebook" onClick={handleRebook} T={T} />
-        <ActionBtn icon="copy" label="Copy" onClick={onCopy} T={T} />
-        <ActionBtn icon="upload" label="Share" onClick={() => shareCode(code, toast)} T={T} />
-      </div>
     </div>
   );
 }
 
-function ExpandChevron({ expanded, T }) {
+function Row({ label, value }) {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={T.inkDim}
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{
-        transition: 'transform 300ms',
-        transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-      }}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
-function SelectionDot({ status }) {
-  const color = LEG_STATUS_COLORS[status] || '#374151';
-  if (status === 'live') {
-    return (
-      <span
-        style={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          background: color,
-          animation: 'pulse 1.5s infinite',
-        }}
-      />
-    );
-  }
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        background: color,
-        opacity: status === 'pending' ? 0.4 : 1,
-      }}
-    />
-  );
-}
-
-function BetMeta({ label, value, color, T }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 9, color: T.inkDim, fontWeight: 600, marginBottom: 1 }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-    </div>
-  );
-}
-
-function DetailSection({ title, children, T }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          fontSize: 10.5,
-          color: T.inkDim,
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: 0.6,
-          marginBottom: 8,
-        }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function InfoGrid({ children, T }) {
-  return (
-    <div
-      style={{
-        padding: '12px 14px',
-        borderRadius: 12,
-        background: T.surfaceAlt,
-        border: `1px solid ${T.line}`,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function InfoItem({ label, value, color, mono, T }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '6px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
-      }}
-    >
-      <span style={{ fontSize: 11.5, color: T.inkDim, fontWeight: 500 }}>{label}</span>
-      <span
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: color || T.ink,
-          fontFamily: mono ? '"JetBrains Mono", "Fira Code", monospace' : 'inherit',
-          fontVariantNumeric: 'tabular-nums',
-          textAlign: 'right',
-          maxWidth: '55%',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
+    <div className="flex justify-between" style={{ padding: '4px 0' }}>
+      <span style={{ color: S.bodyText, fontSize: 13, fontWeight: 500 }}>{label}</span>
+      <span style={{ color: S.navy, fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </span>
     </div>
   );
 }
 
-function OddsDisplay({ initial, current, T }) {
-  if (!initial || initial === current) {
-    return (
-      <span style={{ fontSize: 12, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
-        {Number(current || 0).toFixed(2)}
-      </span>
-    );
-  }
-  const change = current - initial;
-  const isUp = change > 0;
+function Mini({ label, value, color }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ fontSize: 11, color: T.inkDim, textDecoration: 'line-through' }}>{initial.toFixed(2)}</span>
-      <span
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 10, color: S.lightMuted, fontWeight: 500 }}>{label}</div>
+      <div
         style={{
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: 700,
-          color: isUp ? '#16a34a' : '#dc2626',
+          color: color || S.navy,
           fontVariantNumeric: 'tabular-nums',
+          marginTop: 2,
         }}
       >
-        {current.toFixed(2)}
-      </span>
-      <span style={{ fontSize: 10, fontWeight: 700, color: isUp ? '#16a34a' : '#dc2626' }}>{isUp ? '↑' : '↓'}</span>
+        {value}
+      </div>
     </div>
   );
 }
 
-function ActionBtn({ icon, label, onClick, active, T }) {
-  const [hovered, setHovered] = useState(false);
-
-  const icons = {
-    chevDown: 'M6 9l6 6 6-6',
-    info: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm1-13h-2v2h2V7Zm0 4h-2v6h2v-6Z',
-    external: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6v6m-11 5L21 3',
-    refresh:
-      'M17.65 6.35A7.96 7.96 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z',
-    copy: 'M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z',
-    upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5-5 5 5m-5 7V5',
-  };
-
+function SkeletonCard() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div
       style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-        padding: '7px 0',
-        borderRadius: 8,
-        background: active || hovered ? `${T.greenBright}15` : 'transparent',
-        border: 0,
-        cursor: 'pointer',
-        color: active ? T.greenBright : hovered ? T.greenBright : T.inkSoft,
-        fontWeight: 700,
-        fontSize: 10.5,
-        transition: 'all 120ms',
+        background: S.cardBg,
+        borderRadius: 10,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+        padding: '14px 16px',
       }}
     >
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d={icons[icon] || icons.info} />
-      </svg>
-      {label}
-    </button>
+      <div className="flex justify-between items-center">
+        <div style={{ width: 80, height: 18, background: '#E5E7EB', borderRadius: 4 }} />
+        <div style={{ width: 120, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+      </div>
+      {[1, 2].map((i) => (
+        <div
+          key={i}
+          className="flex items-start"
+          style={{ gap: 12, padding: '12px 0', borderBottom: i < 2 ? `1px solid ${S.divider}` : 'none' }}
+        >
+          <div style={{ width: 18, height: 18, background: '#E5E7EB', borderRadius: 999, flexShrink: 0 }} />
+          <div className="flex-1" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: '60%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+            <div style={{ width: '80%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+            <div style={{ width: '40%', height: 12, background: '#E5E7EB', borderRadius: 4 }} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
-function CodeActionBtn({ label, onClick, primary, T }) {
-  const [hovered, setHovered] = useState(false);
+function EmptyState({ title, hint, onAction }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div
       style={{
-        padding: '8px 16px',
-        borderRadius: 8,
-        border: 0,
-        background: primary ? T.greenBright : hovered ? `${T.greenBright}20` : T.surfaceAlt,
-        color: primary ? T.goldDark : hovered ? T.greenBright : T.ink,
-        fontWeight: 700,
-        fontSize: 11.5,
-        cursor: 'pointer',
-        transition: 'all 120ms',
+        background: S.cardBg,
+        borderRadius: 10,
+        padding: '40px 24px',
+        textAlign: 'center',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
       }}
     >
-      {label}
-    </button>
-  );
-}
-
-function EmptyState({ icon, title, hint }) {
-  const T = useTokens();
-  return (
-    <div style={{ padding: '40px 24px', textAlign: 'center' }}>
       <div
         style={{
-          width: 60,
-          height: 60,
+          width: 56,
+          height: 56,
           borderRadius: 999,
-          background: T.surface,
-          border: `1px solid ${T.line}`,
+          background: '#F2F4F7',
           margin: '0 auto 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <OddIcon name={icon} size={26} color={T.inkDim} />
+        <Clock size={24} color={S.lightMuted} />
       </div>
-      <div style={{ fontWeight: 700, fontSize: 15, color: T.ink }}>{title}</div>
-      <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 4 }}>{hint}</div>
+      <div style={{ fontWeight: 700, fontSize: 15, color: S.navy }}>{title}</div>
+      <div style={{ fontSize: 12, color: S.muted, marginTop: 4 }}>{hint}</div>
+      {onAction && (
+        <button
+          type="button"
+          onClick={onAction}
+          style={{
+            marginTop: 16,
+            padding: '10px 24px',
+            background: S.green,
+            color: '#FFFFFF',
+            border: 0,
+            borderRadius: 999,
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          Browse Sports
+        </button>
+      )}
     </div>
   );
 }
 
 function SignedOutState({ navigate }) {
-  const T = useTokens();
   return (
-    <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
-      <OddPageHeader title="My Bets" subtitle="Sign in to view your slips" />
-      <div style={{ padding: '40px 24px', textAlign: 'center' }}>
-        <OddIcon name="lock" size={32} color={T.inkDim} />
-        <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>Sign in to see your bets</div>
-        <button
-          type="button"
-          onClick={() => navigate('/login?next=/my-bets')}
-          style={{
-            marginTop: 16,
-            padding: '12px 24px',
-            borderRadius: 999,
-            background: T.greenBright,
-            color: T.goldDark,
-            fontWeight: 700,
-            fontSize: 13,
-            border: 0,
-            cursor: 'pointer',
-          }}
-        >
-          Sign in
-        </button>
+    <div className="min-h-screen flex items-start justify-center" style={{ background: S.navy }}>
+      <div
+        className="w-full"
+        style={{ maxWidth: 414, minHeight: '100vh', background: S.pageBg, fontFamily: S.font }}
+      >
+        <div style={{ height: 48, background: S.navy }} />
+        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: S.navy }}>Sign in to view your bets</div>
+          <button
+            type="button"
+            onClick={() => navigate('/login?next=/my-bets')}
+            style={{
+              marginTop: 16,
+              padding: '12px 24px',
+              background: S.green,
+              color: '#FFFFFF',
+              border: 0,
+              borderRadius: 999,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            Sign in
+          </button>
+        </div>
       </div>
     </div>
   );
