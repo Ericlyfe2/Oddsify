@@ -181,8 +181,7 @@ export default function BetHistoryPage() {
 
   const balance = Number(account.balance || 0);
 
-  const isHistory = tab === 'history';
-  const bodyBg = isHistory ? S.pageDark : S.pageBg;
+  const bodyBg = S.pageBg;
 
   return (
     <div className="min-h-screen flex items-start justify-center" style={{ background: S.navy }}>
@@ -265,7 +264,7 @@ export default function BetHistoryPage() {
         {tab === 'history' && (
           <div
             className="flex items-center justify-between"
-            style={{ background: S.pageDark, padding: '10px 14px' }}
+            style={{ background: '#FFFFFF', padding: '12px 16px' }}
           >
             <div className="flex items-center" style={{ gap: 8 }}>
               <FilterChip label="Settled" />
@@ -277,14 +276,14 @@ export default function BetHistoryPage() {
                 aria-label="Pick date"
                 style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
               >
-                <Calendar size={20} color="#FFFFFF" />
+                <Calendar size={20} color={S.muted} />
               </button>
               <button
                 type="button"
                 aria-label="Clear filters"
                 style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
               >
-                <X size={20} color="#FFFFFF" />
+                <X size={20} color={S.muted} />
               </button>
             </div>
           </div>
@@ -532,19 +531,19 @@ function FilterChip({ label }) {
       className="flex items-center"
       style={{
         gap: 6,
-        background: S.filterChip,
-        color: '#FFFFFF',
-        padding: '6px 12px',
-        borderRadius: 4,
+        background: '#F2F4F7',
+        color: S.bodyText,
+        padding: '6px 14px',
+        borderRadius: 16,
         border: 0,
         outline: 'none',
         fontSize: 13,
-        fontWeight: 500,
+        fontWeight: 600,
         cursor: 'pointer',
       }}
     >
       {label}
-      <ChevronDown size={14} color="#FFFFFF" />
+      <ChevronDown size={14} color={S.bodyText} />
     </button>
   );
 }
