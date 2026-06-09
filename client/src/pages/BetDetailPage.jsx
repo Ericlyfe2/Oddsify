@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Bell, Home, Trophy, XCircle, CheckCircle2, ChevronRight, Clock } from 'lucide-react';
+import { ChevronLeft, Bell, Home, Trophy, XCircle, CheckCircle2, ChevronRight, Clock, Headphones } from 'lucide-react';
 import { fetchBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
