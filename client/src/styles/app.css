@@ -22,9 +22,36 @@
   --green-mid: #1a1814;
   --danger: #ff5b78;
   --warn: #f0a040;
-  --r-sm: 6px;
-  --r: 10px;
-  --r-lg: 18px;
+  --win: #e8b94a; /* Won status — gold, not green (brand choice) */
+  /* RGB channels for translucent fills via rgba(var(--x-rgb), a). */
+  --accent-rgb: 232, 185, 74;
+  --danger-rgb: 255, 91, 120;
+  --warn-rgb: 240, 160, 64;
+  --accent-cool-rgb: 106, 208, 255;
+  /* Radius scale — design-system spec. --r kept at 10px for back-compat
+     with existing cards; --r-md is the design's name for the same value. */
+  --r-xs: 4px; /* tags, market chips */
+  --r-sm: 6px; /* ticket leg boxes */
+  --r: 10px; /* default — back-compat alias of --r-md */
+  --r-btn: 8px; /* default button radius (design spec) */
+  --r-md: 10px; /* bet cards */
+  --r-lg: 18px; /* hero / promo */
+  --r-pill: 999px; /* chips, badges, balance pill */
+  /* Shadows — gold-glow CTA is the brand signature. */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-pop: 0 12px 30px rgba(0, 0, 0, 0.5);
+  --shadow-cta: 0 4px 14px rgba(232, 185, 74, 0.3);
+  --shadow-nav: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+  /* Layout — 414px mobile column is canonical. */
+  --col-max: 414px;
+  --pane-pad: 12px;
+  --card-pad: 16px;
+  /* Type families — match the live app exactly. */
+  --font-display: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --font-body: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --font-alt: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
   /* Theme-aware overlay primitives. --overlay is a soft hover/fill tint;
      --overlay-strong is the same idea but more present (active/selected);
      --scrim is for modal/drawer backdrops. In dark mode these are
@@ -64,6 +91,14 @@ html[data-theme='light'] {
   --green-mid: #e8e0d0;
   --danger: #d6263f;
   --warn: #b4720a;
+  --win: #c8980b; /* Won status — gold (richer in light mode) */
+  /* Light-mode RGB channels for translucent fills. */
+  --accent-rgb: 200, 152, 11;
+  --danger-rgb: 214, 38, 63;
+  --warn-rgb: 180, 114, 10;
+  --accent-cool-rgb: 31, 141, 208;
+  /* Gold CTA glow is dimmer in light mode (less contrast on cream). */
+  --shadow-cta: 0 4px 14px rgba(200, 152, 11, 0.25);
   --overlay: rgba(28, 22, 8, 0.06);
   --overlay-strong: rgba(28, 22, 8, 0.1);
   --scrim: rgba(28, 22, 8, 0.45);

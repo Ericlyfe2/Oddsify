@@ -821,7 +821,7 @@ function BetCard({ bet, isOpen, expanded, onToggle, liveOffer, cashingOut, onCas
             className="w-full flex items-center justify-center"
             style={{
               background: 'var(--accent)',
-              borderRadius: 8,
+              borderRadius: 'var(--r-btn, 8px)',
               border: 0,
               outline: 'none',
               color: 'var(--gold-ink)',
@@ -833,7 +833,7 @@ function BetCard({ bet, isOpen, expanded, onToggle, liveOffer, cashingOut, onCas
               opacity: cashingOut ? 0.7 : 1,
               gap: 8,
               transition: 'background 150ms, transform 100ms',
-              boxShadow: '0 4px 14px rgba(232,185,74,0.3)',
+              boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(232,185,74,0.3))',
             }}
           >
             {cashingOut ? (
