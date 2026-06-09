@@ -1,41 +1,43 @@
+/* BetDetailPage — Oddsify Ticket Details.
+   Ported from the Claude Design "Oddsify Design System" handoff bundle
+   (ui_kits/bet-slips/TicketDetailScreen.jsx). Recolored SportyBet ticket
+   structure → dark gold-accented Oddsify chrome: bg-soft header with the
+   gold "Back" link, surface summary card with the gold return figure,
+   gold-tinted won-leg boxes with trophy watermark, gold Remix Bet CTA
+   with the brand gold-glow shadow. */
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Bell, Home, Trophy, XCircle, CheckCircle2, ChevronRight, Clock, Headphones } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Headphones,
+  Trophy,
+  XCircle,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Ban,
+} from 'lucide-react';
 import { fetchBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
 
-const S = {
-  red: '#E11E2C',
-  navy: '#1C2531',
-  navyDeep: '#0F1620',
-  navyCard: '#1F2937',
-  green: '#22C55E',
-  greenDeep: '#16A34A',
-  amber: '#F59E0B',
-  blue: '#2563EB',
-  muted: '#9CA3AF',
-  divider: '#2A3441',
-  whiteCard: '#FFFFFF',
-  pageBg: '#F3F4F6',
-  bodyText: '#374151',
-  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-};
+const MONO = 'var(--font-mono, "JetBrains Mono", "SF Mono", monospace)';
 
 const STATUS = {
-  won: { color: S.green, label: 'Won', Icon: Trophy },
-  lost: { color: '#DC2626', label: 'Lost', Icon: XCircle },
-  cashed_out: { color: S.blue, label: 'Cashed Out', Icon: CheckCircle2 },
-  pending: { color: S.amber, label: 'Pending', Icon: Clock },
-  open: { color: S.amber, label: 'Pending', Icon: Clock },
-  void: { color: S.muted, label: 'Void', Icon: XCircle },
-  cancelled: { color: S.muted, label: 'Cancelled', Icon: XCircle },
+  won: { color: 'var(--accent)', label: 'Won', Icon: Trophy },
+  cashed_out: { color: 'var(--accent-cool)', label: 'Cashed Out', Icon: Copy },
+  lost: { color: 'var(--danger)', label: 'Lost', Icon: XCircle },
+  pending: { color: 'var(--warn)', label: 'Pending', Icon: Clock },
+  open: { color: 'var(--warn)', label: 'Pending', Icon: Clock },
+  void: { color: 'var(--text-dim)', label: 'Void', Icon: Ban },
+  cancelled: { color: 'var(--text-dim)', label: 'Cancelled', Icon: Ban },
 };
 
 function fmtMoney(n) {
-  const v = Number(n || 0);
-  return v.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtTicketDate(iso) {
@@ -130,8 +132,8 @@ export default function BetDetailPage() {
   if (!account) {
     return (
       <Frame onBack={() => navigate('/login?next=' + window.location.pathname)}>
-        <div style={{ padding: '60px 24px', textAlign: 'center', color: '#FFFFFF' }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>Sign in to view ticket</div>
+        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>Sign in to view ticket</div>
         </div>
       </Frame>
     );
@@ -140,9 +142,9 @@ export default function BetDetailPage() {
   if (loading) {
     return (
       <Frame onBack={() => navigate(-1)}>
-        <div style={{ padding: 16 }}>
-          <div style={{ height: 220, background: S.navyCard, borderRadius: 8, opacity: 0.5 }} />
-          <div style={{ height: 140, background: S.navyCard, borderRadius: 8, marginTop: 10, opacity: 0.4 }} />
+        <div style={{ padding: 12 }}>
+          <Skeleton h={220} />
+          <Skeleton h={140} style={{ marginTop: 10 }} />
         </div>
       </Frame>
     );
@@ -151,22 +153,23 @@ export default function BetDetailPage() {
   if (error || !bet) {
     return (
       <Frame onBack={() => navigate(-1)}>
-        <div style={{ padding: '60px 24px', textAlign: 'center', color: '#FFFFFF' }}>
-          <XCircle size={36} color={S.muted} style={{ margin: '0 auto 12px' }} />
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{error || 'Ticket not found'}</div>
+        <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <XCircle size={36} color="var(--text-dim)" style={{ margin: '0 auto 12px' }} />
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{error || 'Ticket not found'}</div>
           <button
             type="button"
             onClick={() => navigate('/my-bets')}
             style={{
               marginTop: 16,
               padding: '10px 24px',
-              background: S.green,
-              color: '#FFFFFF',
+              background: 'var(--accent)',
+              color: 'var(--gold-ink)',
               border: 0,
-              borderRadius: 999,
+              borderRadius: 'var(--r-pill, 999px)',
               fontWeight: 700,
               fontSize: 13,
               cursor: 'pointer',
+              boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(232,185,74,0.3))',
             }}
           >
             Back to My Bets
@@ -189,6 +192,7 @@ export default function BetDetailPage() {
   const isSettled = status !== 'open' && status !== 'pending';
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
   const totalReturn = isSettled ? payout : potential;
+  const StatusIcon = ss.Icon;
 
   return (
     <Frame onBack={() => navigate(-1)}>
@@ -196,39 +200,49 @@ export default function BetDetailPage() {
       <div style={{ padding: '12px 12px 0' }}>
         <div
           style={{
-            background: S.navy,
-            borderRadius: 8,
+            background: 'var(--surface)',
+            borderRadius: 'var(--r-md, 10px)',
+            border: '1px solid var(--line)',
             padding: '14px 14px 0',
-            color: '#FFFFFF',
+            boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.12))',
           }}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <div style={{ fontSize: 12, color: S.muted, fontWeight: 500 }}>
-                Ticket ID: <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{code}</span>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>
+              Ticket ID:{' '}
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontFamily: MONO }}>{code.toUpperCase()}</span>
             </div>
-            <div style={{ fontSize: 12, color: S.muted, fontFamily: '"JetBrains Mono", monospace' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: MONO }}>
               {fmtTicketDate(bet.placedAt || bet.createdAt)}
             </div>
           </div>
 
-          <div className="flex items-center justify-between" style={{ marginTop: 10, paddingBottom: 12 }}>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>{betType}</span>
-            <div className="flex items-center" style={{ gap: 6, color: ss.color, fontWeight: 700, fontSize: 15 }}>
-              <ss.Icon size={18} color={ss.color} />
-              <span>{ss.label}</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: 10,
+              paddingBottom: 12,
+            }}
+          >
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 6, color: ss.color, fontWeight: 700, fontSize: 15 }}
+            >
+              <StatusIcon size={18} /> {ss.label}
             </div>
           </div>
 
-          <div style={{ borderTop: `1px solid ${S.divider}`, padding: '14px 0 10px' }}>
-            <div className="flex items-center justify-between">
-              <span style={{ fontSize: 13, color: '#FFFFFF' }}>Total Oddsify Return</span>
+          <div style={{ borderTop: '1px solid var(--line)', padding: '14px 0 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: 'var(--text)' }}>Total Oddsify Return</span>
               <span
                 style={{
                   fontSize: 24,
                   fontWeight: 800,
-                  color: isWon ? S.green : '#FFFFFF',
+                  color: isWon ? 'var(--accent)' : 'var(--text)',
+                  fontFamily: MONO,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
@@ -239,19 +253,19 @@ export default function BetDetailPage() {
 
           <SumRow label="Total Stake" value={fmtMoney(stake)} />
           <SumRow label="Total Odds" value={odds.toFixed(2)} />
-          {bonus > 0 && <SumRow label="Total Bonus" value={fmtMoney(bonus)} />}
+          {bonus > 0 && <SumRow label="Total Bonus" value={fmtMoney(bonus)} strong="var(--accent-warm)" />}
 
-          {/* Action buttons */}
-          <div className="flex" style={{ gap: 10, padding: '14px 0' }}>
+          {/* Show Off / Remix Bet */}
+          <div style={{ display: 'flex', gap: 10, padding: '14px 0' }}>
             <button
               type="button"
               onClick={handleShowOff}
-              className="flex-1"
               style={{
-                background: '#F59E0B',
-                color: '#FFFFFF',
-                border: 0,
-                borderRadius: 6,
+                flex: 1,
+                background: 'var(--surface-2)',
+                color: 'var(--text)',
+                border: '1px solid var(--line-strong)',
+                borderRadius: 'var(--r-sm, 6px)',
                 padding: '12px 0',
                 fontWeight: 700,
                 fontSize: 14,
@@ -263,16 +277,17 @@ export default function BetDetailPage() {
             <button
               type="button"
               onClick={handleRebook}
-              className="flex-1"
               style={{
-                background: S.green,
-                color: '#FFFFFF',
+                flex: 1,
+                background: 'var(--accent)',
+                color: 'var(--gold-ink)',
                 border: 0,
-                borderRadius: 6,
+                borderRadius: 'var(--r-sm, 6px)',
                 padding: '12px 0',
                 fontWeight: 700,
                 fontSize: 14,
                 cursor: 'pointer',
+                boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(232,185,74,0.3))',
               }}
             >
               Remix Bet
@@ -281,18 +296,29 @@ export default function BetDetailPage() {
         </div>
       </div>
 
-      {/* ── Verify Code: Bet Details ── */}
-      <div className="flex items-center justify-between" style={{ padding: '14px 16px 8px', color: '#FFFFFF' }}>
-        <span style={{ fontSize: 12, color: S.muted }}>
-          Verify Code: <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{code}</span>
+      {/* Verify code */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 16px 8px',
+        }}
+      >
+        <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>
+          Verify Code:{' '}
+          <span style={{ color: 'var(--text)', fontWeight: 600, fontFamily: MONO }}>{code.toUpperCase()}</span>
         </span>
         <button
           type="button"
-          onClick={() => navigator.clipboard?.writeText(code)}
+          onClick={() => {
+            navigator.clipboard?.writeText(code.toUpperCase());
+            toast('Code copied!', 'success');
+          }}
           style={{
             background: 'none',
             border: 0,
-            color: S.green,
+            color: 'var(--accent)',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
@@ -302,36 +328,39 @@ export default function BetDetailPage() {
         </button>
       </div>
 
-      {/* ── Leg cards ── */}
+      {/* Legs */}
       <div style={{ padding: '0 12px' }}>
         {legs.map((leg, i) => (
-          <LegCard key={i} leg={leg} index={i} />
+          <LegCard key={i} leg={leg} />
         ))}
       </div>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div style={{ padding: '16px 16px 100px' }}>
         <div
-          className="flex items-center justify-between"
           style={{
-            background: S.navy,
-            borderRadius: 6,
-            padding: '14px 14px',
-            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--surface)',
+            borderRadius: 'var(--r, 8px)',
+            border: '1px solid var(--line)',
+            padding: '14px',
             marginBottom: 8,
           }}
         >
-          <span style={{ fontSize: 13 }}>
-            Number of Bets: <span style={{ fontWeight: 700 }}>1</span>
+          <span style={{ fontSize: 13, color: 'var(--text-soft)' }}>
+            Number of Bets: <span style={{ fontWeight: 700, color: 'var(--text)' }}>{legs.length}</span>
           </span>
           <button
             type="button"
-            className="flex items-center"
             style={{
+              display: 'flex',
+              alignItems: 'center',
               gap: 4,
               background: 'none',
               border: 0,
-              color: S.green,
+              color: 'var(--accent)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -343,66 +372,52 @@ export default function BetDetailPage() {
         <button
           type="button"
           onClick={() => navigate('/wallet')}
-          className="flex items-center justify-between w-full"
           style={{
-            background: S.navy,
-            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'var(--surface)',
+            borderRadius: 'var(--r, 8px)',
+            border: '1px solid var(--line)',
             padding: '14px',
-            color: '#FFFFFF',
-            border: 0,
+            color: 'var(--text)',
             cursor: 'pointer',
             fontSize: 13,
           }}
         >
           <span>Check Transaction History</span>
-          <ChevronRight size={14} color={S.muted} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm('Remove this ticket from your records?')) {
-              toast('Settled tickets are kept for your records and cannot be deleted.', 'warn');
-            }
-          }}
-          className="w-full"
-          style={{
-            marginTop: 14,
-            background: 'none',
-            border: 0,
-            color: '#DC2626',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-            textAlign: 'center',
-          }}
-        >
-          Delete Ticket
+          <span style={{ color: 'var(--text-dim)', display: 'inline-flex' }}>
+            <ChevronRight size={14} />
+          </span>
         </button>
       </div>
     </Frame>
   );
 }
 
+// ─── Header frame — bg-soft, gold "Back" link, headphones/home icons ────
 function Frame({ onBack, children }) {
   return (
-    <div className="min-h-screen flex items-start justify-center" style={{ background: S.navyDeep }}>
+    <div className="min-h-screen flex items-start justify-center" style={{ background: 'var(--bg)' }}>
       <div
         className="w-full flex flex-col"
         style={{
-          maxWidth: 414,
+          maxWidth: 'var(--col-max, 414px)',
           minHeight: '100vh',
-          background: S.navyDeep,
-          fontFamily: S.font,
+          background: 'var(--bg)',
+          fontFamily: 'var(--font-body)',
         }}
       >
-        {/* Red header */}
+        {/* Header */}
         <div
-          className="flex items-center justify-between"
           style={{
-            background: S.red,
-            padding: '10px 14px',
-            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--bg-soft)',
+            borderBottom: '1px solid var(--gold-soft)',
+            padding: '12px 14px',
             position: 'sticky',
             top: 0,
             zIndex: 10,
@@ -411,25 +426,25 @@ function Frame({ onBack, children }) {
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center"
             style={{
+              display: 'flex',
+              alignItems: 'center',
               gap: 2,
               background: 'none',
               border: 0,
-              color: '#FFFFFF',
+              color: 'var(--accent)',
               fontSize: 14,
-              fontWeight: 500,
+              fontWeight: 600,
               cursor: 'pointer',
               padding: 0,
             }}
           >
-            <ChevronLeft size={20} />
-            Back
+            <ChevronLeft size={20} /> Back
           </button>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>Ticket Details</div>
-          <div className="flex items-center" style={{ gap: 12 }}>
-            <Headphones size={18} color="#FFFFFF" />
-            <Home size={18} color="#FFFFFF" />
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Ticket Details</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--text-soft)' }}>
+            <Headphones size={18} />
+            <Home size={18} />
           </div>
         </div>
 
@@ -439,100 +454,137 @@ function Frame({ onBack, children }) {
   );
 }
 
-function SumRow({ label, value }) {
+// ─── Summary card row (mono value) ────
+function SumRow({ label, value, strong }) {
   return (
-    <div className="flex items-center justify-between" style={{ padding: '6px 0' }}>
-      <span style={{ fontSize: 13, color: S.muted }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+      <span style={{ fontSize: 13, color: 'var(--text-soft)' }}>{label}</span>
+      <span
+        style={{
+          fontSize: 14,
+          fontWeight: 700,
+          color: strong || 'var(--text)',
+          fontFamily: MONO,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
         {value}
       </span>
     </div>
   );
 }
 
-function LegCard({ leg, index }) {
-  const lr = legResult(leg);
-  const lrColor = lr === 'won' ? S.green : lr === 'lost' ? '#DC2626' : S.amber;
-  const code = leg.gameId || leg.matchId || `Game ${index + 1}`;
-  const matchDate = leg.matchDate || leg.kickoff;
-  const odds = Number(leg.odds || 0);
+// ─── Per-leg card with gold-tinted won box + trophy watermark ────
+function LegCard({ leg }) {
+  const r = legResult(leg);
+  const won = r === 'won';
+  const lost = r === 'lost';
+  const c = won ? 'var(--accent)' : lost ? 'var(--danger)' : 'var(--text-dim)';
+  const tintBg = won ? 'var(--gold-soft)' : lost ? 'rgba(var(--danger-rgb, 255, 91, 120), 0.1)' : 'var(--surface-2)';
 
-  const showStatus = lr === 'won' || lr === 'lost';
-  const pickBoxBg = lr === 'won' ? '#E6F4EA' : lr === 'lost' ? '#FBEAEA' : '#F9FAFB';
+  const home = leg.home || '';
+  const away = leg.away || '';
+  const sHome = leg.scoreHome ?? '?';
+  const sAway = leg.scoreAway ?? '?';
+  const outcome =
+    leg.outcomeLabel ||
+    (leg.scoreHome != null || leg.scoreAway != null ? `${home} ${sHome} - ${sAway} ${away}` : `${home} vs ${away}`);
+  const pick = leg.pickLabel || leg.label || leg.pick || leg.key || '—';
+  const odds = Number(leg.odds || 0);
+  const gameId = leg.gameId || leg.matchId || leg.id?.toString().slice(-6) || '—';
+  const dt = leg.matchDate || leg.kickoff;
+  const dtFormatted = dt ? fmtMatchDate(dt) : '';
 
   return (
     <div
-      className="flex"
       style={{
+        display: 'flex',
         gap: 12,
-        background: S.whiteCard,
-        borderRadius: 8,
+        background: 'var(--surface)',
+        borderRadius: 'var(--r, 8px)',
         padding: '12px 14px',
         marginBottom: 10,
-        color: S.bodyText,
+        border: '1px solid var(--line)',
         alignItems: 'stretch',
       }}
     >
-      {/* Status column (left) */}
-      {showStatus && (
-        <div className="flex items-center" style={{ flexShrink: 0 }}>
-          <div
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 999,
-              background: lrColor,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {lr === 'won' ? (
-              <CheckCircle2 size={16} color="#FFFFFF" fill={lrColor} />
-            ) : (
-              <XCircle size={16} color="#FFFFFF" fill={lrColor} />
-            )}
-          </div>
-        </div>
-      )}
+      {/* Status circle */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0, paddingTop: 8 }}>
+        <span
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 999,
+            background: c,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--bg)',
+          }}
+        >
+          {won ? (
+            <CheckCircle2 size={15} strokeWidth={2.4} />
+          ) : lost ? (
+            <XCircle size={15} strokeWidth={2.4} />
+          ) : (
+            <Clock size={14} />
+          )}
+        </span>
+      </div>
 
-      {/* Pick / Market / Outcome box (tinted by result) */}
-      <div
-        style={{
-          position: 'relative',
-          overflow: 'hidden',
-          background: pickBoxBg,
-          borderRadius: 6,
-          padding: '8px 10px',
-          marginTop: 8,
-        }}
-      >
-        {lr === 'won' && (
-          <Trophy
-            size={56}
-            color={S.green}
-            style={{ position: 'absolute', right: 6, bottom: -6, opacity: 0.14, pointerEvents: 'none' }}
-          />
-        )}
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <LegRow
-            label="Pick"
-            value={
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                {leg.pickLabel || leg.label || leg.pick || leg.key}
-                {odds > 0 && <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}
-                {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
-                {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
-              </span>
-            }
-            valueColor={lrColor}
-          />
-          <LegRow label="Market" value={leg.market || 'Match Result'} />
-          <LegRow
-            label="Outcome"
-            value={leg.outcomeLabel || leg.market || 'Match Result'}
-            valueColor={lr === 'won' ? S.green : lr === 'lost' ? '#DC2626' : '#374151'}
-          />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--text-dim)',
+            fontFamily: MONO,
+            marginBottom: 6,
+          }}
+        >
+          Game ID: {gameId}
+          {dtFormatted && <> · {dtFormatted}</>}
+        </div>
+
+        {/* Pick / Market / Outcome box (tinted + trophy watermark when won) */}
+        <div
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            background: tintBg,
+            borderRadius: 'var(--r-sm, 6px)',
+            padding: '8px 10px',
+          }}
+        >
+          {won && (
+            <span
+              style={{
+                position: 'absolute',
+                right: 6,
+                bottom: -8,
+                opacity: 0.16,
+                color: 'var(--accent)',
+                pointerEvents: 'none',
+              }}
+            >
+              <Trophy size={56} />
+            </span>
+          )}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <LegRow
+              label="Pick"
+              value={
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {pick}{' '}
+                  {odds > 0 && <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}{' '}
+                  {won && <CheckCircle2 size={12} color="var(--accent)" />}
+                  {lost && <XCircle size={12} color="var(--danger)" />}
+                </span>
+              }
+              valueColor={c}
+            />
+            <LegRow label="Market" value={leg.market || 'Match Result'} />
+            <LegRow label="Outcome" value={outcome} valueColor={c} />
+          </div>
         </div>
       </div>
     </div>
@@ -541,13 +593,13 @@ function LegCard({ leg, index }) {
 
 function LegRow({ label, value, valueColor }) {
   return (
-    <div className="flex items-start justify-between" style={{ padding: '3px 0' }}>
-      <span style={{ fontSize: 12, color: '#6B7280', flexShrink: 0 }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '3px 0' }}>
+      <span style={{ fontSize: 12, color: 'var(--text-dim)', flexShrink: 0 }}>{label}</span>
       <span
         style={{
           fontSize: 12,
           fontWeight: 600,
-          color: valueColor || '#374151',
+          color: valueColor || 'var(--text)',
           textAlign: 'right',
           marginLeft: 10,
         }}
@@ -555,5 +607,20 @@ function LegRow({ label, value, valueColor }) {
         {value}
       </span>
     </div>
+  );
+}
+
+function Skeleton({ h, style }) {
+  return (
+    <div
+      style={{
+        height: h,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r, 8px)',
+        opacity: 0.6,
+        ...style,
+      }}
+    />
   );
 }
