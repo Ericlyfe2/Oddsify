@@ -5,6 +5,7 @@ import {
   RotateCcw,
   Share2,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Wallet,
   Trophy,
@@ -22,6 +23,12 @@ import {
   Sun,
   Moon,
   X,
+  Crosshair,
+  Play,
+  Pencil,
+  LayoutGrid,
+  Calendar,
+  FileDown,
 } from 'lucide-react';
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
@@ -33,11 +40,11 @@ import CashoutConfirmModal from '../components/CashoutConfirmModal.jsx';
 import CashoutSuccessOverlay from '../components/CashoutSuccessOverlay.jsx';
 import BetTimeline from '../components/BetTimeline.jsx';
 
-const MONO = '"SF Mono", "Fira Code", "JetBrains Mono", monospace';
+const MONO = 'var(--font-mono, "JetBrains Mono", "SF Mono", monospace)';
 const FILTERS = [
   { key: 'all', label: 'All' },
-  { key: 'cashout', label: 'Cashout' },
-  { key: 'live', label: 'Live' },
+  { key: 'cashout', label: 'Cashout Available' },
+  { key: 'live', label: 'Live Games' },
 ];
 
 function fmt(n) {
@@ -250,21 +257,27 @@ export default function BetHistoryPage() {
               onAction={() => navigate('/')}
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {displayBets.map((bet) => (
-                <BetCard
-                  key={bet.id}
-                  bet={bet}
-                  isOpen={isOpen}
-                  expanded={expandedId === bet.id}
-                  onToggle={() => toggleExpand(bet.id)}
-                  liveOffer={isOpen ? cashoutOffers[bet.id] || null : null}
-                  cashingOut={cashingOut === bet.id}
-                  onCashOut={() => openCashoutConfirm(bet)}
-                  onDetails={() => navigate(`/bets/${bet.id}`)}
-                  onRebook={(e) => handleRebook(e, bet, navigate, toast)}
-                />
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {displayBets.map((bet) =>
+                isOpen ? (
+                  <OpenBetCard
+                    key={bet.id}
+                    bet={bet}
+                    liveOffer={cashoutOffers[bet.id] || null}
+                    cashingOut={cashingOut === bet.id}
+                    onCashOut={() => openCashoutConfirm(bet)}
+                    onDetails={() => navigate(`/bets/${bet.id}`)}
+                    onRebook={(e) => handleRebook(e, bet, navigate, toast)}
+                  />
+                ) : (
+                  <HistoryRow
+                    key={bet.id}
+                    bet={bet}
+                    onOpen={() => navigate(`/bets/${bet.id}`)}
+                    onRebook={(e) => handleRebook(e, bet, navigate, toast)}
+                  />
+                ),
+              )}
             </div>
           )}
         </div>
@@ -469,385 +482,448 @@ function FilterBar({ filter, onFilterChange, search, onSearchChange }) {
 }
 
 // ─── Bet Card ────────────────────────────────────────────────────
-function BetCard({ bet, isOpen, expanded, onToggle, liveOffer, cashingOut, onCashOut, onDetails, onRebook }) {
-  const T = useTokens();
-  const { toast } = useToast();
-  const contentRef = useRef(null);
-  const [contentHeight, setContentHeight] = useState(0);
-
+// ─── OpenBetCard — design port (SportyBet layout / Oddsify gold) ────
+function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onRebook }) {
+  const [open, setOpen] = useState(true);
   const legs = bet.legs || bet.selections || [];
   const stake = Number(bet.stake || 0);
   const odds = Number(bet.totalOdds || bet.odds || 1);
   const potential = Number(bet.potentialReturn || bet.win || stake * odds);
-  const payout = Number(bet.payout || bet.winAmount || bet.cashOut || bet.win || 0);
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
-  const code = bet.bookingCode || bet.code || '—';
-  const codeUpper = code.toUpperCase();
-  const status = bet.status || (isOpen ? 'open' : 'pending');
-  const isSettled = !isBetOpen(bet);
-  const isCashedOut = status === 'cashed_out';
-  const isWon = status === 'won' || isCashedOut;
-  const offer = isOpen ? liveOffer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0 : 0;
-  const profitLoss = isSettled ? (isWon ? payout - stake : 0 - stake) : 0;
-  const hasLiveLeg = legs.some((l) => l.isLive || l.status === 'live');
+  const offer = liveOffer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
 
-  const statusConfig = STATUS_CONFIG(T);
-  const sc = statusConfig[status] || statusConfig.pending;
-  const StatusIcon = sc.icon;
-
-  const legResults = legs.map(legResult);
-  const wonCount = legResults.filter((r) => r === 'won').length;
-  const lostCount = legResults.filter((r) => r === 'lost').length;
-  const totalLegs = legResults.length;
-
-  useEffect(() => {
-    if (expanded && contentRef.current) setContentHeight(contentRef.current.scrollHeight);
-    else setContentHeight(0);
-  }, [expanded, legs]);
-
-  const handleCopy = (e) => {
-    e.stopPropagation();
-    navigator.clipboard
-      .writeText(codeUpper)
-      .then(() => toast('Code copied!', 'success'))
-      .catch(() => {});
-  };
-
-  const handleShare = (e) => {
-    e.stopPropagation();
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/code/${code}` : `/code/${code}`;
-    if (navigator.share)
-      navigator.share({ title: 'Oddsify Bet', text: `Booking Code: ${codeUpper}`, url }).catch(() => {});
-    else
-      navigator.clipboard
-        .writeText(url)
-        .then(() => toast('Link copied!', 'success'))
-        .catch(() => {});
-  };
-
-  const legColors = {
-    won: { bg: 'rgba(var(--accent-rgb, 232, 185, 74), 0.15)', text: 'var(--accent)', dot: 'var(--accent)' },
-    lost: { bg: 'rgba(var(--danger-rgb, 255, 91, 120), 0.15)', text: 'var(--danger)', dot: 'var(--danger)' },
-    live: {
-      bg: 'rgba(var(--accent-cool-rgb, 106, 208, 255), 0.15)',
-      text: 'var(--accent-cool)',
-      dot: 'var(--accent-cool)',
-    },
-    pending: { bg: 'var(--surface-2)', text: 'var(--text-dim)', dot: 'var(--line-strong)' },
-  };
+  const actions = [
+    { Icon: RotateCcw, label: 'Rebet', handler: onRebook },
+    { Icon: Play, label: 'SIM', handler: null },
+    { Icon: Share2, label: null, handler: null },
+    { Icon: Pencil, label: 'Edit Bet', handler: onDetails },
+  ];
 
   return (
-    <div
-      className="select-none"
-      style={{
-        background: 'var(--surface)',
-        borderRadius: 10,
-        overflow: 'hidden',
-        transition: 'box-shadow 200ms',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-      }}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full text-left"
+    <div>
+      <div
         style={{
-          background: 'none',
-          border: 0,
-          padding: '14px 16px 12px',
-          cursor: 'pointer',
-          outline: 'none',
-          width: '100%',
+          background: 'var(--surface)',
+          borderRadius: 'var(--r-md, 10px)',
+          padding: '14px 16px',
+          boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.12))',
+          border: '1px solid var(--line)',
         }}
-        aria-expanded={expanded}
-        aria-label={`${betType} bet, ${sc.label}, ${legs.length} selections`}
       >
-        {/* Header row */}
-        <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
-          <div className="flex items-center" style={{ gap: 8 }}>
+        {/* Header: type + Rebet/SIM/Share/Edit actions */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{betType}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {actions.map(({ Icon, label, handler }, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handler?.(e);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: 'none',
+                  border: 0,
+                  padding: 0,
+                  cursor: 'pointer',
+                  color: 'var(--accent)',
+                }}
+                aria-label={label || 'Share'}
+              >
+                <Icon size={14} />
+                {label && <span style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Selection rows */}
+        {legs.map((leg, i) => (
+          <SelectionRow key={i} leg={leg} last={i === legs.length - 1} />
+        ))}
+
+        {/* Hide/Show match details toggle */}
+        <div style={{ borderTop: '1px solid var(--line)' }}>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              width: '100%',
+              gap: 4,
+              padding: '10px 0',
+              background: 'none',
+              border: 0,
+              color: 'var(--accent)',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            {open ? 'Hide Match Details' : 'Show Match Details'}
             <span
               style={{
                 display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '3px 10px',
-                borderRadius: 999,
-                background: sc.bg,
-                color: sc.text,
-                fontSize: 11,
-                fontWeight: 700,
-                lineHeight: 1.4,
+                transition: 'transform 200ms',
+                transform: open ? 'rotate(0deg)' : 'rotate(180deg)',
               }}
             >
-              <StatusIcon size={12} />
-              {sc.label}
+              <ChevronUp size={14} />
             </span>
-            {hasLiveLeg && (
-              <span
-                className="flex items-center gap-1"
-                style={{ color: 'var(--accent-cool)', fontSize: 11, fontWeight: 600 }}
-              >
-                <Zap size={12} /> LIVE
-              </span>
-            )}
-          </div>
-          <div className="flex items-center" style={{ gap: 6 }}>
-            <span
-              style={{ fontSize: 11, fontFamily: MONO, color: 'var(--text-dim)', fontWeight: 600, letterSpacing: 0.3 }}
-            >
-              #{codeUpper}
-            </span>
-            <ChevronDown
-              size={16}
-              color="var(--text-dim)"
-              style={{ transition: 'transform 250ms', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-            />
-          </div>
+          </button>
         </div>
 
-        {/* Type + Date */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center" style={{ gap: 6 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{betType}</span>
-            {legs.length > 1 && (
-              <span
-                style={{
-                  fontSize: 11,
-                  color: 'var(--text-dim)',
-                  fontWeight: 500,
-                  background: 'var(--surface-2)',
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                }}
-              >
-                {legs.length}-fold
-              </span>
-            )}
-          </div>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 500 }}>
-            {fmtDate(bet.placedAt || bet.createdAt)}
-          </span>
-        </div>
-
-        {/* Progress */}
-        {legs.length > 0 && (
-          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className="flex items-center" style={{ gap: 3, flexShrink: 0 }}>
-              {legResults.map((r, i) => (
+        {/* Stake / Pot. Win — gated by toggle */}
+        {open && (
+          <div>
+            {[
+              { l: 'Stake', v: stake },
+              { l: 'Pot. Win', v: potential },
+            ].map(({ l, v }) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={{ color: 'var(--text-soft)', fontSize: 13, fontWeight: 500 }}>{l}</span>
                 <span
-                  key={i}
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: legColors[r]?.dot || 'var(--line)',
-                    display: 'inline-block',
-                    transition: 'background 300ms',
+                    color: 'var(--text)',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
                   }}
-                  title={`Selection ${i + 1}: ${r}`}
-                />
-              ))}
-            </div>
-            <div
-              style={{
-                flex: 1,
-                height: 3,
-                background: 'var(--line)',
-                borderRadius: 999,
-                overflow: 'hidden',
-                display: 'flex',
-              }}
-            >
-              {wonCount > 0 && <div style={{ height: '100%', background: 'var(--accent)', flex: wonCount }} />}
-              {lostCount > 0 && <div style={{ height: '100%', background: 'var(--danger)', flex: lostCount }} />}
-              {totalLegs - wonCount - lostCount > 0 && (
-                <div style={{ height: '100%', background: 'var(--warn)', flex: totalLegs - wonCount - lostCount }} />
-              )}
-            </div>
+                >
+                  {fmt(v)}
+                </span>
+              </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {/* Stats */}
-        <div
-          className="flex items-center justify-between"
-          style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)' }}
+      {/* Gold Cashout CTA with Zap left + Chevron right */}
+      {offer > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCashOut();
+          }}
+          disabled={cashingOut}
+          style={{
+            marginTop: 12,
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: 'var(--accent)',
+            color: 'var(--gold-ink)',
+            fontWeight: 700,
+            fontSize: 15,
+            padding: '14px 0',
+            borderRadius: 'var(--r-btn, 8px)',
+            border: 0,
+            cursor: cashingOut ? 'wait' : 'pointer',
+            opacity: cashingOut ? 0.7 : 1,
+            boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(232,185,74,0.3))',
+            transition: 'transform 100ms',
+          }}
         >
-          <StatItem label="Stake" value={`GHS ${fmt(stake)}`} />
-          <StatItem label="Odds" value={`${Number(odds).toFixed(2)}`} />
-          <StatItem
-            label={isSettled ? 'Payout' : 'Potential'}
-            value={`GHS ${fmt(isSettled ? payout : potential)}`}
-            valueColor={isSettled ? (isWon ? 'var(--accent)' : 'var(--text-dim)') : 'var(--text)'}
-          />
-          {isSettled && (
-            <StatItem
-              label="P/L"
-              value={`${profitLoss >= 0 ? '+' : ''}GHS ${fmt(Math.abs(profitLoss))}`}
-              valueColor={isWon ? 'var(--accent)' : 'var(--danger)'}
-            />
+          {cashingOut ? (
+            <>
+              <RefreshCw size={16} className="animate-spin" /> Cashing out…
+            </>
+          ) : (
+            <>
+              <Zap size={16} /> Cashout GHS {fmt(offer)} <ChevronRight size={16} />
+            </>
           )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── SelectionRow — clock + crosshair + underlined match name ────
+function SelectionRow({ leg, last }) {
+  const pick = leg.pickLabel || leg.label || leg.pick || leg.key || '—';
+  const market = leg.market || '1X2';
+  const odds = Number(leg.odds || 0);
+  const home = leg.home || '';
+  const away = leg.away || '';
+  const dt = leg.matchDate || leg.kickoff;
+  const dtFormatted = dt ? fmtDate(dt) : '';
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 12,
+        padding: '12px 0',
+        borderBottom: last ? 'none' : '1px solid var(--line)',
+      }}
+    >
+      <div style={{ flexShrink: 0, paddingTop: 2, color: 'var(--text-soft)' }}>
+        <Clock size={18} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>
+            <Crosshair size={14} />
+          </span>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 14,
+              color: 'var(--text)',
+              fontFamily: MONO,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {pick} @ {odds.toFixed(2)}
+          </span>
+          <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-dim)' }}>{market}</span>
         </div>
-      </button>
+        <div style={{ marginTop: 4 }}>
+          <span
+            style={{
+              color: 'var(--text)',
+              fontSize: 14,
+              fontWeight: 500,
+              textDecoration: 'underline',
+              textDecorationColor: 'var(--line-strong)',
+              textUnderlineOffset: 2,
+            }}
+          >
+            {home} vs {away}
+          </span>
+        </div>
+        {dtFormatted && (
+          <div style={{ marginTop: 4, color: 'var(--text-dim)', fontSize: 12, fontFamily: MONO }}>{dtFormatted}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-      {/* Expanded */}
-      <div
-        style={{
-          overflow: 'hidden',
-          maxHeight: contentHeight,
-          transition: 'max-height 350ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      >
-        <div ref={contentRef} style={{ borderTop: '1px solid var(--line)' }}>
-          <div style={{ padding: '14px 16px 16px' }}>
-            <SectionTitle text={isOpen ? `Selections (${legs.length})` : 'Selections'} />
-            {legs.map((leg, i) => (
-              <SelectionRow key={i} leg={leg} status={legResult(leg)} />
-            ))}
+// ─── HistoryRow — date rail + status pill + matches + Rebook ────
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-            {/* Match info */}
-            {(isOpen || isSettled) && (
-              <>
-                <SectionTitle text="Match Information" style={{ marginTop: 14 }} />
-                <div
-                  style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}
-                >
-                  {legs.map((leg, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between"
-                      style={{ padding: '6px 0', borderBottom: i < legs.length - 1 ? '1px solid var(--line)' : 'none' }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                          {leg.home || 'Home'} vs {leg.away || 'Away'}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>
-                          {leg.league && `${leg.league}${leg.country ? ` · ${leg.country}` : ''}`}
-                          {leg.matchDate && ` · ${fmtDate(leg.matchDate)}`}
-                        </div>
-                      </div>
-                      {(leg.scoreHome != null || leg.scoreAway != null) && (
-                        <div
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 800,
-                            color: 'var(--text)',
-                            fontVariantNumeric: 'tabular-nums',
-                            flexShrink: 0,
-                            marginLeft: 12,
-                          }}
-                        >
-                          {leg.scoreHome ?? '?'} - {leg.scoreAway ?? '?'}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+function HistoryStatusPill({ status }) {
+  const cfg = {
+    won: { bg: 'rgba(var(--accent-rgb), 0.2)', color: 'var(--accent)', Icon: Trophy, label: 'Won' },
+    cashed_out: {
+      bg: 'rgba(var(--accent-cool-rgb), 0.2)',
+      color: 'var(--accent-cool)',
+      Icon: Copy,
+      label: 'Cashed Out',
+    },
+    lost: { bg: 'rgba(var(--danger-rgb), 0.18)', color: 'var(--danger)', Icon: XCircle, label: 'Lost' },
+    pending: { bg: 'rgba(var(--warn-rgb), 0.2)', color: 'var(--warn)', Icon: Clock, label: 'Pending' },
+    void: { bg: 'var(--surface-2)', color: 'var(--text-dim)', Icon: Ban, label: 'Void' },
+    cancelled: { bg: 'var(--surface-2)', color: 'var(--text-dim)', Icon: Ban, label: 'Cancelled' },
+  }[status] || { bg: 'var(--surface-2)', color: 'var(--text-dim)', Icon: Clock, label: status || '—' };
+  const { Icon } = cfg;
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '3px 10px',
+        borderRadius: 999,
+        background: cfg.bg,
+        color: cfg.color,
+        fontSize: 11,
+        fontWeight: 700,
+      }}
+    >
+      <Icon size={12} /> {cfg.label}
+    </span>
+  );
+}
 
-            {/* Timeline */}
-            {isSettled && (
-              <>
-                <SectionTitle text="Timeline" style={{ marginTop: 14 }} />
-                <div style={{ marginBottom: 14 }}>
-                  <BetTimeline bet={bet} />
-                </div>
-              </>
-            )}
+function HistoryRow({ bet, onOpen, onRebook }) {
+  const legs = bet.legs || bet.selections || [];
+  const stake = Number(bet.stake || 0);
+  const payout = Number(bet.payout || bet.winAmount || bet.cashOut || bet.win || 0);
+  const status = bet.status || 'pending';
+  const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
+  const isWon = status === 'won' || status === 'cashed_out';
 
-            {/* Transaction details */}
-            {isSettled && (
-              <>
-                <SectionTitle text="Transaction Details" />
-                <div
-                  style={{ background: 'var(--surface-2)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}
-                >
-                  <DetailRow label="Stake" value={`GHS ${fmt(stake)}`} />
-                  <DetailRow label="Total Odds" value={`${Number(odds).toFixed(3)}x`} />
-                  {isWon && <DetailRow label="Payout" value={`GHS ${fmt(payout)}`} valueColor="var(--accent)" />}
-                  {isCashedOut && (
-                    <DetailRow
-                      label="Cashout Amount"
-                      value={`GHS ${fmt(Number(bet.cashOut || 0))}`}
-                      valueColor="var(--accent-cool)"
-                    />
-                  )}
-                  <DetailRow
-                    label="Profit / Loss"
-                    value={`${profitLoss >= 0 ? '+' : ''}GHS ${fmt(Math.abs(profitLoss))}`}
-                    valueColor={isWon ? 'var(--accent)' : 'var(--danger)'}
-                  />
-                  {bet.transactionRef && <DetailRow label="Transaction ID" value={bet.transactionRef} mono />}
-                  {bet.placedAt && <DetailRow label="Placed" value={fmtFull(bet.placedAt)} />}
-                  {bet.settledAt && <DetailRow label="Settled" value={fmtFull(bet.settledAt)} />}
-                  {bet.cashOutAt && <DetailRow label="Cashed Out" value={fmtFull(bet.cashOutAt)} />}
-                </div>
-              </>
-            )}
+  const placed = new Date(bet.placedAt || bet.createdAt || Date.now());
+  const day = placed.getDate();
+  const month = MONTH_NAMES[placed.getMonth()];
 
-            {/* Booking code */}
-            <SectionTitle text="Booking Code" />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 800, fontFamily: MONO, color: 'var(--text)', letterSpacing: 1 }}>
-                {codeUpper}
-              </span>
-              <ActionBtn label="Copy" icon={Copy} onClick={handleCopy} />
-              <ActionBtn label="Rebook" icon={RotateCcw} onClick={onRebook} primary />
-              <ActionBtn label="Share" icon={Share2} onClick={handleShare} />
-              <ActionBtn
-                label="Details"
-                icon={ExternalLink}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDetails();
-                }}
-              />
-            </div>
-          </div>
+  const visible = legs.slice(0, 3);
+  const extra = Math.max(0, legs.length - visible.length);
+
+  return (
+    <div style={{ display: 'flex', gap: 12 }}>
+      {/* Date rail */}
+      <div style={{ width: 34, flexShrink: 0, textAlign: 'center', paddingTop: 10 }}>
+        <div
+          style={{
+            fontSize: 20,
+            fontWeight: 800,
+            color: 'var(--text)',
+            lineHeight: 1,
+            fontFamily: MONO,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {day}
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: 'var(--text-dim)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            marginTop: 2,
+          }}
+        >
+          {month}
         </div>
       </div>
 
-      {/* Cashout */}
-      {isOpen && offer > 0 && (
-        <div style={{ padding: '0 16px 14px' }}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCashOut();
-            }}
-            disabled={cashingOut}
-            className="w-full flex items-center justify-center"
+      {/* Card */}
+      <button
+        type="button"
+        onClick={onOpen}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          textAlign: 'left',
+          background: 'var(--surface)',
+          borderRadius: 'var(--r-md, 10px)',
+          border: '1px solid var(--line)',
+          boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.12))',
+          overflow: 'hidden',
+          cursor: 'pointer',
+          padding: 0,
+          color: 'inherit',
+        }}
+      >
+        {/* Strip */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 12px',
+            background: 'var(--surface-2)',
+            borderBottom: '1px solid var(--line)',
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <HistoryStatusPill status={status} />
+            <span style={{ color: 'var(--text-dim)', display: 'inline-flex' }}>
+              <ChevronRight size={16} />
+            </span>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '10px 12px' }}>
+          <div
             style={{
-              background: 'var(--accent)',
-              borderRadius: 'var(--r-btn, 8px)',
-              border: 0,
-              outline: 'none',
-              color: 'var(--gold-ink)',
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: 0.2,
-              padding: '13px 0',
-              cursor: cashingOut ? 'wait' : 'pointer',
-              opacity: cashingOut ? 0.7 : 1,
-              gap: 8,
-              transition: 'background 150ms, transform 100ms',
-              boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(232,185,74,0.3))',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 6,
             }}
           >
-            {cashingOut ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw size={16} className="animate-spin" /> Cashing out…
-              </span>
-            ) : (
-              <>
-                <Zap size={16} /> Cashout GHS {fmt(offer)} <ChevronRight size={16} />
-              </>
-            )}
-          </button>
+            <span style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 500 }}>Total Stake (GHS)</span>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--text)',
+                fontFamily: MONO,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {fmt(stake)}
+            </span>
+          </div>
+
+          {/* Match list */}
+          <div style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.55, marginBottom: 8 }}>
+            {visible.map((m, i) => (
+              <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {m.home || ''} v {m.away || ''}
+              </div>
+            ))}
+            {extra > 0 && <div style={{ color: 'var(--text-dim)' }}>…(and {extra} other matches)</div>}
+          </div>
+
+          {/* Total Return + Rebook */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: 8,
+              borderTop: '1px solid var(--line)',
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-dim)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  fontWeight: 600,
+                }}
+              >
+                Total Return
+              </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  fontFamily: MONO,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isWon ? 'var(--accent)' : 'var(--text-dim)',
+                }}
+              >
+                {fmt(payout)}
+              </div>
+            </div>
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onRebook?.(e);
+              }}
+              role="button"
+              tabIndex={0}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'var(--accent)',
+                color: 'var(--gold-ink)',
+                fontWeight: 700,
+                fontSize: 13,
+                padding: '8px 14px',
+                borderRadius: 'var(--r-sm, 6px)',
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={13} /> Rebook
+            </span>
+          </div>
         </div>
-      )}
+      </button>
     </div>
   );
 }
@@ -894,112 +970,6 @@ function StatItem({ label, value, valueColor }) {
         }}
       >
         {value}
-      </div>
-    </div>
-  );
-}
-
-function SelectionRow({ leg, status: rs }) {
-  const bgMap = {
-    won: 'rgba(var(--accent-rgb, 232, 185, 74), 0.12)',
-    lost: 'rgba(var(--danger-rgb, 255, 91, 120), 0.12)',
-    live: 'rgba(var(--accent-cool-rgb, 106, 208, 255), 0.12)',
-  };
-  const dotMap = {
-    won: 'var(--accent)',
-    lost: 'var(--danger)',
-    live: 'var(--accent-cool)',
-    pending: 'var(--text-dim)',
-  };
-  const badgeMap = { won: 'W', lost: 'L', live: '●', pending: '—' };
-
-  const oddsAtPlacement = Number(leg.initialOdds || leg.odds || 0);
-  const currentOdds = Number(leg.odds || 0);
-  const oddsChange = currentOdds - oddsAtPlacement;
-  const hasOddsMovement = leg.initialOdds && Math.abs(oddsChange) > 0.001;
-
-  return (
-    <div
-      className="flex items-center"
-      style={{
-        padding: '8px 10px',
-        marginBottom: 6,
-        borderRadius: 8,
-        background: bgMap[rs] || 'var(--surface-2)',
-        border: rs === 'live' ? '1px solid var(--accent-cool)' : '1px solid transparent',
-        transition: 'all 200ms',
-        gap: 10,
-      }}
-    >
-      <div style={{ flexShrink: 0 }}>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 22,
-            height: 22,
-            borderRadius: '50%',
-            background: dotMap[rs] || 'var(--text-dim)',
-            color: '#fff',
-            fontSize: 11,
-            fontWeight: 800,
-            lineHeight: 1,
-          }}
-        >
-          {badgeMap[rs] || '—'}
-        </span>
-      </div>
-      <div className="flex-1" style={{ minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 4, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>
-            {leg.pickLabel || leg.label || leg.pick || leg.key || 'Selection'}
-          </span>
-          <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-dim)' }}>
-            @ {Number(oddsAtPlacement || leg.odds || 0).toFixed(2)}
-          </span>
-          <span
-            style={{
-              fontWeight: 400,
-              fontSize: 11,
-              color: 'var(--text-dim)',
-              background: 'var(--surface-2)',
-              padding: '1px 6px',
-              borderRadius: 4,
-            }}
-          >
-            {leg.market || '1X2'}
-          </span>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-soft)', marginTop: 2 }}>
-          {leg.home || 'Home'} vs {leg.away || 'Away'}
-        </div>
-      </div>
-      <div style={{ flexShrink: 0, textAlign: 'right' }}>
-        {hasOddsMovement && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              fontSize: 11,
-              fontWeight: 600,
-              color: oddsChange > 0 ? 'var(--accent)' : 'var(--danger)',
-            }}
-          >
-            {oddsChange > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {oddsChange > 0 ? '+' : ''}
-            {oddsChange.toFixed(2)}
-          </div>
-        )}
-        {rs === 'live' && (
-          <span
-            className="flex items-center gap-1"
-            style={{ fontSize: 10, color: 'var(--accent-cool)', fontWeight: 700 }}
-          >
-            <Zap size={10} /> LIVE
-          </span>
-        )}
       </div>
     </div>
   );
