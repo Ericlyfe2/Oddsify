@@ -22,44 +22,46 @@ import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
+import { useTokens } from '../components/odd/tokens.jsx';
 import CashoutConfirmModal from '../components/CashoutConfirmModal.jsx';
 import CashoutSuccessOverlay from '../components/CashoutSuccessOverlay.jsx';
 
-const S = {
-  navy: '#0B1F3A',
-  green: '#1FAA4A',
-  greenSoft: '#16a34a',
-  red: '#DC2626',
-  dateRed: '#E11E2C',
-  blue: '#2563EB',
-  amber: '#D97706',
-  bodyText: '#3A4A5C',
-  muted: '#6B7280',
-  lightMuted: '#9CA3AF',
-  pageBg: '#F2F4F7',
-  pageDark: '#2A3441',
-  cardBg: '#FFFFFF',
-  cardStrip: '#1C2531',
-  divider: '#E5E7EB',
-  filterChip: '#3A4654',
-  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-};
+/**
+ * Oddsify theme-aware palette. Maps this page's legacy Sportybet-style color
+ * slots onto the shared design tokens (`useTokens`) so the Bet History screen
+ * matches the rest of the app in both dark and light themes.
+ */
+function usePalette() {
+  const T = useTokens();
+  return {
+    navy: T.ink,           // primary text / brand ink
+    bar: T.surfaceAlt,     // top tab bar, frame, card strip
+    onBar: T.ink,          // text/icons on bars
+    green: T.greenBright,  // accent (Oddsify gold) — positive, buttons, links
+    greenSoft: T.greenBright,
+    onAccent: T.goldInk,   // text on accent/gold backgrounds
+    red: T.danger,
+    dateRed: T.accentHot,
+    blue: T.accentCool,
+    amber: T.warn,
+    bodyText: T.inkSoft,
+    muted: T.inkSoft,
+    lightMuted: T.inkDim,
+    pageBg: T.bg,
+    cardBg: T.surface,
+    cardStrip: T.surfaceAlt,
+    divider: T.lineStrong,
+    chipBg: T.surfaceAlt,
+    skeleton: T.surfaceAlt,
+    font: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  };
+}
 
 const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'cashout', label: 'Cashout Available' },
   { key: 'live', label: 'Live Games' },
 ];
-
-const STATUS = {
-  won: { color: S.green, label: 'Won' },
-  lost: { color: S.red, label: 'Lost' },
-  cashed_out: { color: S.blue, label: 'Cashed Out' },
-  pending: { color: S.amber, label: 'Pending' },
-  open: { color: S.amber, label: 'Open' },
-  void: { color: S.muted, label: 'Void' },
-  cancelled: { color: S.muted, label: 'Cancelled' },
-};
 
 function fmtMoney(n) {
   const v = Number(n || 0);
@@ -97,6 +99,7 @@ function filterBets(bets, filter) {
 }
 
 export default function BetHistoryPage() {
+  const S = usePalette();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { account, refresh } = useAccount();
@@ -181,16 +184,14 @@ export default function BetHistoryPage() {
 
   const balance = Number(account.balance || 0);
 
-  const bodyBg = S.pageBg;
-
   return (
-    <div className="min-h-screen flex items-start justify-center" style={{ background: S.navy }}>
+    <div className="min-h-screen flex items-start justify-center" style={{ background: S.bar }}>
       <div
         className="w-full flex flex-col"
-        style={{ maxWidth: 414, minHeight: '100vh', background: bodyBg, fontFamily: S.font, paddingBottom: 88 }}
+        style={{ maxWidth: 414, minHeight: '100vh', background: S.pageBg, fontFamily: S.font, paddingBottom: 88 }}
       >
         {/* ── Top tab bar ── */}
-        <div className="relative flex" style={{ height: 48, background: S.navy }}>
+        <div className="relative flex" style={{ height: 48, background: S.bar }}>
           <TabBtn
             active={tab === 'open'}
             onClick={() => setTab('open')}
@@ -209,7 +210,7 @@ export default function BetHistoryPage() {
               background: S.green,
               padding: '4px 10px',
               borderRadius: 999,
-              color: '#FFFFFF',
+              color: S.onAccent,
               fontSize: 12,
               fontWeight: 600,
             }}
@@ -223,7 +224,7 @@ export default function BetHistoryPage() {
         {tab === 'open' && (
           <div
             className="flex items-center justify-between"
-            style={{ background: '#FFFFFF', padding: '12px 16px' }}
+            style={{ background: S.cardBg, padding: '12px 16px' }}
           >
             <div className="flex items-center" style={{ gap: 8 }}>
               {FILTERS.map(({ key, label }) => {
@@ -234,8 +235,8 @@ export default function BetHistoryPage() {
                     type="button"
                     onClick={() => setFilter(key)}
                     style={{
-                      background: active ? S.navy : '#F2F4F7',
-                      color: active ? '#FFFFFF' : S.bodyText,
+                      background: active ? S.green : S.chipBg,
+                      color: active ? S.onAccent : S.bodyText,
                       fontSize: 13,
                       fontWeight: 600,
                       padding: '6px 14px',
@@ -264,7 +265,7 @@ export default function BetHistoryPage() {
         {tab === 'history' && (
           <div
             className="flex items-center justify-between"
-            style={{ background: '#FFFFFF', padding: '12px 16px' }}
+            style={{ background: S.cardBg, padding: '12px 16px' }}
           >
             <div className="flex items-center" style={{ gap: 8 }}>
               <FilterChip label="Settled" />
@@ -344,14 +345,15 @@ export default function BetHistoryPage() {
 }
 
 function TabBtn({ active, onClick, label }) {
+  const S = usePalette();
   return (
     <button
       type="button"
       onClick={onClick}
       className="flex-1 flex items-center justify-center"
       style={{
-        background: active ? '#FFFFFF' : S.navy,
-        color: active ? S.navy : '#FFFFFF',
+        background: active ? S.cardBg : S.bar,
+        color: active ? S.navy : S.muted,
         fontWeight: active ? 600 : 500,
         fontSize: 15,
         borderTopLeftRadius: 8,
@@ -367,6 +369,7 @@ function TabBtn({ active, onClick, label }) {
 }
 
 function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails }) {
+  const S = usePalette();
   const [showDetails, setShowDetails] = useState(true);
   const legs = bet.legs || bet.selections || [];
   const stake = Number(bet.stake || 0);
@@ -506,7 +509,7 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails }) {
             borderRadius: 8,
             border: 0,
             outline: 'none',
-            color: '#FFFFFF',
+            color: S.onAccent,
             fontSize: 15,
             fontWeight: 700,
             letterSpacing: 0.2,
@@ -525,13 +528,14 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails }) {
 }
 
 function FilterChip({ label }) {
+  const S = usePalette();
   return (
     <button
       type="button"
       className="flex items-center"
       style={{
         gap: 6,
-        background: '#F2F4F7',
+        background: S.chipBg,
         color: S.bodyText,
         padding: '6px 14px',
         borderRadius: 16,
@@ -551,6 +555,7 @@ function FilterChip({ label }) {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function HistoryBetCard({ bet, onClick }) {
+  const S = usePalette();
   const { loadFromSlip, rememberCode } = useSlip();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -610,10 +615,10 @@ function HistoryBetCard({ bet, onClick }) {
           boxShadow: '0 1px 2px rgba(0,0,0,0.18)',
         }}
       >
-        {/* Navy strip */}
+        {/* Header strip */}
         <div
           className="flex items-center justify-between"
-          style={{ background: S.cardStrip, padding: '8px 12px', color: '#FFFFFF' }}
+          style={{ background: S.cardStrip, padding: '8px 12px', color: S.onBar }}
         >
           <span style={{ fontSize: 14, fontWeight: 600 }}>{betType}</span>
           <div className="flex items-center" style={{ gap: 4 }}>
@@ -624,8 +629,8 @@ function HistoryBetCard({ bet, onClick }) {
               </>
             ) : isLost ? (
               <>
-                <XCircle size={14} color="#FFFFFF" />
-                <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}>Lost</span>
+                <XCircle size={14} color={S.red} />
+                <span style={{ color: S.red, fontSize: 13, fontWeight: 700 }}>Lost</span>
               </>
             ) : (
               <>
@@ -633,11 +638,11 @@ function HistoryBetCard({ bet, onClick }) {
                 <span style={{ color: S.amber, fontSize: 13, fontWeight: 700 }}>Pending</span>
               </>
             )}
-            <ChevronRight size={14} color="#FFFFFF" />
+            <ChevronRight size={14} color={S.onBar} />
           </div>
         </div>
 
-        {/* White body */}
+        {/* Body */}
         <div style={{ padding: '10px 12px 12px', color: S.bodyText }}>
           <div className="flex justify-between" style={{ fontSize: 12 }}>
             <span style={{ color: S.muted }}>Total Stake(GHS)</span>
@@ -687,7 +692,7 @@ function HistoryBetCard({ bet, onClick }) {
               onClick={handleRebook}
               style={{
                 background: S.green,
-                color: '#FFFFFF',
+                color: S.onAccent,
                 border: 0,
                 borderRadius: 4,
                 padding: '7px 14px',
@@ -708,6 +713,7 @@ function HistoryBetCard({ bet, onClick }) {
 }
 
 function Row({ label, value }) {
+  const S = usePalette();
   return (
     <div className="flex justify-between" style={{ padding: '4px 0' }}>
       <span style={{ color: S.bodyText, fontSize: 13, fontWeight: 500 }}>{label}</span>
@@ -718,26 +724,8 @@ function Row({ label, value }) {
   );
 }
 
-function Mini({ label, value, color }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 10, color: S.lightMuted, fontWeight: 500 }}>{label}</div>
-      <div
-        style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: color || S.navy,
-          fontVariantNumeric: 'tabular-nums',
-          marginTop: 2,
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function SkeletonCard() {
+  const S = usePalette();
   return (
     <div
       style={{
@@ -748,8 +736,8 @@ function SkeletonCard() {
       }}
     >
       <div className="flex justify-between items-center">
-        <div style={{ width: 80, height: 18, background: '#E5E7EB', borderRadius: 4 }} />
-        <div style={{ width: 120, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+        <div style={{ width: 80, height: 18, background: S.skeleton, borderRadius: 4 }} />
+        <div style={{ width: 120, height: 14, background: S.skeleton, borderRadius: 4 }} />
       </div>
       {[1, 2].map((i) => (
         <div
@@ -757,11 +745,11 @@ function SkeletonCard() {
           className="flex items-start"
           style={{ gap: 12, padding: '12px 0', borderBottom: i < 2 ? `1px solid ${S.divider}` : 'none' }}
         >
-          <div style={{ width: 18, height: 18, background: '#E5E7EB', borderRadius: 999, flexShrink: 0 }} />
+          <div style={{ width: 18, height: 18, background: S.skeleton, borderRadius: 999, flexShrink: 0 }} />
           <div className="flex-1" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ width: '60%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
-            <div style={{ width: '80%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
-            <div style={{ width: '40%', height: 12, background: '#E5E7EB', borderRadius: 4 }} />
+            <div style={{ width: '60%', height: 14, background: S.skeleton, borderRadius: 4 }} />
+            <div style={{ width: '80%', height: 14, background: S.skeleton, borderRadius: 4 }} />
+            <div style={{ width: '40%', height: 12, background: S.skeleton, borderRadius: 4 }} />
           </div>
         </div>
       ))}
@@ -770,6 +758,7 @@ function SkeletonCard() {
 }
 
 function EmptyState({ title, hint, onAction }) {
+  const S = usePalette();
   return (
     <div
       style={{
@@ -785,7 +774,7 @@ function EmptyState({ title, hint, onAction }) {
           width: 56,
           height: 56,
           borderRadius: 999,
-          background: '#F2F4F7',
+          background: S.chipBg,
           margin: '0 auto 12px',
           display: 'flex',
           alignItems: 'center',
@@ -804,7 +793,7 @@ function EmptyState({ title, hint, onAction }) {
             marginTop: 16,
             padding: '10px 24px',
             background: S.green,
-            color: '#FFFFFF',
+            color: S.onAccent,
             border: 0,
             borderRadius: 999,
             fontWeight: 700,
@@ -820,13 +809,14 @@ function EmptyState({ title, hint, onAction }) {
 }
 
 function SignedOutState({ navigate }) {
+  const S = usePalette();
   return (
-    <div className="min-h-screen flex items-start justify-center" style={{ background: S.navy }}>
+    <div className="min-h-screen flex items-start justify-center" style={{ background: S.bar }}>
       <div
         className="w-full"
         style={{ maxWidth: 414, minHeight: '100vh', background: S.pageBg, fontFamily: S.font }}
       >
-        <div style={{ height: 48, background: S.navy }} />
+        <div style={{ height: 48, background: S.bar }} />
         <div style={{ padding: '60px 24px', textAlign: 'center' }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: S.navy }}>Sign in to view your bets</div>
           <button
@@ -836,7 +826,7 @@ function SignedOutState({ navigate }) {
               marginTop: 16,
               padding: '12px 24px',
               background: S.green,
-              color: '#FFFFFF',
+              color: S.onAccent,
               border: 0,
               borderRadius: 999,
               fontWeight: 700,
