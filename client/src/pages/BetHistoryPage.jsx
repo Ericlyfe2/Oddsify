@@ -491,7 +491,8 @@ function BetCard({ bet, isOpen, expanded, onToggle, liveOffer, cashingOut, onCas
   const profitLoss = isSettled ? (isWon ? payout - stake : 0 - stake) : 0;
   const hasLiveLeg = legs.some((l) => l.isLive || l.status === 'live');
 
-  const sc = STATUS_CONFIG[T](status) || STATUS_CONFIG(T).pending;
+  const statusConfig = STATUS_CONFIG(T);
+  const sc = statusConfig[status] || statusConfig.pending;
   const StatusIcon = sc.icon;
 
   const legResults = legs.map(legResult);
