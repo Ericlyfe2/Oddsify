@@ -298,7 +298,10 @@ function TabBar({ openCount, activeTab, onTabChange, balance }) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="relative flex" style={{ height: 48, background: 'var(--surface)' }}>
+    <div
+      className="relative flex"
+      style={{ position: 'relative', display: 'flex', height: 48, background: 'var(--surface)' }}
+    >
       {['open', 'history'].map((t) => {
         const active = activeTab === t;
         return (
@@ -334,6 +337,10 @@ function TabBar({ openCount, activeTab, onTabChange, balance }) {
         onClick={toggleTheme}
         className="absolute flex items-center justify-center"
         style={{
+          position: 'absolute',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           top: 8,
           right: 12,
           width: 28,
