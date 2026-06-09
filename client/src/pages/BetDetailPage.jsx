@@ -496,30 +496,17 @@ function LegCard({ leg, index }) {
         </div>
       )}
 
-      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #F3F4F6' }}>
-        <LegRow
-          label="Pick"
-          value={
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              {leg.pickLabel || leg.label || leg.pick || leg.key}
-              {odds > 0 && <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}
-              {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
-              {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
-            </span>
-          </div>
-        )}
-
-        {/* Pick / Market / Outcome box (tinted by result) */}
-        <div
-          style={{
-            position: 'relative',
-            overflow: 'hidden',
-            background: pickBoxBg,
-            borderRadius: 6,
-            padding: '8px 10px',
-            marginTop: 8,
-          }}
-        >
+      {/* Pick / Market / Outcome box (tinted by result) */}
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          background: pickBoxBg,
+          borderRadius: 6,
+          padding: '8px 10px',
+          marginTop: 8,
+        }}
+      >
           {lr === 'won' && (
             <Trophy
               size={56}
@@ -548,7 +535,6 @@ function LegCard({ leg, index }) {
             />
           </div>
         </div>
-      </div>
     </div>
   );
 }
