@@ -289,7 +289,14 @@ function OddsifyFooter() {
         <button
           type="button"
           onClick={() => navigate('/info#licence')}
-          style={{ background: 'none', border: 0, color: T.greenBright, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+          style={{
+            background: 'none',
+            border: 0,
+            color: T.greenBright,
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
         >
           Oddsify GH
         </button>
@@ -297,7 +304,14 @@ function OddsifyFooter() {
         <button
           type="button"
           onClick={() => navigate('/info#responsible-gaming')}
-          style={{ background: 'none', border: 0, color: T.greenBright, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+          style={{
+            background: 'none',
+            border: 0,
+            color: T.greenBright,
+            fontWeight: 600,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
         >
           Responsible Gaming
         </button>

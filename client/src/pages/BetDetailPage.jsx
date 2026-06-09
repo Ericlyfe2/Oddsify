@@ -507,34 +507,34 @@ function LegCard({ leg, index }) {
           marginTop: 8,
         }}
       >
-          {lr === 'won' && (
-            <Trophy
-              size={56}
-              color={S.green}
-              style={{ position: 'absolute', right: 6, bottom: -6, opacity: 0.14, pointerEvents: 'none' }}
-            />
-          )}
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <LegRow
-              label="Pick"
-              value={
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {leg.pickLabel || leg.label || leg.pick || leg.key}
-                  {odds > 0 && <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}
-                  {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
-                  {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
-                </span>
-              }
-              valueColor={lrColor}
-            />
-            <LegRow label="Market" value={leg.market || 'Match Result'} />
-            <LegRow
-              label="Outcome"
-              value={leg.outcomeLabel || leg.market || 'Match Result'}
-              valueColor={lr === 'won' ? S.green : lr === 'lost' ? '#DC2626' : '#374151'}
-            />
-          </div>
+        {lr === 'won' && (
+          <Trophy
+            size={56}
+            color={S.green}
+            style={{ position: 'absolute', right: 6, bottom: -6, opacity: 0.14, pointerEvents: 'none' }}
+          />
+        )}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <LegRow
+            label="Pick"
+            value={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {leg.pickLabel || leg.label || leg.pick || leg.key}
+                {odds > 0 && <span style={{ color: '#6B7280', fontWeight: 500 }}>@{odds.toFixed(2)}</span>}
+                {lr === 'won' && <CheckCircle2 size={12} color={S.green} />}
+                {lr === 'lost' && <XCircle size={12} color="#DC2626" />}
+              </span>
+            }
+            valueColor={lrColor}
+          />
+          <LegRow label="Market" value={leg.market || 'Match Result'} />
+          <LegRow
+            label="Outcome"
+            value={leg.outcomeLabel || leg.market || 'Match Result'}
+            valueColor={lr === 'won' ? S.green : lr === 'lost' ? '#DC2626' : '#374151'}
+          />
         </div>
+      </div>
     </div>
   );
 }
