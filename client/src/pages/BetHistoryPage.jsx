@@ -363,6 +363,10 @@ function TabBar({ openCount, activeTab, onTabChange, balance }) {
       <div
         className="absolute flex items-center gap-1"
         style={{
+          position: 'absolute',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
           top: 8,
           right: 44,
           background: 'var(--accent)',
