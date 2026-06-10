@@ -714,32 +714,6 @@ export default function ProfilePage() {
         </Row>
       </Section>
 
-      {/* Verification */}
-      <Section title="Verification (KYC)" subtitle="Required for higher limits & withdrawals">
-        <Row>
-          <OddIcon
-            name={account.verified ? 'check' : 'info'}
-            size={16}
-            color={account.verified ? T.greenBright : 'var(--warn)'}
-          />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>
-              {account.verified ? 'Account verified' : promotionPending ? 'Pending review' : 'Not yet verified'}
-            </div>
-            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
-              {account.verified
-                ? `Verified ${account.verifiedAt ? new Date(account.verifiedAt).toLocaleDateString('en-GH') : ''}`
-                : 'Make a deposit of GHS 1,000+ in one transaction to trigger admin review.'}
-            </div>
-          </div>
-        </Row>
-        <Row onClick={() => openDeposit()}>
-          <OddIcon name="deposit" size={16} color={T.greenBright} />
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>Deposit to trigger verification</span>
-          <OddIcon name="chevR" size={14} color={T.inkDim} />
-        </Row>
-      </Section>
-
       {/* Responsible gaming */}
       <Section title="Responsible gaming" subtitle="Stay in control">
         <ResponsibleGamingRow
