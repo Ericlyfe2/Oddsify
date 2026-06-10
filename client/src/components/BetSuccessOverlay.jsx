@@ -82,7 +82,7 @@ export default function BetSuccessOverlay({
               '--x': `${Math.random() * 100}%`,
               '--d': `${Math.random() * 1.5}s`,
               '--r': `${Math.random() * 720}deg`,
-              '--c': ['#4ade80', '#22c55e', '#16a34a', '#ffd76d', '#ffb800', '#fff'][i % 6],
+              '--c': ['#f7c948', '#e8b94a', '#d4a72c', '#fff3b8', '#ffb800', '#f3e9cf'][i % 6],
               '--w': `${5 + Math.random() * 6}px`,
               '--h': `${8 + Math.random() * 10}px`,
               '--tx': `${-40 + Math.random() * 80}px`,
@@ -100,7 +100,7 @@ export default function BetSuccessOverlay({
               '--x': `${20 + Math.random() * 60}%`,
               '--d': `${Math.random() * 2}s`,
               '--s': `${3 + Math.random() * 5}px`,
-              '--c': ['#4ade80', '#22c55e', '#86efac', '#bbf7d0'][i % 4],
+              '--c': ['#f7c948', '#e8b94a', '#fff3b8', '#f3e9cf'][i % 4],
             }}
           />
         ))}
@@ -242,7 +242,7 @@ export default function BetSuccessOverlay({
 const CSS = `
 @keyframes bsoFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bsoFadeOut { from { opacity: 1; } to { opacity: 0; } }
-@keyframes bsoCardIn { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+@keyframes bsoCardIn { 0% { transform: scale(0.8) translateY(28px); opacity: 0; } 60% { transform: scale(1.03) translateY(-4px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
 @keyframes bsoCardOut { from { transform: scale(1) translateY(0); opacity: 1; } to { transform: scale(0.85) translateY(20px); opacity: 0; } }
 @keyframes bsoCheckIn { 0% { stroke-dashoffset: 330; opacity: 0; } 30% { opacity: 1; } 100% { stroke-dashoffset: 0; } }
 @keyframes bsoRingIn { 0% { stroke-dashoffset: 340; } 100% { stroke-dashoffset: 0; } }
@@ -252,6 +252,11 @@ const CSS = `
 @keyframes bsoSparkleAnim { 0%, 100% { opacity: 0; transform: scale(0.3) rotate(0); } 30% { opacity: 1; transform: scale(1.2) rotate(180deg); } 60% { opacity: 0.6; transform: scale(0.8) rotate(360deg); } 100% { opacity: 0; transform: scale(0.3) rotate(540deg); } }
 @keyframes bsoCountdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @keyframes bsoTitleIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bsoCheckPop { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes bsoRipple { 0% { transform: translate(-50%,-50%) scale(.5); opacity: .8; } 100% { transform: translate(-50%,-50%) scale(1.8); opacity: 0; } }
+@keyframes bsoShimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+@keyframes bsoBorderGlow { 0%, 100% { box-shadow: 0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,185,74,0.2) inset, 0 0 24px rgba(232,185,74,0.05); } 50% { box-shadow: 0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(247,201,72,0.45) inset, 0 0 48px rgba(232,185,74,0.14); } }
+@keyframes bsoBtnGlow { 0%, 100% { box-shadow: 0 10px 24px rgba(232,185,74,0.3); } 50% { box-shadow: 0 12px 36px rgba(247,201,72,0.55); } }
 @keyframes bsoSubIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes bsoDetailsIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes bsoActionsIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -269,7 +274,7 @@ const CSS = `
 
 .bso-bg {
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 40%, rgba(5, 46, 22, 0.92), rgba(0, 0, 0, 0.95));
+  background: radial-gradient(ellipse at 50% 40%, rgba(26, 19, 0, 0.92), rgba(0, 0, 0, 0.96));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -308,7 +313,7 @@ const CSS = `
 }
 .bso-sparkle::after {
   content: ''; display: block; width: 100%; height: 100%;
-  background: #ffd76d;
+  background: #f7c948;
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
 
@@ -318,15 +323,15 @@ const CSS = `
   max-height: 100%;
   overflow-y: auto;
   background:
-    radial-gradient(500px 200px at 80% -10%, rgba(74, 222, 128, 0.12), transparent 60%),
-    linear-gradient(180deg, #052e16 0%, #022008 100%);
+    radial-gradient(500px 200px at 80% -10%, rgba(232, 185, 74, 0.12), transparent 60%),
+    linear-gradient(180deg, #161513 0%, #0a0a0a 100%);
   border-radius: 24px;
   padding: 32px 24px 24px;
-  box-shadow: 0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(74,222,128,0.15) inset;
+  box-shadow: 0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,185,74,0.2) inset;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   text-align: center;
-  animation: bsoCardIn 0.5s cubic-bezier(0.18, 0.88, 0.36, 1.2) both;
-  color: #fff;
+  animation: bsoCardIn 0.55s cubic-bezier(0.18, 0.88, 0.36, 1.2) both, bsoBorderGlow 3s ease-in-out 1.2s infinite;
+  color: #f3e9cf;
   scrollbar-width: thin;
 }
 .bso-exiting .bso-card {
@@ -337,6 +342,16 @@ const CSS = `
   width: 100px; height: 100px;
   margin: 0 auto 4px;
   position: relative;
+  animation: bsoCheckPop 0.5s ease-out 1s both;
+}
+.bso-checkmark-circle::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(247,201,72,0.5);
+  opacity: 0;
+  transform: translate(-50%,-50%) scale(.5);
+  animation: bsoRipple 2s ease-out 1.2s infinite;
 }
 .bso-checkmark-svg {
   width: 100%; height: 100%;
@@ -344,7 +359,7 @@ const CSS = `
 }
 .bso-checkmark-ring {
   fill: none;
-  stroke: #4ade80;
+  stroke: #f7c948;
   stroke-width: 4;
   stroke-linecap: round;
   stroke-dasharray: 340;
@@ -354,7 +369,7 @@ const CSS = `
 }
 .bso-checkmark-path {
   fill: none;
-  stroke: #4ade80;
+  stroke: #f7c948;
   stroke-width: 6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -368,7 +383,7 @@ const CSS = `
   transform: translate(-50%, -50%);
   width: 140px; height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(74,222,128,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(232,185,74,0.18) 0%, transparent 70%);
   pointer-events: none;
   animation: bsoGlowPulse 2.5s ease-in-out infinite;
 }
@@ -382,7 +397,7 @@ const CSS = `
 .bso-sub {
   margin: 0 0 14px;
   font-size: 14px;
-  color: rgba(255,255,255,0.7);
+  color: rgba(243,233,207,0.7);
   animation: bsoSubIn 0.4s ease 0.7s both;
 }
 
@@ -394,18 +409,23 @@ const CSS = `
 }
 .bso-amount .bso-cur {
   font-size: 14px; font-weight: 700;
-  color: rgba(74,222,128,0.6);
+  color: rgba(247,201,72,0.6);
   letter-spacing: 0.08em;
 }
 .bso-amount .bso-amt {
   font-size: 42px; font-weight: 900;
   letter-spacing: -0.025em;
-  color: #4ade80;
-  text-shadow: 0 6px 28px rgba(74,222,128,0.35);
+  background: linear-gradient(110deg, #e8b94a 25%, #fff7d6 50%, #e8b94a 75%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: bsoShimmer 2.8s linear 1.4s infinite;
+  filter: drop-shadow(0 6px 28px rgba(232,185,74,0.35));
 }
 .bso-odds-row {
   font-size: 12px;
-  color: rgba(255,255,255,0.55);
+  color: rgba(243,233,207,0.55);
   margin-bottom: 16px;
   animation: bsoSubIn 0.4s ease 0.9s both;
 }
@@ -414,45 +434,50 @@ const CSS = `
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 18px;
-  animation: bsoDetailsIn 0.4s ease 1s both;
 }
 .bso-stat {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(232,185,74,0.05);
+  border: 1px solid rgba(232,185,74,0.1);
   border-radius: 12px;
   padding: 10px 12px;
   display: flex; flex-direction: column; gap: 3px;
   text-align: left;
+  animation: bsoDetailsIn 0.4s ease both;
 }
+.bso-stat:nth-child(1) { animation-delay: 1s; }
+.bso-stat:nth-child(2) { animation-delay: 1.08s; }
+.bso-stat:nth-child(3) { animation-delay: 1.16s; }
+.bso-stat:nth-child(4) { animation-delay: 1.24s; }
+.bso-stat:nth-child(5) { animation-delay: 1.32s; }
 .bso-stat .bso-lbl {
   font-size: 9px; letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.42);
+  color: rgba(243,233,207,0.45);
 }
 .bso-stat .bso-val {
   font-size: 14px; font-weight: 700;
-  color: #fff;
+  color: #f3e9cf;
   font-variant-numeric: tabular-nums;
 }
 .bso-stat .bso-val-code {
   font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
   letter-spacing: 0.06em;
-  color: #4ade80;
+  color: #f7c948;
   font-size: 13px;
 }
 .bso-stat .bso-val-id {
   font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
-  color: rgba(255,255,255,0.6);
+  color: rgba(243,233,207,0.6);
   font-size: 12px;
 }
 .bso-stat .bso-val-win {
-  color: #4ade80;
+  color: #f7c948;
 }
 
 .bso-actions {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 8px;
-  animation: bsoActionsIn 0.4s ease 1.1s both;
+  animation: bsoActionsIn 0.4s ease 1.4s both;
 }
 .bso-btn {
   padding: 11px 12px;
@@ -466,29 +491,29 @@ const CSS = `
 }
 .bso-btn:active { transform: scale(0.97); }
 .bso-btn-primary {
-  background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
-  color: #052e16;
-  box-shadow: 0 10px 24px rgba(22,163,74,0.35);
+  background: linear-gradient(135deg, #f7c948 0%, #d4a72c 100%);
+  color: #1a1300;
+  box-shadow: 0 10px 24px rgba(232,185,74,0.3);
   grid-column: 1 / -1;
+  animation: bsoBtnGlow 2.4s ease-in-out 1.8s infinite;
 }
 .bso-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(22,163,74,0.5);
 }
 .bso-btn-ghost {
-  background: rgba(255,255,255,0.06);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(232,185,74,0.06);
+  color: #f3e9cf;
+  border: 1px solid rgba(232,185,74,0.2);
 }
 .bso-btn-ghost:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.22);
+  background: rgba(232,185,74,0.12);
+  border-color: rgba(232,185,74,0.4);
 }
 
 .bso-countdown {
   position: absolute; bottom: 0; left: 0; right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #4ade80, #22c55e);
+  background: linear-gradient(90deg, #f7c948, #b8860b);
   transform-origin: left;
   animation: bsoCountdown 2.2s linear both;
   border-radius: 0 0 24px 24px;
