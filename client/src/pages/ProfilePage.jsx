@@ -750,28 +750,28 @@ export default function ProfilePage() {
       </Section>
 
       {/* Refer & earn */}
-      <Section title="Refer & earn" subtitle="Share your invite code">
+      <Section title="Refer & earn" subtitle="Invite friends, earn GHS 10 each">
         <Row>
           <OddIcon name="trophy" size={16} color={T.greenBright} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Your code</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Your referral code</div>
             <div
               style={{
-                fontSize: 16,
+                fontSize: 20,
                 fontWeight: 800,
                 color: T.greenBright,
-                letterSpacing: 2,
+                letterSpacing: 3,
                 fontFamily: '"JetBrains Mono", monospace',
                 marginTop: 2,
               }}
             >
-              {(account.id || '').slice(0, 6).toUpperCase()}
+              {account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}
             </div>
           </div>
           <button
             type="button"
             onClick={() => {
-              const code = (account.id || '').slice(0, 6).toUpperCase();
+              const code = account.referralCode || (account.id || '').slice(0, 6).toUpperCase();
               try {
                 navigator.clipboard?.writeText(code);
                 toast(`Copied ${code}.`, 'success');
@@ -794,14 +794,58 @@ export default function ProfilePage() {
           </button>
         </Row>
         <Row>
-          <OddIcon name="info" size={16} color={T.inkSoft} />
+          <OddIcon name="link" size={16} color={T.greenBright} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600 }}>How it works</div>
-            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
-              Share your code. When a friend signs up and deposits GHS 100+, you both get bonus credit. Tracking
-              dashboard coming soon.
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Your referral link</div>
+            <div
+              style={{
+                fontSize: 11,
+                color: T.inkSoft,
+                marginTop: 2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 200,
+              }}
+              title={`https://oddsify.com/register?ref=${account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}`}
+            >
+              oddsify.com/register?ref={account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              const link = `https://oddsify.com/register?ref=${account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}`;
+              try {
+                navigator.clipboard?.writeText(link);
+                toast('Link copied.', 'success');
+              } catch {
+                /* ignore */
+              }
+            }}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'transparent',
+              color: T.greenBright,
+              border: `1px solid ${T.greenBright}44`,
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
+        </Row>
+        <Row onClick={() => navigate('/refer')}>
+          <OddIcon name="chevR" size={16} color={T.greenBright} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Refer & Earn dashboard</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+              Track referrals, earnings, and share your link.
+            </div>
+          </div>
+          <OddIcon name="chevR" size={14} color={T.inkDim} />
         </Row>
       </Section>
 

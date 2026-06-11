@@ -131,19 +131,20 @@ router.post(
     if (referralCode) {
       attachReferral(user, referralCode, { ip: req.ip, userAgent: req.get('user-agent'), deviceId });
     }
-    logActivity(user.id, { kind: 'register', ip: req.ip, country: countryCode });
+    const freshUser = getUserById(user.id);
+    logActivity(freshUser.id, { kind: 'register', ip: req.ip, country: countryCode });
     recordAudit({
-      actorId: user.id,
+      actorId: freshUser.id,
       action: 'user.register',
-      target: user.id,
+      target: freshUser.id,
       targetType: 'user',
       ip: req.ip,
       userAgent: req.get('user-agent') || '',
       meta: { email, country: countryCode },
     });
     log.info(`registered ${email} (${countryCode})`);
-    const session = issueSession(user, req);
-    res.status(201).json({ ok: true, kind: 'user', account: publicUser(user), ...session });
+    const session = issueSession(freshUser, req);
+    res.status(201).json({ ok: true, kind: 'user', account: publicUser(freshUser), ...session });
   }),
 );
 
@@ -324,6 +325,7 @@ router.post(
           deviceId: req.body.deviceId,
         });
       }
+      user = getUserById(user.id);
     } else if (!user.googleId) {
       user = updateUser(user.id, { googleId: profile.googleId, picture: profile.picture, emailVerified: true });
     }

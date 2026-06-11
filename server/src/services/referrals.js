@@ -40,12 +40,12 @@ export const REFERRAL_CODE_RE = /^[A-Z0-9]{6,10}$/;
 
 function candidateCode(user, attempt) {
   const base = String(user.displayName || user.email || 'ODDS')
-    .replace(/[^a-zA-Z]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
     .toUpperCase()
-    .slice(0, 4)
-    .padEnd(4, 'X');
-  const digits = attempt === 0 ? String(100 + Math.floor(Math.random() * 900)) : String(Math.floor(Math.random() * 10 ** 6)).padStart(6, '0');
-  return (base + digits).slice(0, 10);
+    .slice(0, 5)
+    .padEnd(5, 'X');
+  const digits = String(10000 + Math.floor(Math.random() * 90000) + attempt);
+  return (base + digits).slice(0, 9);
 }
 
 /** Assign a unique referral code to a user (no-op if they already have one). */

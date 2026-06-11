@@ -32,6 +32,7 @@ const EMPTY_ACCOUNT = {
   openWithdraw: () => {},
   refresh: () => {},
   showWin: () => {},
+  showReferralReward: () => {},
   notifications: [],
   unreadCount: 0,
   clearNotifications: () => {},
@@ -79,6 +80,7 @@ export default function AppProviders({ children }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [wins, setWins] = useState([]);
+  const [referralReward, setReferralReward] = useState(null);
   // Queue of deposit decisions still to show. Approve/reject events push into
   // it; the modal pops the head when dismissed. A queue (not a single value)
   // means a burst of admin decisions never silently overwrites an unread
@@ -313,6 +315,13 @@ export default function AppProviders({ children }) {
       }
     });
 
+    const offReferralReward = onLive('referral:rewarded', (payload) => {
+      if (payload?.amount) {
+        setAccount((prev) => (prev ? { ...prev, balance: payload.balance ?? prev.balance } : prev));
+        setReferralReward(payload);
+      }
+    });
+
     return () => {
       alive = false;
       clearInterval(id);
@@ -324,6 +333,7 @@ export default function AppProviders({ children }) {
       offWin?.();
       offSettled?.();
       offCashout?.();
+      offReferralReward?.();
     };
   }, [accountId]);
 
@@ -447,6 +457,10 @@ export default function AppProviders({ children }) {
     });
   }, []);
 
+  const showReferralReward = useCallback((payload) => {
+    if (payload?.amount) setReferralReward(payload);
+  }, []);
+
   const accountValue = useMemo(
     () => ({
       account,
@@ -459,6 +473,7 @@ export default function AppProviders({ children }) {
       openWithdraw,
       refresh,
       showWin,
+      showReferralReward,
       notifications,
       unreadCount,
       clearNotifications,
@@ -470,10 +485,12 @@ export default function AppProviders({ children }) {
       signIn,
       signOut,
       adjustBalance,
+      setAccount,
       openDeposit,
       openWithdraw,
       refresh,
       showWin,
+      showReferralReward,
       notifications,
       unreadCount,
       clearNotifications,
@@ -489,6 +506,14 @@ export default function AppProviders({ children }) {
         {children}
 
         <WinCelebrationOverlay wins={wins} onClose={dismissWins} onViewSlip={() => navigate('/my-bets')} />
+
+        {referralReward && (
+          <ReferralCelebration
+            amount={referralReward.amount}
+            name={referralReward.referredName}
+            onClose={() => setReferralReward(null)}
+          />
+        )}
 
         <DepositResultModal
           result={depositResults[0] || null}
@@ -731,5 +756,116 @@ export default function AppProviders({ children }) {
         </dialog>
       </ToastCtx.Provider>
     </AccountCtx.Provider>
+  );
+}
+
+/* ─── Referral reward celebration overlay ───────────────── */
+
+function ReferralCelebration({ amount, name, onClose }) {
+  const [show, setShow] = useState(true);
+  const dismiss = () => {
+    setShow(false);
+    setTimeout(onClose, 300);
+  };
+  if (!show) return null;
+  return (
+    <div
+      className="rfp-celebrate"
+      onClick={dismiss}
+      role="alertdialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(10,8,2,.78)', backdropFilter: 'blur(6px)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+        }}
+        aria-hidden
+      >
+        {Array.from({ length: 40 }).map((_, i) => (
+          <span
+            key={i}
+            style={{
+              position: 'absolute', top: -16,
+              left: `${Math.random() * 100}%`,
+              width: 8, height: 12, borderRadius: 2,
+              background: ['#f7c948','#e8b94a','#fff3b8','#d4a72c','#f3e9cf'][i % 5],
+              animation: `rfpFall 2.6s linear ${Math.random() * 1.4}s both`,
+            }}
+          />
+        ))}
+      </div>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative', width: 'min(340px, 100%)', textAlign: 'center',
+          background: 'linear-gradient(180deg, #161513 0%, #0a0a0a 100%)',
+          borderRadius: 20, padding: '26px 22px',
+          boxShadow: '0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(232,185,74,.25) inset',
+          animation: 'rfpPop .45s cubic-bezier(.18,.88,.36,1.2) both',
+        }}
+      >
+        <svg viewBox="0 0 120 120" style={{ width: 84, height: 84, margin: '0 auto' }}>
+          <circle
+            cx="60" cy="60" r="52"
+            fill="none" stroke="#f7c948" strokeWidth="4" strokeLinecap="round"
+            strokeDasharray="340" transform="rotate(-90)" transformOrigin="center"
+            style={{ animation: 'rfpRing .7s ease-out .1s both' }}
+          />
+          <path
+            d="M38 62l14 14 30-32"
+            fill="none" stroke="#f7c948" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
+            strokeDasharray="120" strokeDashoffset="120"
+            style={{ animation: 'rfpCheck .5s ease-out .5s both' }}
+          />
+        </svg>
+        <h2 style={{ margin: '12px 0 6px', fontSize: 24, fontWeight: 900, color: '#f3e9cf' }}>
+          Congratulations!
+        </h2>
+        <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'rgba(243,233,207,.7)' }}>
+          You earned <strong style={{ color: '#f7c948' }}>GHS {Number(amount || 0).toFixed(2)}</strong>
+          {name ? ` from ${name}` : ''}. It&rsquo;s already in your wallet.
+        </p>
+        <button
+          type="button"
+          onClick={dismiss}
+          style={{
+            padding: '10px 20px', borderRadius: 10, border: 'none',
+            fontWeight: 800, fontSize: 12.5, cursor: 'pointer',
+            background: 'linear-gradient(135deg, #f7c948 0%, #d4a72c 100%)',
+            color: '#1a1300',
+            boxShadow: '0 8px 20px rgba(232,185,74,.3)',
+          }}
+        >
+          Awesome!
+        </button>
+      </div>
+      <style>{`
+@keyframes rfpFall {
+  0% { transform: translate(0,-20px) rotate(0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate(var(--tx,20px),110vh) rotate(720deg); opacity: 0; }
+}
+@keyframes rfpPop {
+  0% { transform: scale(.85) translateY(16px); opacity: 0; }
+  60% { transform: scale(1.02); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes rfpRing {
+  0% { stroke-dashoffset: 340; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes rfpCheck {
+  0% { stroke-dashoffset: 120; }
+  100% { stroke-dashoffset: 0; }
+}
+      `}</style>
+    </div>
   );
 }

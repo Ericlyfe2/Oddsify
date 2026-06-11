@@ -124,6 +124,9 @@ export default function SettingsPage() {
             {[
               ['bonusRate', 'Bonus rate', '', `${(settings.bonusRate * 100).toFixed(0)}%`],
               ['referralBonus', 'Referral bonus', 'GHS', settings.referralBonus],
+              ['referralMinDeposit', 'Referral min deposit', 'GHS', settings.referralMinDeposit],
+              ['referralWelcomeBonus', 'Referral welcome bonus', 'GHS', settings.referralWelcomeBonus],
+              ['referralMaxPerDay', 'Referral max per day', '', settings.referralMaxPerDay],
             ].map(([key, label, prefix, val]) => (
               <div key={key} className="adm-kv-row">
                 <dt>{label}</dt>
