@@ -51,6 +51,7 @@ const NAV = [
       { to: '/admin/promotions', label: 'Promotions', icon: <IconSparkles /> },
       { to: '/admin/finance', label: 'Finance', icon: <IconCash />, roles: ['finance_admin'] },
       { to: '/admin/deposits', label: 'Deposits', icon: <IconCash />, roles: ['finance_admin'] },
+      { to: '/admin/referrals', label: 'Referrals', icon: <IconSparkles /> },
     ],
   },
   {

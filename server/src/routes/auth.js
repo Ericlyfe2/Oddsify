@@ -29,6 +29,7 @@ import { badRequest, unauthorized, conflict, forbidden } from '../utils/httpErro
 import { GOOGLE } from '../config/env.js';
 import { log } from '../utils/logger.js';
 import { parseIdentifier } from '../lib/phone.js';
+import { ensureReferralCode, attachReferral } from '../services/referrals.js';
 
 const router = Router();
 
@@ -61,6 +62,8 @@ const registerSchema = z.object({
   password: z.string(),
   displayName: z.string().trim().max(60).optional(),
   country,
+  referralCode: z.string().trim().max(20).optional(),
+  deviceId: z.string().trim().max(80).optional(),
 });
 
 const loginSchema = z.object({
@@ -77,6 +80,7 @@ const changePwSchema = z.object({
 const googleSchema = z.object({
   credential: z.string().min(10),
   country: country.optional(),
+  referralCode: z.string().trim().max(20).optional(),
 });
 
 /* ------------ Helpers ------------ */
@@ -108,7 +112,7 @@ router.post(
   '/register',
   validate(registerSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, displayName, country: countryCode } = req.body;
+    const { email, password, displayName, country: countryCode, referralCode, deviceId } = req.body;
     passwordOrThrow(password);
 
     if (findByEmail(email)) throw conflict('An account with this email already exists.');
@@ -122,6 +126,10 @@ router.post(
       country: countryCode,
       emailVerified: true,
     });
+    ensureReferralCode(user.id);
+    if (referralCode) {
+      attachReferral(user, referralCode, { ip: req.ip, userAgent: req.get('user-agent'), deviceId });
+    }
     logActivity(user.id, { kind: 'register', ip: req.ip, country: countryCode });
     recordAudit({
       actorId: user.id,
@@ -307,6 +315,10 @@ router.post(
         emailVerified: true,
         country: submittedCountry || null,
       });
+      ensureReferralCode(user.id);
+      if (req.body.referralCode) {
+        attachReferral(user, req.body.referralCode, { ip: req.ip, userAgent: req.get('user-agent') });
+      }
     } else if (!user.googleId) {
       user = updateUser(user.id, { googleId: profile.googleId, picture: profile.picture, emailVerified: true });
     }

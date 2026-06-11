@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { login, register, fetchAuthConfig, googleSignIn } from '../api/betApi.js';
+import {
+  login,
+  register,
+  fetchAuthConfig,
+  googleSignIn,
+  recordReferralClick,
+  validateReferralCode,
+} from '../api/betApi.js';
 import { setAdminTokens } from '../api/adminApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import CountrySelect from '../components/CountrySelect.jsx';
@@ -80,6 +87,34 @@ export default function LoginPage() {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [authConfig, setAuthConfig] = useState({ googleEnabled: false, googleClientId: null });
+  const [refInfo, setRefInfo] = useState(null); // { code, referrerName }
+
+  // Referral capture: ?ref=CODE on any visit to this page is remembered so
+  // the relationship survives the user browsing around before registering.
+  useEffect(() => {
+    const fromUrl = (params.get('ref') || '').trim().toUpperCase();
+    if (fromUrl) {
+      try {
+        localStorage.setItem('oddsify_ref', fromUrl);
+      } catch {}
+      recordReferralClick(fromUrl).catch(() => {});
+    }
+    const code = fromUrl || (() => {
+      try {
+        return localStorage.getItem('oddsify_ref') || '';
+      } catch {
+        return '';
+      }
+    })();
+    if (!code) return;
+    validateReferralCode(code)
+      .then((r) => {
+        if (r?.valid) setRefInfo({ code, referrerName: r.referrerName });
+        else localStorage.removeItem('oddsify_ref');
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (params.get('logout') === '1') signOut();
@@ -213,7 +248,11 @@ export default function LoginPage() {
           password,
           displayName: fullName || idValue,
           country,
+          ...(refInfo?.code ? { referralCode: refInfo.code } : {}),
         });
+        try {
+          localStorage.removeItem('oddsify_ref');
+        } catch {}
         // Surface the exact identifier that was stored on the server.
         // The whole "I keep losing my account" problem is usually that
         // a different format was typed on the next login (e.g. no '+',
@@ -310,6 +349,28 @@ export default function LoginPage() {
           <form onSubmit={submit} noValidate>
             {mode === 'register' ? (
               <>
+                {refInfo && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      marginBottom: 12,
+                      borderRadius: 10,
+                      background: 'rgba(232,185,74,.08)',
+                      border: '1px solid rgba(232,185,74,.3)',
+                      fontSize: 12.5,
+                      color: '#f3e9cf',
+                    }}
+                  >
+                    <span aria-hidden>🎁</span>
+                    <span>
+                      Invited by <strong style={{ color: '#f7c948' }}>{refInfo.referrerName}</strong> — code{' '}
+                      <strong style={{ fontFamily: 'monospace', color: '#f7c948' }}>{refInfo.code}</strong> applied.
+                    </span>
+                  </div>
+                )}
                 <div className="name-grid">
                   <div>
                     <label htmlFor="auth-fn">First name</label>

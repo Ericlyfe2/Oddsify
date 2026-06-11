@@ -17,6 +17,8 @@ import authRouter from './routes/auth.js';
 import betRouter from './routes/bet.js';
 import walletRouter from './routes/wallet.js';
 import profileRouter from './routes/profile.js';
+import referralsRouter from './routes/referrals.js';
+import adminReferralsRouter from './routes/admin/referrals.js';
 import supportRouter from './routes/support.js';
 import statsRouter from './routes/stats.js';
 import adminAuthRouter from './routes/admin/auth.js';
@@ -125,6 +127,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/bet', betRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/referrals', referralsRouter);
 app.use('/api/support', supportRouter);
 app.use('/api/stats', statsRouter);
 
@@ -138,6 +141,7 @@ app.use('/api/admin/stats', adminStatsRouter);
 app.use('/api/admin/providers', adminProvidersRouter);
 app.use('/api/admin/notifications', adminNotificationsRouter);
 app.use('/api/admin/deposits', adminDepositsRouter);
+app.use('/api/admin/referrals', adminReferralsRouter);
 app.use('/api/admin/settings', adminSettingsRouter);
 app.use('/api/admin/support', adminSupportRouter);
 

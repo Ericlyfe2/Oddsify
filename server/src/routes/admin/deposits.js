@@ -9,6 +9,7 @@ import { createStore } from '../../db/store.js';
 import { emitToUser, emitAdmin } from '../../services/realtime.js';
 import { recordAudit } from '../../db/audit.js';
 import { STAGE_PROMOTE_THRESHOLD } from '../wallet.js';
+import { handleQualifyingDeposit } from '../../services/referrals.js';
 
 const txStore = createStore('transactions', {});
 const router = Router();
@@ -102,6 +103,8 @@ router.post(
     txStore.set(foundUserId, updatedTxs);
 
     logActivity(foundUserId, { kind: 'deposit_approved', amount, by: req.admin?.email });
+    // Referral qualifying-deposit hook — idempotent, never throws.
+    handleQualifyingDeposit(foundUserId, amount);
     emitToUser(foundUserId, 'deposit:approved', {
       transaction: updatedTxs.find((t) => t.id === txId),
       account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },

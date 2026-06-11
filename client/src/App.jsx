@@ -50,6 +50,8 @@ const AdminStats = lazy(() => import('./pages/admin/Stats.jsx'));
 const AdminProviders = lazy(() => import('./pages/admin/Providers.jsx'));
 const AdminHealth = lazy(() => import('./pages/admin/Health.jsx'));
 const AdminDeposits = lazy(() => import('./pages/admin/Deposits.jsx'));
+const AdminReferrals = lazy(() => import('./pages/admin/Referrals.jsx'));
+const ReferralPage = lazy(() => import('./pages/ReferralPage.jsx'));
 
 const PAGE_FALLBACK = <div className="page-loading" />;
 
@@ -76,6 +78,7 @@ function AdminApp() {
             <Route path="promotions" element={<AdminPromotions />} />
             <Route path="finance" element={<FinancePage />} />
             <Route path="deposits" element={<AdminDeposits />} />
+            <Route path="referrals" element={<AdminReferrals />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="support" element={<SupportPage />} />
             <Route path="analytics" element={<AdminStats />} />
@@ -173,6 +176,14 @@ export default function App() {
                     }
                   />
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route
+                    path="/refer"
+                    element={
+                      <Suspense fallback={PAGE_FALLBACK}>
+                        <ReferralPage />
+                      </Suspense>
+                    }
+                  />
                   <Route path="/wallet" element={<WalletPage />} />
                   <Route
                     path="/withdraw"
