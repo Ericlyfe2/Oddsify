@@ -13,6 +13,7 @@ import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import CountrySelect from '../components/CountrySelect.jsx';
 import PageBack from '../components/PageBack.jsx';
 import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
+import { getDeviceId } from '../lib/device.js';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -156,7 +157,21 @@ export default function LoginPage() {
       callback: async ({ credential }) => {
         try {
           setBusy(true);
-          const data = await googleSignIn(credential, country);
+          // refInfo may be stale inside this once-registered callback; fall
+          // back to the persisted code captured from ?ref=.
+          let refCode = refInfo?.code || null;
+          if (!refCode) {
+            try {
+              refCode = localStorage.getItem('oddsify_ref') || null;
+            } catch {}
+          }
+          const data = await googleSignIn(credential, country, {
+            ...(refCode ? { referralCode: refCode } : {}),
+            ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
+          });
+          try {
+            localStorage.removeItem('oddsify_ref');
+          } catch {}
           signIn(data);
           navigate('/', { replace: true });
         } catch (e) {
@@ -249,6 +264,7 @@ export default function LoginPage() {
           displayName: fullName || idValue,
           country,
           ...(refInfo?.code ? { referralCode: refInfo.code } : {}),
+          ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
         });
         try {
           localStorage.removeItem('oddsify_ref');

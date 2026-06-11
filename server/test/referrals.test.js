@@ -5,6 +5,7 @@
 import { describe, test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createUser, getUserById, deleteUser, updateUser } from '../src/db/users.js';
+import { getSettings, updateSettings } from '../src/db/settings.js';
 import { createStore } from '../src/db/store.js';
 import {
   ensureReferralCode,
@@ -22,6 +23,8 @@ const stamp = Date.now();
 const REFERRER = `ref-referrer-${stamp}@test.local`;
 const FRIEND = `ref-friend-${stamp}@test.local`;
 const FRIEND2 = `ref-friend2-${stamp}@test.local`;
+const FRIEND3 = `ref-friend3-${stamp}@test.local`;
+const FRIEND4 = `ref-friend4-${stamp}@test.local`;
 const SELF = `ref-self-${stamp}@test.local`;
 
 const referralsStore = createStore('referrals', {});
@@ -37,7 +40,7 @@ before(() => {
 });
 
 after(() => {
-  for (const id of [REFERRER, FRIEND, FRIEND2, SELF]) {
+  for (const id of [REFERRER, FRIEND, FRIEND2, FRIEND3, FRIEND4, SELF]) {
     referralsStore.delete(id);
     txStore.delete(id);
     deleteUser(id);
@@ -76,6 +79,16 @@ describe('attachReferral', () => {
     assert.equal(attachReferral(friend, code), null);
   });
 
+  test('shared device fingerprint flags the referral', () => {
+    const f3 = createUser({ email: FRIEND3, displayName: 'Kofi Three', emailVerified: true });
+    const f4 = createUser({ email: FRIEND4, displayName: 'Esi Four', emailVerified: true });
+    const r3 = attachReferral(f3, code, { ip: '10.0.0.3', deviceId: 'device-abc' });
+    assert.equal(r3.status, 'pending');
+    const r4 = attachReferral(f4, code, { ip: '10.0.0.4', deviceId: 'device-abc' });
+    assert.equal(r4.status, 'flagged');
+    assert.ok(r4.fraudReasons.includes('shared_device'));
+  });
+
   test('self-referral is rejected', () => {
     // Simulate: account whose referral code is used on itself.
     const self = createUser({ email: SELF, displayName: 'Selfie', emailVerified: true });
@@ -110,6 +123,7 @@ describe('qualifying deposit & reward', () => {
   test('summary reflects the rewarded referral', () => {
     const s = referralSummary(referrer.id);
     assert.equal(s.code, code);
+    assert.ok(s.link.endsWith(`/register?ref=${code}`));
     assert.ok(s.stats.total >= 1);
     assert.ok(s.stats.totalEarned >= 10);
     const row = s.history.find((h) => h.status === 'rewarded');
@@ -140,12 +154,21 @@ describe('admin operations', () => {
     assert.equal(adminReverse(FRIEND, 'admin@test').error, 'not_rewarded');
   });
 
-  test('approve pays a flagged referral that already deposited', () => {
+  test('approve pays a flagged referral that already deposited (incl. welcome bonus)', () => {
     // Re-arm FRIEND2 as flagged with a recorded deposit.
     referralsStore.update(FRIEND2, (cur) => ({ ...cur, status: 'flagged', depositAmount: 200, rewardAmount: null }));
     updateUser(REFERRER, { balance: 100 });
-    const res = adminApprove(FRIEND2, 'admin@test');
-    assert.equal(res.rewarded, true);
-    assert.equal(getUserById(REFERRER).balance, 110);
+    updateUser(FRIEND2, { balance: 0 });
+    const prevWelcome = getSettings().referralWelcomeBonus;
+    updateSettings({ referralWelcomeBonus: 5 });
+    try {
+      const res = adminApprove(FRIEND2, 'admin@test');
+      assert.equal(res.rewarded, true);
+      assert.equal(getUserById(REFERRER).balance, 110);
+      // Welcome bonus follows the same path as the automatic reward.
+      assert.equal(getUserById(FRIEND2).balance, 5);
+    } finally {
+      updateSettings({ referralWelcomeBonus: prevWelcome });
+    }
   });
 });
