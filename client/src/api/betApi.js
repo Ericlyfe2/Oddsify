@@ -142,7 +142,7 @@ export const logout = () => post('/auth/logout', { refreshToken: getRefresh() })
 export const changePassword = (body) => post('/auth/change-password', body);
 export const fetchMe = () => get('/auth/me');
 export const fetchActivity = () => get('/auth/activity');
-export const googleSignIn = (credential, country) => post('/auth/google', { credential, country });
+export const googleSignIn = (credential, country, extra = {}) => post('/auth/google', { credential, country, ...extra });
 
 /* referrals */
 export const fetchReferralInfo = () => get('/referrals/me');

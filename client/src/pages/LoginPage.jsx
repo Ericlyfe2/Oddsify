@@ -13,6 +13,7 @@ import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import CountrySelect from '../components/CountrySelect.jsx';
 import PageBack from '../components/PageBack.jsx';
 import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
+import { getDeviceId } from '../lib/device.js';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -88,6 +89,8 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [authConfig, setAuthConfig] = useState({ googleEnabled: false, googleClientId: null });
   const [refInfo, setRefInfo] = useState(null); // { code, referrerName }
+  const [refCodeInput, setRefCodeInput] = useState('');
+  const [refState, setRefState] = useState('idle'); // idle | checking | valid | invalid
 
   // Referral capture: ?ref=CODE on any visit to this page is remembered so
   // the relationship survives the user browsing around before registering.
@@ -109,12 +112,57 @@ export default function LoginPage() {
     if (!code) return;
     validateReferralCode(code)
       .then((r) => {
-        if (r?.valid) setRefInfo({ code, referrerName: r.referrerName });
-        else localStorage.removeItem('oddsify_ref');
+        if (r?.valid) {
+          setRefInfo({ code, referrerName: r.referrerName });
+          setRefCodeInput(code);
+          setRefState('valid');
+        } else localStorage.removeItem('oddsify_ref');
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Manual referral-code entry on the register form. Debounced live
+  // validation; a valid code becomes the refInfo used at submit.
+  useEffect(() => {
+    const code = refCodeInput.trim().toUpperCase();
+    if (!code) {
+      setRefState('idle');
+      if (refInfo) {
+        setRefInfo(null);
+        try {
+          localStorage.removeItem('oddsify_ref');
+        } catch {}
+      }
+      return undefined;
+    }
+    if (refInfo?.code === code) {
+      setRefState('valid');
+      return undefined;
+    }
+    setRefState('checking');
+    const t = setTimeout(() => {
+      validateReferralCode(code)
+        .then((r) => {
+          if (r?.valid) {
+            setRefInfo({ code, referrerName: r.referrerName });
+            setRefState('valid');
+            try {
+              localStorage.setItem('oddsify_ref', code);
+            } catch {}
+          } else {
+            setRefInfo(null);
+            setRefState('invalid');
+            try {
+              localStorage.removeItem('oddsify_ref');
+            } catch {}
+          }
+        })
+        .catch(() => setRefState('idle'));
+    }, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refCodeInput]);
 
   useEffect(() => {
     if (params.get('logout') === '1') signOut();
@@ -156,7 +204,21 @@ export default function LoginPage() {
       callback: async ({ credential }) => {
         try {
           setBusy(true);
-          const data = await googleSignIn(credential, country);
+          // refInfo may be stale inside this once-registered callback; fall
+          // back to the persisted code captured from ?ref=.
+          let refCode = refInfo?.code || null;
+          if (!refCode) {
+            try {
+              refCode = localStorage.getItem('oddsify_ref') || null;
+            } catch {}
+          }
+          const data = await googleSignIn(credential, country, {
+            ...(refCode ? { referralCode: refCode } : {}),
+            ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
+          });
+          try {
+            localStorage.removeItem('oddsify_ref');
+          } catch {}
           signIn(data);
           navigate('/', { replace: true });
         } catch (e) {
@@ -209,6 +271,9 @@ export default function LoginPage() {
       if (!/\d/.test(password)) return 'Password must include a digit.';
       if (password !== confirm) return 'Passwords don\u2019t match.';
       if (!agree) return 'Accept the terms to create an account.';
+      if (refCodeInput.trim() && refState === 'invalid') {
+        return 'That referral code isn’t valid — correct it or clear the field.';
+      }
       return null;
     }
     if (!identifier.trim()) return 'Enter your phone or email.';
@@ -249,6 +314,7 @@ export default function LoginPage() {
           displayName: fullName || idValue,
           country,
           ...(refInfo?.code ? { referralCode: refInfo.code } : {}),
+          ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
         });
         try {
           localStorage.removeItem('oddsify_ref');
@@ -349,28 +415,6 @@ export default function LoginPage() {
           <form onSubmit={submit} noValidate>
             {mode === 'register' ? (
               <>
-                {refInfo && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 12px',
-                      marginBottom: 12,
-                      borderRadius: 10,
-                      background: 'rgba(232,185,74,.08)',
-                      border: '1px solid rgba(232,185,74,.3)',
-                      fontSize: 12.5,
-                      color: '#f3e9cf',
-                    }}
-                  >
-                    <span aria-hidden>🎁</span>
-                    <span>
-                      Invited by <strong style={{ color: '#f7c948' }}>{refInfo.referrerName}</strong> — code{' '}
-                      <strong style={{ fontFamily: 'monospace', color: '#f7c948' }}>{refInfo.code}</strong> applied.
-                    </span>
-                  </div>
-                )}
                 <div className="name-grid">
                   <div>
                     <label htmlFor="auth-fn">First name</label>
@@ -478,6 +522,45 @@ export default function LoginPage() {
                   invalid={!country}
                   placeholder="Select your country…"
                 />
+
+                <label htmlFor="auth-ref" style={{ marginTop: 12 }}>
+                  Referral code <span style={{ opacity: 0.55, fontWeight: 400 }}>(optional)</span>
+                </label>
+                <div
+                  className={`field${refState === 'invalid' ? ' invalid' : ''}${refState === 'valid' ? ' valid' : ''}`}
+                >
+                  <span className="field-icon" aria-hidden>
+                    🎁
+                  </span>
+                  <input
+                    id="auth-ref"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    placeholder="Enter a friend's code, e.g. KWAM483"
+                    value={refCodeInput}
+                    onChange={(e) => setRefCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+                    style={{ textTransform: 'uppercase', letterSpacing: '.08em' }}
+                  />
+                  {refState === 'checking' && (
+                    <span className="field-suffix" aria-hidden>
+                      …
+                    </span>
+                  )}
+                  {refState === 'valid' && (
+                    <span className="field-suffix" style={{ color: '#3ddc84' }} aria-hidden>
+                      ✓
+                    </span>
+                  )}
+                </div>
+                {refState === 'valid' && refInfo && (
+                  <p style={{ margin: '6px 2px 0', fontSize: 12.5, color: '#f7c948' }} aria-live="polite">
+                    🎁 Invited by <strong>{refInfo.referrerName}</strong> — your accounts will be linked when you sign
+                    up.
+                  </p>
+                )}
+                {refState === 'invalid' && <p className="phone-error">This referral code isn&rsquo;t valid.</p>}
               </>
             ) : (
               <>

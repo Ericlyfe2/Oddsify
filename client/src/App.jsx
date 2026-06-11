@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppProviders from './providers/AccountProvider.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import ScrollRestoration from './components/ScrollRestoration.jsx';
@@ -94,6 +94,14 @@ function AdminApp() {
   );
 }
 
+/** /register?ref=CODE → /login?mode=register&ref=CODE (referral links). */
+function RegisterRedirect() {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('mode', 'register');
+  return <Navigate to={`/login?${params.toString()}`} replace />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -106,6 +114,8 @@ export default function App() {
             <AppProviders>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterRedirect />} />
+                <Route path="/signup" element={<RegisterRedirect />} />
                 <Route path="/verify" element={<Navigate to="/login" replace />} />
                 <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
                 <Route path="/reset-password" element={<Navigate to="/login" replace />} />

@@ -346,6 +346,7 @@ export function adminApprove(referredId, adminId) {
       history: [...(cur.history || []), { at: new Date().toISOString(), event: 'admin_approved', by: adminId }],
     }));
     const tx = payReferrer(referrals.get(referredId), { actor: adminId });
+    payWelcomeBonus(referredId);
     return { ok: true, rewarded: true, tx };
   }
   referrals.update(referredId, (cur) => ({
@@ -437,7 +438,7 @@ export function referralSummary(userId, origin = 'https://oddsify.com') {
 
   return {
     code,
-    link: `${origin}/login?mode=register&ref=${code}`,
+    link: `${origin}/register?ref=${code}`,
     rewardPerReferral: Number(settings.referralBonus || 10),
     minDeposit: Number(settings.referralMinDeposit || 100),
     stats: {

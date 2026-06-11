@@ -81,6 +81,7 @@ const googleSchema = z.object({
   credential: z.string().min(10),
   country: country.optional(),
   referralCode: z.string().trim().max(20).optional(),
+  deviceId: z.string().trim().max(80).optional(),
 });
 
 /* ------------ Helpers ------------ */
@@ -317,7 +318,11 @@ router.post(
       });
       ensureReferralCode(user.id);
       if (req.body.referralCode) {
-        attachReferral(user, req.body.referralCode, { ip: req.ip, userAgent: req.get('user-agent') });
+        attachReferral(user, req.body.referralCode, {
+          ip: req.ip,
+          userAgent: req.get('user-agent'),
+          deviceId: req.body.deviceId,
+        });
       }
     } else if (!user.googleId) {
       user = updateUser(user.id, { googleId: profile.googleId, picture: profile.picture, emailVerified: true });
