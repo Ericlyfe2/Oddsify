@@ -7,9 +7,9 @@
 
 // In dev, leave VITE_API_BASE unset — Vite proxies /api to the local server.
 // In production (Vercel), set VITE_API_BASE to the deployed backend, e.g.
-//   VITE_API_BASE=https://oddsify-api.onrender.com
+//   VITE_API_BASE=https://oddsify.onrender.com
 // If unset in production, falls back to the Render backend automatically.
-const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify-api.onrender.com' : '';
+const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify.onrender.com' : '';
 const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_PROD_API) + '/api';
 const ACCESS_KEY = 'bv_access';
 const REFRESH_KEY = 'bv_refresh';
@@ -143,6 +143,11 @@ export const changePassword = (body) => post('/auth/change-password', body);
 export const fetchMe = () => get('/auth/me');
 export const fetchActivity = () => get('/auth/activity');
 export const googleSignIn = (credential, country) => post('/auth/google', { credential, country });
+
+/* referrals */
+export const fetchReferralInfo = () => get('/referrals/me');
+export const recordReferralClick = (code) => post('/referrals/click', { code });
+export const validateReferralCode = (code) => get(`/referrals/validate/${encodeURIComponent(code)}`);
 
 /* wallet */
 export const fetchTransactions = () => get('/wallet/transactions');

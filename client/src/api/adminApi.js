@@ -6,7 +6,7 @@
 
 // See betApi.js — set VITE_API_BASE in production to point at the backend host.
 // If unset in production, falls back to the Render backend automatically.
-const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify-api.onrender.com' : '';
+const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify.onrender.com' : '';
 const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_PROD_API) + '/api/admin';
 const ACCESS = 'sp_admin_access';
 const REFRESH = 'sp_admin_refresh';
@@ -240,6 +240,13 @@ export const adminImpersonate = (id) => post(`/users/${encodeURIComponent(id)}/i
 export const adminListPendingDeposits = () => get('/deposits/pending');
 export const adminApproveDeposit = (id) => post(`/deposits/${encodeURIComponent(id)}/approve`);
 export const adminRejectDeposit = (id, body) => post(`/deposits/${encodeURIComponent(id)}/reject`, body);
+
+/* referrals */
+export const adminListReferrals = (params) => get(`/referrals${qs(params)}`);
+export const adminReferralStats = () => get('/referrals/stats');
+export const adminApproveReferral = (id) => post(`/referrals/${encodeURIComponent(id)}/approve`);
+export const adminRejectReferral = (id, reason) => post(`/referrals/${encodeURIComponent(id)}/reject`, { reason });
+export const adminReverseReferral = (id, reason) => post(`/referrals/${encodeURIComponent(id)}/reverse`, { reason });
 
 /* platform settings */
 export const adminGetSettings = () => get('/settings');
