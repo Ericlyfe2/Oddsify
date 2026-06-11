@@ -10,14 +10,19 @@ const standardOpts = {
 const emailKey = (req) => `${ipKeyGenerator(req.ip)}|${(req.body?.email || '').toLowerCase()}`;
 
 // Global rate limiter applied to all /api routes.
-// 100 req/min per IP keeps abuse in check without breaking UX.
+// 500 req/min per IP — generous enough to handle concurrent SPA calls
+// (fetchMe, matches, sports, recent-wins, public-stats, etc.) from multiple
+// users sharing a Render proxy IP, without breaking UX.
 // Login is separately rate-limited below with a tighter window.
 export const apiLimiter = rateLimit({
   ...standardOpts,
   windowMs: 60 * 1000,
   limit: RATE_LIMITS.globalMax,
   message: { error: 'Too many requests. Slow down.' },
-  skip: (req) => req.path === '/api/health',
+  skip: (req) => {
+    const pub = ['/api/health', '/api/auth/config', '/api/settings/public'];
+    return pub.includes(req.path);
+  },
 });
 
 // Login is rate-limited with per-email keying so a single account/IP

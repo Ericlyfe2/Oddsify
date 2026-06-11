@@ -40,7 +40,7 @@ export const GOOGLE = {
 };
 
 export const RATE_LIMITS = {
-  globalMax: Number(env.RATE_LIMIT_GLOBAL_MAX) || 100,
+  globalMax: Number(env.RATE_LIMIT_GLOBAL_MAX) || 500,
   loginMax: Number(env.RATE_LIMIT_LOGIN_MAX) || 5,
   otpMax: Number(env.RATE_LIMIT_OTP_MAX) || 3,
 };
