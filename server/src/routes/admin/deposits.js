@@ -7,8 +7,6 @@ import { badRequest, notFound } from '../../utils/httpError.js';
 import { getUserById, updateUser, logActivity } from '../../db/users.js';
 import { createStore } from '../../db/store.js';
 import { emitToUser, emitAdmin } from '../../services/realtime.js';
-import { recordAudit } from '../../db/audit.js';
-import { STAGE_PROMOTE_THRESHOLD } from '../wallet.js';
 import { handleQualifyingDeposit } from '../../services/referrals.js';
 
 const txStore = createStore('transactions', {});
@@ -67,25 +65,10 @@ router.post(
       totalDeposited: newTotal,
     };
 
-    // All stage promotions are manual — the admin must approve via PATCH /:id/stage.
-    // Deposit approval only flags the user as requesting a promotion.
-    const currentStage = Number(user.stage ?? 0);
-    let promotionPending = false;
-    let promotedFrom = null;
-    let promotedTo = null;
-
-    if (currentStage < 3 && amount >= STAGE_PROMOTE_THRESHOLD) {
-      const target = currentStage + 1;
-      patch.stagePromotionRequested = true;
-      patch.stagePromotionRequestedAt = new Date().toISOString();
-      patch.stagePromotionRequestedFrom = currentStage;
-      patch.stagePromotionRequestedTo = target;
-      patch.stagePromotionRequestedReason = `Single deposit of GHS ${amount} crossed the GHS ${STAGE_PROMOTE_THRESHOLD} threshold.`;
-      promotionPending = true;
-      promotedFrom = currentStage;
-      promotedTo = target;
-    }
-
+    // Verification and stage promotions are FULLY manual. A deposit never
+    // changes a user's verification/stage state — the admin alone decides
+    // when a user moves to "In review" (Stage 2) or is verified, via
+    // PATCH /api/admin/users/:id/stage and the verify actions.
     const updated = updateUser(foundUserId, patch);
 
     const userTxs = txStore.get(foundUserId) || [];
@@ -110,48 +93,6 @@ router.post(
       account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
     });
     emitAdmin('deposit:approved', { userId: foundUserId, amount, transactionId: txId, approvedBy: req.admin?.email });
-
-    if (promotionPending) {
-      // Stage promotion is always manual — deposit approval only flags
-      // the user. The admin must visit the user drawer and run PATCH
-      // /api/admin/users/:id/stage to actually promote.
-      logActivity(foundUserId, {
-        kind: 'stage_promotion_requested',
-        from: promotedFrom,
-        to: promotedTo,
-        trigger: 'deposit_approval',
-        singleDeposit: amount,
-        totalDeposited: newTotal,
-      });
-      recordAudit({
-        actorId: null,
-        action: 'user.stage.promotion_requested',
-        target: foundUserId,
-        targetType: 'user',
-        severity: 'warning',
-        meta: {
-          from: promotedFrom,
-          to: promotedTo,
-          singleDeposit: amount,
-          totalDeposited: newTotal,
-          threshold: STAGE_PROMOTE_THRESHOLD,
-          trigger: 'deposit_approval',
-          requiresApproval: true,
-        },
-      });
-      emitAdmin('user:stage_promotion_pending', {
-        userId: foundUserId,
-        from: promotedFrom,
-        to: promotedTo,
-        singleDeposit: amount,
-        email: user.email,
-      });
-      emitToUser(foundUserId, 'stage:promotion_pending', {
-        from: promotedFrom,
-        to: promotedTo,
-        message: 'Your account is awaiting verification — you will be notified once approved.',
-      });
-    }
 
     audit(req, {
       action: 'deposit.approve',

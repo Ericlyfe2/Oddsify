@@ -340,7 +340,12 @@ router.post(
 );
 
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ account: publicUser(req.user) });
+  // Guarantee every authenticated account carries a real referral code.
+  // Legacy users created before codes were minted at signup get one lazily
+  // here, so the Refer & Earn and Profile screens never fall back to a
+  // truncated account id.
+  ensureReferralCode(req.user.id);
+  res.json({ account: publicUser(getUserById(req.user.id)) });
 });
 
 router.get('/activity', requireAuth, (req, res) => {

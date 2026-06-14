@@ -42,7 +42,7 @@ function toBookingCode(id = '') {
   return letters + digits;
 }
 
-const STAGE_LABELS = { 0: 'New', 1: 'Registered', 2: 'Verified', 3: 'Approved', 4: 'VIP' };
+const STAGE_LABELS = { 0: 'New', 1: 'Registered', 2: 'In review', 3: 'Approved', 4: 'VIP' };
 const STAGE_GRADIENTS = {
   0: 'linear-gradient(135deg, #475569 0%, #94a3b8 100%)',
   1: 'linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%)',

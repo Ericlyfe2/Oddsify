@@ -34,6 +34,9 @@ export function createUser(record) {
     updatedAt: now,
     emailVerified: !!record.emailVerified,
     suspended: false,
+    // Identity/deposit verification is always manual — every account starts
+    // unverified and only an admin can flip these via the admin user drawer.
+    kycStatus: 'unverified',
     passwordHash: record.passwordHash || null,
     googleId: record.googleId || null,
     picture: record.picture || null,

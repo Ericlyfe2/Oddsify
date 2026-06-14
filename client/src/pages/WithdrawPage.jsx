@@ -48,8 +48,8 @@ export default function WithdrawPage() {
   const MAX_WITHDRAW = 95_000;
   const WITHDRAW_DEPOSIT_RATIO = 0.1;
   // Stage gates withdrawal flow. New users start at Stage 0 (see
-  // /admin/stages). Stage 0 → Stage 1 is automatic once lifetime deposits
-  // reach GHS 1,000; the rest are admin-controlled.
+  // /admin/stages). Every promotion is admin-controlled — deposits never
+  // move a user between stages. Stage 2 is the "in review" state.
   // Stage 3 + blocked locks the account until an admin unblocks it.
   const stage = (() => {
     const n = Number(account?.stage);

@@ -34,6 +34,7 @@ import adminDepositsRouter from './routes/admin/deposits.js';
 import adminSettingsRouter from './routes/admin/settings.js';
 import adminSupportRouter from './routes/admin/support.js';
 import { seedAdmins } from './db/seedAdmins.js';
+import { backfillVerification } from './db/backfillVerification.js';
 import { initStores } from './db/store.js';
 import { getSettings } from './db/settings.js';
 import { startSettlementLoop } from './services/settlement.js';
@@ -198,6 +199,10 @@ async function boot() {
   // demo transactions, no seeded promotions — operators add real content
   // through the admin UI.
   await seedAdmins();
+
+  // One-time: reset legacy accounts to unverified so verification is fully
+  // manual. Guarded internally — safe to call on every boot.
+  backfillVerification();
 
   await new Promise((resolve) => server.listen(PORT, resolve));
   log.info(`Oddsify API listening on http://127.0.0.1:${PORT}`);
