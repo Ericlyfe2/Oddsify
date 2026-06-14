@@ -17,12 +17,16 @@ import { allUsers, updateUser } from './users.js';
 import { ensureReferralCode } from '../services/referrals.js';
 import { log } from '../utils/logger.js';
 
+// Registered at module-import time so initStores() picks it up. Creating a
+// new store inside the function body would race the Postgres preload and
+// throw "Store used before initStores() resolved".
+const migrations = createStore('migrations', {});
+
 const MIGRATION_KEY = 'verification-reset-2026-06-v2';
 
 const isAdmin = (u) => u.role === 'admin' || !!u.adminRole;
 
 export function backfillVerification() {
-  const migrations = createStore('migrations', {});
   if (migrations.get(MIGRATION_KEY)) return 0;
 
   let reset = 0;
