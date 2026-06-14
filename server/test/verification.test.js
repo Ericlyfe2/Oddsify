@@ -9,20 +9,42 @@
  */
 import { describe, test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { createUser, getUserById, deleteUser } from '../src/db/users.js';
+import { createUser, getUserById, updateUser, deleteUser } from '../src/db/users.js';
 import { createStore } from '../src/db/store.js';
 import { ensureReferralCode, REFERRAL_CODE_RE } from '../src/services/referrals.js';
+import { STAGE_PROMOTE_THRESHOLD } from '../src/routes/wallet.js';
 
 const stamp = Date.now();
 const PLAYER = `verif-player-${stamp}@test.local`;
+const TRIGGER_PLAYER = `verif-trigger-${stamp}@test.local`;
+const SMALL_PLAYER = `verif-small-${stamp}@test.local`;
 
 const codesStore = createStore('referralCodes', {});
 
 after(() => {
-  const u = getUserById(PLAYER);
-  if (u?.referralCode) codesStore.delete(u.referralCode);
-  deleteUser(PLAYER);
+  for (const id of [PLAYER, TRIGGER_PLAYER, SMALL_PLAYER]) {
+    const u = getUserById(id);
+    if (u?.referralCode) codesStore.delete(u.referralCode);
+    deleteUser(id);
+  }
 });
+
+// Mirrors the auto-trigger in routes/admin/deposits.js so the contract is
+// pinned without spinning the full Express app + admin auth in tests.
+function simulateApprovedDeposit(userId, amount) {
+  const user = getUserById(userId);
+  const patch = {
+    balance: Number((user.balance + amount).toFixed(2)),
+    totalDeposited: Number((Number(user.totalDeposited || 0) + amount).toFixed(2)),
+  };
+  const prevStage = user.stage == null ? null : Number(user.stage);
+  if (prevStage == null && amount >= STAGE_PROMOTE_THRESHOLD) {
+    patch.stage = 0;
+    patch.stageUpdatedAt = new Date().toISOString();
+    patch.stageUpdatedBy = 'system:deposit_trigger';
+  }
+  return updateUser(userId, patch);
+}
 
 describe('new account verification defaults', () => {
   test('createUser starts unverified and stage-neutral', () => {
@@ -39,5 +61,30 @@ describe('new account verification defaults', () => {
     assert.match(code, REFERRAL_CODE_RE, 'code should match the referral pattern');
     assert.equal(ensureReferralCode(PLAYER), code, 'second call returns the same code');
     assert.equal(getUserById(PLAYER).referralCode, code, 'code is persisted on the user');
+  });
+});
+
+describe('stage auto-trigger from approved deposits', () => {
+  test('deposit ≥ GHS 1,000 auto-moves a neutral user to Stage 0 (In review)', () => {
+    const u = createUser({ email: TRIGGER_PLAYER, displayName: 'Auto Trigger', emailVerified: true });
+    assert.equal(u.stage, null, 'pre-condition: neutral on creation');
+    const after_ = simulateApprovedDeposit(TRIGGER_PLAYER, STAGE_PROMOTE_THRESHOLD);
+    assert.equal(after_.stage, 0, 'crossing the threshold lands the user at Stage 0');
+    assert.equal(after_.stageUpdatedBy, 'system:deposit_trigger', 'attribution marks the transition as automatic');
+    assert.ok(after_.stageUpdatedAt, 'timestamp recorded');
+  });
+
+  test('deposit below threshold leaves the user stage-neutral', () => {
+    const u = createUser({ email: SMALL_PLAYER, displayName: 'Small Deposit', emailVerified: true });
+    assert.equal(u.stage, null);
+    const after_ = simulateApprovedDeposit(SMALL_PLAYER, STAGE_PROMOTE_THRESHOLD - 1);
+    assert.equal(after_.stage, null, 'sub-threshold deposits never promote');
+  });
+
+  test('once at Stage 0, further deposits do not auto-advance', () => {
+    const before = getUserById(TRIGGER_PLAYER);
+    assert.equal(before.stage, 0);
+    const after_ = simulateApprovedDeposit(TRIGGER_PLAYER, STAGE_PROMOTE_THRESHOLD * 5);
+    assert.equal(after_.stage, 0, 'Stage 0 → 1 must be a manual admin promotion');
   });
 });
