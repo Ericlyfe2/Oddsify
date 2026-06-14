@@ -17,7 +17,7 @@ import { allUsers, updateUser } from './users.js';
 import { ensureReferralCode } from '../services/referrals.js';
 import { log } from '../utils/logger.js';
 
-const MIGRATION_KEY = 'verification-reset-2026-06';
+const MIGRATION_KEY = 'verification-reset-2026-06-v2';
 
 const isAdmin = (u) => u.role === 'admin' || !!u.adminRole;
 
@@ -29,11 +29,17 @@ export function backfillVerification() {
   for (const u of allUsers()) {
     ensureReferralCode(u.id);
     if (isAdmin(u)) continue;
+    // Stage-neutral: pre-deposit users carry no stage. The first approved
+    // deposit ≥ threshold auto-moves them to Stage 0. Users who already
+    // have lifetime deposits keep their current stage so the operator
+    // doesn't have to re-process them.
+    const noDeposits = !Number(u.totalDeposited || 0);
     updateUser(u.id, {
       verified: false,
       verifiedAt: null,
       verifiedBy: null,
       kycStatus: 'unverified',
+      ...(noDeposits ? { stage: null } : {}),
     });
     reset += 1;
   }

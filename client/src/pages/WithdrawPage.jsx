@@ -47,10 +47,12 @@ export default function WithdrawPage() {
   const STAGE4_MIN_WITHDRAW = 50_000; // Stage 4 (VIP)
   const MAX_WITHDRAW = 95_000;
   const WITHDRAW_DEPOSIT_RATIO = 0.1;
-  // Stage gates withdrawal flow. New users start at Stage 0 (see
-  // /admin/stages). Every promotion is admin-controlled — deposits never
-  // move a user between stages. Stage 2 is the "in review" state.
-  // Stage 3 + blocked locks the account until an admin unblocks it.
+  // Stage gates withdrawal flow. Fresh accounts are stage-neutral
+  // (account.stage === null) until a deposit ≥ GHS 1,000 auto-moves them to
+  // Stage 0 (In review). Every promotion from Stage 0 onward is admin-
+  // controlled. Stage 3 + blocked locks the account until admin unblocks.
+  // Neutral users are treated the same as Stage 0 by the withdraw gates
+  // (deposit-requirement popup), so the flow funnels them into depositing.
   const stage = (() => {
     const n = Number(account?.stage);
     if (!Number.isFinite(n)) return 0;

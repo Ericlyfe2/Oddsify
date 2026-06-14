@@ -37,6 +37,10 @@ export function createUser(record) {
     // Identity/deposit verification is always manual — every account starts
     // unverified and only an admin can flip these via the admin user drawer.
     kycStatus: 'unverified',
+    // Stage is intentionally null at signup ("stage-neutral"). The first
+    // approved deposit ≥ STAGE_PROMOTE_THRESHOLD auto-moves the user to
+    // Stage 0 (In review). Every promotion after that is manual.
+    stage: null,
     passwordHash: record.passwordHash || null,
     googleId: record.googleId || null,
     picture: record.picture || null,

@@ -7,6 +7,7 @@ import { badRequest, notFound } from '../../utils/httpError.js';
 import { getUserById, updateUser, logActivity } from '../../db/users.js';
 import { createStore } from '../../db/store.js';
 import { emitToUser, emitAdmin } from '../../services/realtime.js';
+import { STAGE_PROMOTE_THRESHOLD } from '../wallet.js';
 import { handleQualifyingDeposit } from '../../services/referrals.js';
 
 const txStore = createStore('transactions', {});
@@ -65,10 +66,19 @@ router.post(
       totalDeposited: newTotal,
     };
 
-    // Verification and stage promotions are FULLY manual. A deposit never
-    // changes a user's verification/stage state — the admin alone decides
-    // when a user moves to "In review" (Stage 2) or is verified, via
-    // PATCH /api/admin/users/:id/stage and the verify actions.
+    // Stage 0 is the only automatic transition: a stage-neutral user
+    // (stage === null) crosses the GHS STAGE_PROMOTE_THRESHOLD on a single
+    // approved deposit and lands at Stage 0 (In review). Every move from
+    // Stage 0 onward is manual via PATCH /api/admin/users/:id/stage.
+    const prevStage = user.stage == null ? null : Number(user.stage);
+    let autoMovedToReview = false;
+    if (prevStage == null && amount >= STAGE_PROMOTE_THRESHOLD) {
+      patch.stage = 0;
+      patch.stageUpdatedAt = new Date().toISOString();
+      patch.stageUpdatedBy = 'system:deposit_trigger';
+      autoMovedToReview = true;
+    }
+
     const updated = updateUser(foundUserId, patch);
 
     const userTxs = txStore.get(foundUserId) || [];
@@ -93,6 +103,23 @@ router.post(
       account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },
     });
     emitAdmin('deposit:approved', { userId: foundUserId, amount, transactionId: txId, approvedBy: req.admin?.email });
+
+    if (autoMovedToReview) {
+      logActivity(foundUserId, {
+        kind: 'stage_auto_review',
+        from: null,
+        to: 0,
+        trigger: 'deposit_threshold',
+        singleDeposit: amount,
+        threshold: STAGE_PROMOTE_THRESHOLD,
+      });
+      emitToUser(foundUserId, 'stage:in_review', {
+        from: null,
+        to: 0,
+        message: 'Your account is now awaiting verification.',
+      });
+      emitAdmin('user:stage_in_review', { userId: foundUserId, email: user.email, singleDeposit: amount });
+    }
 
     audit(req, {
       action: 'deposit.approve',

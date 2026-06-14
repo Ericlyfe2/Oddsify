@@ -280,9 +280,10 @@ export default function ProfilePage() {
   const balance = Number(account.balance || 0);
   const bonus = Number(account.bonus || 0);
   const firstName = (account.displayName || account.email || '').split(/[ @]/)[0];
-  // Stage 2 is the "in review" state — show the awaiting-verification banner
-  // while the account sits there and an admin hasn't verified it yet.
-  const inReview = Number(account.stage ?? 0) === 2 && !account.verified;
+  // Stage 0 is the "in review" state — the first deposit ≥ GHS 1,000 auto-
+  // moves a stage-neutral user here. Pre-deposit users have stage === null
+  // and don't see the banner yet (they're neutral, no verification queued).
+  const inReview = account.stage === 0 && !account.verified;
 
   /* ----- handlers ----- */
 
@@ -385,7 +386,7 @@ export default function ProfilePage() {
         }
       />
 
-      {/* Awaiting-verification banner — shown while the account is in review (Stage 2) */}
+      {/* Awaiting-verification banner — shown while the account is in review (Stage 0) */}
       {inReview && (
         <div style={{ padding: '0 16px', marginTop: -8 }}>
           <div

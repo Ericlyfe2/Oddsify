@@ -25,12 +25,13 @@ after(() => {
 });
 
 describe('new account verification defaults', () => {
-  test('createUser starts unverified', () => {
+  test('createUser starts unverified and stage-neutral', () => {
     const u = createUser({ email: PLAYER, displayName: 'Ama Player', emailVerified: true });
     assert.equal(u.verified, false, 'verified should default to false');
     assert.equal(u.kycStatus, 'unverified', 'kycStatus should default to unverified');
     assert.equal(u.verifiedAt, null);
     assert.equal(u.verifiedBy, null);
+    assert.equal(u.stage, null, 'fresh users must be stage-neutral (stage === null)');
   });
 
   test('ensureReferralCode mints a real, valid, stable code', () => {

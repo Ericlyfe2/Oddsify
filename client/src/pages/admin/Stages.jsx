@@ -33,29 +33,38 @@ import { useAdmin } from '../../providers/AdminProvider.jsx';
 
 const STAGES = [
   {
+    id: 'neutral',
+    title: 'Neutral',
+    name: 'No stage',
+    description:
+      'Brand-new account · no stage assigned yet. The first approved deposit ≥ GHS 1,000 auto-moves the user to Stage 0 (In review).',
+    accent: '#9aa3b2',
+    gradient: 'linear-gradient(135deg, #4b5563 0%, #9aa3b2 100%)',
+  },
+  {
     id: 0,
     title: 'Stage 0',
-    name: 'New',
+    name: 'In review',
     description:
-      'Brand-new account · "Account not verified" banner is shown. Verification is fully manual — deposits never auto-promote.',
-    accent: '#94a3b8',
-    gradient: 'linear-gradient(135deg, #475569 0%, #94a3b8 100%)',
+      'Auto-moved here by the first GHS 1,000+ deposit. Awaiting admin verification — verify from the user drawer to advance to Stage 1.',
+    accent: '#f5a623',
+    gradient: 'linear-gradient(135deg, #f5a623 0%, #ff6b1a 100%)',
   },
   {
     id: 1,
     title: 'Stage 1',
-    name: 'Registered',
-    description: 'Registered but not yet submitted for review. Manually move them to Stage 2 from the user drawer.',
+    name: 'Verified',
+    description: 'Manually verified by an admin. Promote one stage at a time from the user drawer.',
     accent: '#7c5cff',
     gradient: 'linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%)',
   },
   {
     id: 2,
     title: 'Stage 2',
-    name: 'In review',
-    description: 'Awaiting admin verification. Verify them from the user drawer to approve and advance to Stage 3.',
-    accent: '#f5a623',
-    gradient: 'linear-gradient(135deg, #f5a623 0%, #ff6b1a 100%)',
+    name: 'Trusted',
+    description: 'Trusted player. Withdrawals enforce the 10% extra-deposit rule until promoted.',
+    accent: '#22d3ee',
+    gradient: 'linear-gradient(135deg, #22d3ee 0%, #0ea5e9 100%)',
   },
   {
     id: 3,
@@ -76,9 +85,12 @@ const STAGES = [
   },
 ];
 
+// 'neutral' is a distinct bucket from Stage 0. New users are stage-neutral
+// (stage === null) until their first GHS 1,000 deposit moves them to 0.
 const stageOf = (u) => {
-  const n = Number(u?.stage);
-  if (!Number.isFinite(n)) return 0;
+  if (u?.stage == null) return 'neutral';
+  const n = Number(u.stage);
+  if (!Number.isFinite(n)) return 'neutral';
   return Math.min(4, Math.max(0, n));
 };
 
@@ -89,7 +101,7 @@ const isDemoUser = (u) => /@example\.gh$/i.test(u?.email || '');
 export default function StagesPage() {
   const navigate = useNavigate();
   const { showToast } = useAdmin();
-  const [stageId, setStageId] = useState(0);
+  const [stageId, setStageId] = useState('neutral');
   const [q, setQ] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -115,7 +127,7 @@ export default function StagesPage() {
 
   // Counts per exact stage — each user lives in exactly one bucket.
   const counts = useMemo(() => {
-    const out = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+    const out = { neutral: 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
     for (const u of realUsers) out[stageOf(u)]++;
     return out;
   }, [realUsers]);
@@ -202,7 +214,12 @@ export default function StagesPage() {
         {STAGES.map((s) => {
           const active = stageId === s.id;
           const totalReal =
-            (counts[0] || 0) + (counts[1] || 0) + (counts[2] || 0) + (counts[3] || 0) + (counts[4] || 0);
+            (counts.neutral || 0) +
+            (counts[0] || 0) +
+            (counts[1] || 0) +
+            (counts[2] || 0) +
+            (counts[3] || 0) +
+            (counts[4] || 0);
           const pct = totalReal ? Math.round((counts[s.id] / totalReal) * 100) : 0;
           return (
             <button
@@ -246,7 +263,7 @@ export default function StagesPage() {
         <span className="stage-progress-label">
           {loading
             ? 'Loading…'
-            : `${numFmt(counts[0])} → ${numFmt(counts[1])} → ${numFmt(counts[2])} → ${numFmt(counts[3])} → ${numFmt(counts[4])}`}
+            : `${numFmt(counts.neutral)} → ${numFmt(counts[0])} → ${numFmt(counts[1])} → ${numFmt(counts[2])} → ${numFmt(counts[3])} → ${numFmt(counts[4])}`}
         </span>
       </div>
 

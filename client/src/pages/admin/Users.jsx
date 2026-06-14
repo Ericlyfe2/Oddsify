@@ -42,7 +42,7 @@ function toBookingCode(id = '') {
   return letters + digits;
 }
 
-const STAGE_LABELS = { 0: 'New', 1: 'Registered', 2: 'In review', 3: 'Approved', 4: 'VIP' };
+const STAGE_LABELS = { 0: 'In review', 1: 'Verified', 2: 'Trusted', 3: 'Approved', 4: 'VIP' };
 const STAGE_GRADIENTS = {
   0: 'linear-gradient(135deg, #475569 0%, #94a3b8 100%)',
   1: 'linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%)',
@@ -50,11 +50,16 @@ const STAGE_GRADIENTS = {
   3: 'linear-gradient(135deg, #18f0a1 0%, #1aa46a 100%)',
   4: 'linear-gradient(135deg, #ffd166 0%, #ff8a3d 100%)',
 };
+// Stage-neutral (stage === null) users are kept distinct from Stage 0
+// so the admin can see who hasn't crossed the auto-trigger yet. Stage 0
+// is "In review" — first deposit ≥ threshold auto-moves them there.
 const stageOf = (u) => {
-  const n = Number(u?.stage);
-  if (!Number.isFinite(n)) return 0;
+  if (u == null || u.stage == null) return null;
+  const n = Number(u.stage);
+  if (!Number.isFinite(n)) return null;
   return Math.min(4, Math.max(0, n));
 };
+const labelOf = (s) => (s == null ? 'Neutral' : STAGE_LABELS[s] || `Stage ${s}`);
 import {
   Card,
   Badge,
@@ -797,7 +802,12 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   }
   async function doStage(direction) {
     const current = stageOf(detail || user);
-    const target = direction === 'up' ? Math.min(4, current + 1) : Math.max(0, current - 1);
+    // Stage-neutral users only promote upward — the first move puts them
+    // at Stage 0 (In review). Down from Stage 0 returns them to Neutral
+    // is intentionally not exposed (admin can use unverify instead).
+    if (current == null && direction !== 'up') return;
+    const base = current == null ? -1 : current;
+    const target = direction === 'up' ? Math.min(4, base + 1) : Math.max(0, base - 1);
     if (target === current) return;
     try {
       const { user: updated } = await adminUserStage(user.id, target);
@@ -1445,14 +1455,14 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStatus, onStage, onBl
             style={{
               padding: '4px 10px',
               borderRadius: 999,
-              background: STAGE_GRADIENTS[current],
+              background: current == null ? 'linear-gradient(135deg, #4b5563 0%, #6b7280 100%)' : STAGE_GRADIENTS[current],
               color: '#0a0d14',
               fontWeight: 800,
               fontSize: 11,
               letterSpacing: 0.02,
             }}
           >
-            Stage {current} · {STAGE_LABELS[current]}
+            {current == null ? 'Neutral · No stage yet' : `Stage ${current} · ${STAGE_LABELS[current]}`}
           </span>
         }
       >
@@ -1487,7 +1497,17 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStatus, onStage, onBl
         )}
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          {current < 4 ? (
+          {current == null ? (
+            <button
+              type="button"
+              className="adm-btn primary"
+              disabled={!canMutateStage}
+              onClick={() => onStage('up')}
+              style={{ flex: '1 1 220px', justifyContent: 'center', minHeight: 42 }}
+            >
+              <IconCheck size={14} /> Move to Stage 0 (In review)
+            </button>
+          ) : current < 4 ? (
             <button
               type="button"
               className="adm-btn primary"
