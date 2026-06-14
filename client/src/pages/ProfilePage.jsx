@@ -175,7 +175,7 @@ export default function ProfilePage() {
   const { account, signOut, openDeposit, openWithdraw, unreadCount, refresh } = useAccount();
   const { toast } = useToast();
 
-  const [counts, setCounts] = useState({ openBets: 0, tx: 0 });
+  const [counts, setCounts] = useState({ openBets: 0, tx: 0, winRate: 0, biggestWin: 0, streak: 0 });
   const [balanceVisible, setBalanceVisible] = useState(true);
 
   // personal info editor state
@@ -212,9 +212,25 @@ export default function ProfilePage() {
     Promise.all([fetchBetHistory().catch(() => null), fetchTransactions().catch(() => null)]).then(([bets, txs]) => {
       if (!alive) return;
       const items = bets?.bets || bets?.history || [];
+      const settled = items.filter((b) => b.status === 'won' || b.status === 'lost');
+      const won = settled.filter((b) => b.status === 'won');
+      const winRate = settled.length ? Math.round((won.length / settled.length) * 100) : 0;
+      const biggestWin = won.reduce((m, b) => Math.max(m, Number(b.payout || b.winnings || 0)), 0);
+      // Current winning streak (most recent consecutive wins by settlement date).
+      const recent = [...settled].sort(
+        (a, b) => new Date(b.settledAt || b.placedAt || 0) - new Date(a.settledAt || a.placedAt || 0),
+      );
+      let streak = 0;
+      for (const b of recent) {
+        if (b.status === 'won') streak += 1;
+        else break;
+      }
       setCounts({
         openBets: items.filter((b) => b.status === 'open').length,
         tx: (txs?.transactions || txs?.items || []).length,
+        winRate,
+        biggestWin,
+        streak,
       });
     });
     return () => {
@@ -264,7 +280,6 @@ export default function ProfilePage() {
   const balance = Number(account.balance || 0);
   const bonus = Number(account.bonus || 0);
   const firstName = (account.displayName || account.email || '').split(/[ @]/)[0];
-  const totalStaked = Number(account.totalStaked || 0);
   // Stage 2 is the "in review" state — show the awaiting-verification banner
   // while the account sits there and an admin hasn't verified it yet.
   const inReview = Number(account.stage ?? 0) === 2 && !account.verified;
@@ -449,7 +464,7 @@ export default function ProfilePage() {
                       background: account.verified ? '#18f0a1' : '#ffb547',
                     }}
                   />
-                  {account.verified ? 'Verified' : 'Unverified'}
+                  {account.verified ? 'Premium' : 'Unverified'}
                 </span>
               </div>
             </div>
@@ -512,12 +527,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Stats strip */}
+      {/* Stats strip — performance, not balances. Balances live in the hero. */}
       <div style={{ padding: '16px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {[
-          { label: 'Open bets', value: String(counts.openBets) },
-          { label: 'Deposited', value: `GHS ${fmtCedi(Number(account.totalDeposited || 0))}` },
-          { label: 'Staked', value: `GHS ${fmtCedi(totalStaked)}` },
+          { label: 'Win rate', value: `${counts.winRate}%` },
+          { label: 'Biggest win', value: `GHS ${fmtCedi(counts.biggestWin)}` },
+          { label: 'Win streak', value: counts.streak ? `${counts.streak} 🔥` : '0' },
         ].map((s) => (
           <div
             key={s.label}
