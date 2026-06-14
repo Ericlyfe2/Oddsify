@@ -802,22 +802,19 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   }
   async function doStage(direction) {
     const current = stageOf(detail || user);
-    // Stage-neutral users only promote upward — the first move puts them
-    // at Stage 0 (In review). Down from Stage 0 returns them to Neutral
-    // is intentionally not exposed (admin can use unverify instead).
+    // Adjacency: Neutral <-> 0 <-> 1 <-> 2 <-> 3 <-> 4. Going down from
+    // Stage 0 returns the user to Neutral (stage: null).
     if (current == null && direction !== 'up') return;
     const base = current == null ? -1 : current;
-    const target = direction === 'up' ? Math.min(4, base + 1) : Math.max(0, base - 1);
+    const targetIdx = direction === 'up' ? Math.min(4, base + 1) : Math.max(-1, base - 1);
+    const target = targetIdx === -1 ? null : targetIdx;
     if (target === current) return;
     try {
       const { user: updated } = await adminUserStage(user.id, target);
       setDetail(updated);
       onUpdate(updated);
-      showToast(
-        direction === 'up'
-          ? `Verified — promoted to Stage ${target} (${STAGE_LABELS[target]}).`
-          : `Moved back to Stage ${target} (${STAGE_LABELS[target]}).`,
-      );
+      const label = target == null ? 'Neutral · No stage' : `Stage ${target} (${STAGE_LABELS[target]})`;
+      showToast(direction === 'up' ? `Verified — promoted to ${label}.` : `Moved back to ${label}.`);
     } catch (e) {
       showToast(e.message, 'error');
     }
@@ -1536,6 +1533,18 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStatus, onStage, onBl
             >
               <IconCheck size={14} /> VIP · Free withdrawals · No popups
             </div>
+          )}
+          {current === 0 && (
+            <button
+              type="button"
+              className="adm-btn ghost"
+              disabled={!canMutateStage}
+              onClick={() => onStage('down')}
+              title="Send the player back to Stage Neutral (no stage assigned)"
+              style={{ minHeight: 42 }}
+            >
+              ← Neutral
+            </button>
           )}
           {current > 0 && (
             <button

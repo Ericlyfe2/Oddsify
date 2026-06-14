@@ -87,4 +87,15 @@ describe('stage auto-trigger from approved deposits', () => {
     const after_ = simulateApprovedDeposit(TRIGGER_PLAYER, STAGE_PROMOTE_THRESHOLD * 5);
     assert.equal(after_.stage, 0, 'Stage 0 → 1 must be a manual admin promotion');
   });
+
+  test('admin can demote a Stage 0 user back to Neutral', () => {
+    // Mirrors the patch the admin route writes when stage === null.
+    const reset = updateUser(TRIGGER_PLAYER, {
+      stage: null,
+      stageUpdatedAt: new Date().toISOString(),
+      stageUpdatedBy: 'admin@test',
+    });
+    assert.equal(reset.stage, null, 'admin demotion lands the user back at Neutral');
+    assert.equal(reset.stageUpdatedBy, 'admin@test', 'attribution is recorded');
+  });
 });

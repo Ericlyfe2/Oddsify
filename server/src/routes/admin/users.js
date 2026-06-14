@@ -207,17 +207,30 @@ router.patch(
   requireRole('moderator', 'support'),
   validate(
     z.object({
-      stage: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+      // null = stage-neutral (no stage assigned). Adjacency: null <-> 0.
+      stage: z.union([
+        z.literal(null),
+        z.literal(0),
+        z.literal(1),
+        z.literal(2),
+        z.literal(3),
+        z.literal(4),
+      ]),
       note: z.string().max(500).optional(),
     }),
   ),
   (req, res, next) => {
     const u = getUserById(req.params.id);
     if (!u) return next(notFound('User not found'));
-    const prev = u.stage ?? 0;
+    const prev = u.stage == null ? null : Number(u.stage);
     const { stage, note } = req.body;
-    if (Math.abs(stage - prev) > 1) {
-      return next(badRequest(`Cannot jump from stage ${prev} to ${stage}. Move one stage at a time.`));
+    // Adjacency check — neutral counts as "before 0". Allowed steps:
+    // null <-> 0, 0 <-> 1, 1 <-> 2, 2 <-> 3, 3 <-> 4. Any jump is rejected.
+    const prevIdx = prev == null ? -1 : prev;
+    const nextIdx = stage == null ? -1 : stage;
+    if (Math.abs(nextIdx - prevIdx) > 1) {
+      const label = (v) => (v == null ? 'Neutral' : `stage ${v}`);
+      return next(badRequest(`Cannot jump from ${label(prev)} to ${label(stage)}. Move one stage at a time.`));
     }
     if (stage === prev) {
       return res.json({ user: expandUser(u) });
@@ -254,8 +267,10 @@ router.patch(
       patch.blockedBy = null;
     }
     const next_ = updateUser(u.id, patch);
+    const isPromote = nextIdx > prevIdx;
+    const stageKey = stage == null ? 'neutral' : stage;
     audit(req, {
-      action: stage > prev ? 'user.stage.promote' : 'user.stage.demote',
+      action: isPromote ? 'user.stage.promote' : 'user.stage.demote',
       target: u.id,
       targetType: 'user',
       severity: 'info',
@@ -267,7 +282,7 @@ router.patch(
       },
     });
     logActivity(u.id, {
-      kind: `stage_${stage > prev ? 'promoted' : 'demoted'}_to_${stage}`,
+      kind: `stage_${isPromote ? 'promoted' : 'demoted'}_to_${stageKey}`,
       by: req.admin?.email,
       note,
     });
