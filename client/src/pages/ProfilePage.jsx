@@ -2,13 +2,13 @@
  * Account — comprehensive player profile hub for Oddsify.
  *
  * Sections (top → bottom):
- *  - Balance hero with toggleable visibility, KYC chip, stage chip,
- *    pending-promotion banner.
+ *  - Balance hero with toggleable visibility, verification chip,
+ *    in-review banner (Stage 2).
  *  - Quick action grid (Deposit / Withdraw / Bet History / Promos).
  *  - Stats strip (open bets · win rate · staked).
  *  - Personal information editor (display name + phone).
  *  - Security panel (change password, 2FA placeholder).
- *  - Verification status (KYC / stage 0→1 explicit gate).
+ *  - Verification status (admin-controlled, fully manual).
  *  - Responsible gambling (daily / weekly / monthly deposit limits, self-
  *    exclusion).
  *  - Refer & earn (share code).
@@ -27,14 +27,6 @@ import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { fetchTransactions, fetchBetHistory, updateProfile, changePassword } from '../api/betApi.js';
 import { fmtCedi, useTokens, OddPageHeader, OddIcon } from '../components/odd/primitives.jsx';
 import { validatePhone, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
-
-const STAGE_LABELS = {
-  0: 'Newcomer',
-  1: 'Verified',
-  2: 'Trusted',
-  3: 'High roller',
-  4: 'VIP',
-};
 
 const buildQuickActions = (T, handlers) => [
   { id: 'dep', icon: 'deposit', label: 'Deposit', tint: T.greenBright, onClick: handlers.deposit },
@@ -273,9 +265,9 @@ export default function ProfilePage() {
   const bonus = Number(account.bonus || 0);
   const firstName = (account.displayName || account.email || '').split(/[ @]/)[0];
   const totalStaked = Number(account.totalStaked || 0);
-  const stage = Number(account.stage ?? 0);
-  const stageLabel = STAGE_LABELS[stage] || `Stage ${stage}`;
-  const promotionPending = !!account.stagePromotionRequested;
+  // Stage 2 is the "in review" state — show the awaiting-verification banner
+  // while the account sits there and an admin hasn't verified it yet.
+  const inReview = Number(account.stage ?? 0) === 2 && !account.verified;
 
   /* ----- handlers ----- */
 
@@ -378,8 +370,8 @@ export default function ProfilePage() {
         }
       />
 
-      {/* Pending promotion banner — only when admin gate is pending */}
-      {promotionPending && (
+      {/* Awaiting-verification banner — shown while the account is in review (Stage 2) */}
+      {inReview && (
         <div style={{ padding: '0 16px', marginTop: -8 }}>
           <div
             style={{
@@ -404,7 +396,7 @@ export default function ProfilePage() {
       )}
 
       {/* Balance hero */}
-      <div style={{ padding: '0 16px', marginTop: promotionPending ? 12 : -16, position: 'relative', zIndex: 2 }}>
+      <div style={{ padding: '0 16px', marginTop: inReview ? 12 : 6, position: 'relative', zIndex: 2 }}>
         <div
           style={{
             background: T.surface,
@@ -458,19 +450,6 @@ export default function ProfilePage() {
                     }}
                   />
                   {account.verified ? 'Verified' : 'Unverified'}
-                </span>
-                <span
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    background: T.surfaceAlt,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: 0.3,
-                    color: T.inkSoft,
-                  }}
-                >
-                  {stageLabel}
                 </span>
               </div>
             </div>

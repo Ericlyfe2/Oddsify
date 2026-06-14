@@ -768,11 +768,19 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   }, [open, user?.id, showToast]);
 
   async function doStatus(action) {
+    const MESSAGES = {
+      suspend: 'User suspended.',
+      unsuspend: 'User unsuspended.',
+      verify: 'Email verified.',
+      unverify: 'Email verification revoked.',
+      verified_user: 'User verified.',
+      verified_unverify: 'User verification revoked.',
+    };
     try {
       const { user: updated } = await adminUserStatus(user.id, action);
       setDetail(updated);
       onUpdate(updated);
-      showToast(`User ${action}d.`);
+      showToast(MESSAGES[action] || `User ${action}d.`);
     } catch (e) {
       showToast(e.message, 'error');
     }
@@ -900,22 +908,22 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
                 <IconBan size={14} /> Suspend
               </button>
             )}
-            {(detail?.emailVerified ?? user.emailVerified) ? (
-              <button className="adm-btn ghost" onClick={() => doStatus('unverify')}>
-                <IconBan size={14} /> Revoke verification
-              </button>
-            ) : (
-              <button className="adm-btn success" onClick={() => doStatus('verify')}>
-                <IconCheck size={14} /> Verify user
-              </button>
-            )}
             {(detail?.verified ?? user.verified) ? (
               <button className="adm-btn ghost" onClick={() => doStatus('verified_unverify')}>
-                <IconBan size={14} /> Revoke deposit verification
+                <IconBan size={14} /> Unverify user
               </button>
             ) : (
               <button className="adm-btn success" onClick={() => doStatus('verified_user')}>
-                <IconCheck size={14} /> Verify deposits
+                <IconCheck size={14} /> Verify user
+              </button>
+            )}
+            {(detail?.emailVerified ?? user.emailVerified) ? (
+              <button className="adm-btn ghost" onClick={() => doStatus('unverify')}>
+                <IconBan size={14} /> Unverify email
+              </button>
+            ) : (
+              <button className="adm-btn success" onClick={() => doStatus('verify')}>
+                <IconCheck size={14} /> Verify email
               </button>
             )}
             {hasRole('finance_admin') && (
@@ -963,6 +971,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
           logins={logins}
           hasRole={hasRole}
           onKyc={doKyc}
+          onStatus={doStatus}
           onStage={doStage}
           onBlocked={doBlocked}
           onTags={saveTags}
@@ -1330,13 +1339,14 @@ function DeleteUserModal({ open, onClose, user, onConfirm }) {
   );
 }
 
-function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onTags, onNotes }) {
+function ProfileTab({ user, logins = [], hasRole, onKyc, onStatus, onStage, onBlocked, onTags, onNotes }) {
   const [tagInput, setTagInput] = useState('');
   const [notes, setNotes] = useState(user.notes || '');
   const lastLogin = logins.find((e) => e.kind === 'login_success' || e.kind === 'login_google');
   const lastLogout = logins.find((e) => e.kind === 'logout');
   const current = stageOf(user);
   const canMutateStage = hasRole('moderator', 'support');
+  const canVerify = hasRole('moderator');
   const blocked = !!user.blocked;
   return (
     <>
@@ -1367,7 +1377,7 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
             </dd>
             <dt>Last update</dt>
             <dd>{dateShort(user.updatedAt)}</dd>
-            <dt>Deposit verification</dt>
+            <dt>Verification</dt>
             <dd>
               {user.verified ? (
                 <>
@@ -1383,6 +1393,37 @@ function ProfileTab({ user, logins = [], hasRole, onKyc, onStage, onBlocked, onT
             <dd>{user.twoFactorEnabled ? <Badge tone="success">Enabled</Badge> : <Badge>Off</Badge>}</dd>
           </dl>
         </div>
+      </Card>
+
+      <Card
+        title="Account verification"
+        subtitle="This is the badge the player sees on their account. Verify or unverify at any time."
+        pill={
+          user.verified ? <Badge tone="success">Verified</Badge> : <Badge tone="warn">Unverified</Badge>
+        }
+      >
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {user.verified ? (
+            <button className="adm-btn ghost" disabled={!canVerify} onClick={() => onStatus('verified_unverify')}>
+              <IconBan size={14} /> Unverify user
+            </button>
+          ) : (
+            <button className="adm-btn success" disabled={!canVerify} onClick={() => onStatus('verified_user')}>
+              <IconCheck size={14} /> Verify user
+            </button>
+          )}
+        </div>
+        {user.verified && (user.verifiedAt || user.verifiedBy) && (
+          <p style={{ marginTop: 10, marginBottom: 0, fontSize: 12, color: 'var(--text-dim)' }}>
+            Verified{user.verifiedAt ? ` ${ago(user.verifiedAt)}` : ''}
+            {user.verifiedBy ? ` by ${user.verifiedBy}` : ''}.
+          </p>
+        )}
+        {!canVerify && (
+          <p style={{ marginTop: 10, marginBottom: 0, fontSize: 12, color: 'var(--text-dim)' }}>
+            Read-only — your role can't change verification.
+          </p>
+        )}
       </Card>
 
       <Card title="Lifetime stats">
