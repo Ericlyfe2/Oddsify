@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Card, Badge, Spinner, useToast } from '../../components/admin/primitives.jsx';
+import { Card, Badge, Spinner } from '../../components/admin/primitives.jsx';
 import { adminGetSettings, adminUpdateSettings, adminHealth } from '../../api/adminApi.js';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
 
 export default function SettingsPage() {
   const { hasRole, showToast } = useAdmin();
   const isSuper = hasRole();
-  const $t = useToast();
-  const toast = showToast || $t?.showToast || (() => {});
+  const toast = showToast || (() => {});
   const [health, setHealth] = useState(null);
   const [settings, setSettings] = useState(null);
   const [busy, setBusy] = useState(false);
