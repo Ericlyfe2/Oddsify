@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
-import { Card, Badge, Modal, Empty, Spinner, showToast } from '../../components/admin/primitives.jsx';
+import { Card, Badge, Modal, Empty, Spinner } from '../../components/admin/primitives.jsx';
 import { adminCatalog, adminGetTemplate, adminCreateTemplate, adminPatchTemplate, adminDeleteTemplate } from '../../api/adminApi.js';
 
 const SPORTS = { football: '⚽ Football', basketball: '🏀 Basketball', tennis: '🎾 Tennis' };
