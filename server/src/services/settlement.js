@@ -114,45 +114,131 @@ function ensureResult(match, sport) {
 
 /* ------------ leg resolvers ------------ */
 
-function legWon(leg, scoreHome, scoreAway) {
+export function legWon(leg, scoreHome, scoreAway, htHome = null, htAway = null) {
   const m = String(leg.market || '').toUpperCase();
   const o = String(leg.outcome || '');
+  const total = scoreHome + scoreAway;
+  const homeWin = scoreHome > scoreAway;
+  const awayWin = scoreAway > scoreHome;
+  const draw = scoreHome === scoreAway;
+  const btts = scoreHome > 0 && scoreAway > 0;
+  const hasHT = htHome != null && htAway != null;
+
   if (m === '1X2') {
-    if (o === '1') return scoreHome > scoreAway;
-    if (o === '2') return scoreAway > scoreHome;
-    if (o === 'X') return scoreHome === scoreAway;
+    if (o === '1') return homeWin;
+    if (o === '2') return awayWin;
+    if (o === 'X') return draw;
   }
+
   if (m === 'ML') {
-    if (o === '1') return scoreHome > scoreAway;
-    if (o === '2') return scoreAway > scoreHome;
+    if (o === '1') return homeWin;
+    if (o === '2') return awayWin;
   }
-  if (m === 'OU25') {
-    const total = scoreHome + scoreAway;
-    if (o === 'Over') return total > 2.5;
-    if (o === 'Under') return total < 2.5;
-  }
-  if (m === 'BTTS') {
-    const both = scoreHome > 0 && scoreAway > 0;
-    if (o === 'Yes') return both;
-    if (o === 'No') return !both;
-  }
+
   if (m === 'DC') {
-    if (o === '1X') return scoreHome >= scoreAway;
-    if (o === 'X2') return scoreAway >= scoreHome;
-    if (o === '12') return scoreHome !== scoreAway;
+    if (o === '1X') return homeWin || draw;
+    if (o === 'X2') return awayWin || draw;
+    if (o === '12') return homeWin || awayWin;
   }
+
+  if (m === 'DNB') {
+    if (draw) return null;
+    if (o === '1') return homeWin;
+    if (o === '2') return awayWin;
+  }
+
+  const ouMatch = m.match(/^OU(\d)(\d)$/);
+  if (ouMatch) {
+    const line = parseInt(ouMatch[1], 10) + parseInt(ouMatch[2], 10) / 10;
+    if (o === 'Over') return total > line;
+    if (o === 'Under') return total < line;
+  }
+
+  if (m === 'BTTS') {
+    if (o === 'Yes') return btts;
+    if (o === 'No') return !btts;
+  }
+
+  if (m === 'CS') {
+    const actual = `${scoreHome}-${scoreAway}`;
+    if (/^\d+-\d+$/.test(o)) return o === actual;
+    const inGrid = scoreHome <= 6 && scoreAway <= 6;
+    if (o === 'OTHER_HOME') return !inGrid && homeWin;
+    if (o === 'OTHER_AWAY') return !inGrid && awayWin;
+    if (o === 'OTHER_DRAW') return !inGrid && draw;
+    if (o === 'OTHER') return !inGrid;
+  }
+
+  const ahMatch = m.match(/^AH(\d)$/);
+  if (ahMatch) {
+    const hc = parseInt(ahMatch[1], 10);
+    if (o === `H-${hc}`) return scoreHome - scoreAway > hc;
+    if (o === `A+${hc}`) return scoreAway - scoreHome > -hc;
+  }
+
   if (m === 'TP') {
-    const total = scoreHome + scoreAway;
     const line = leg.line || 220.5;
     if (o === 'Over') return total > line;
     if (o === 'Under') return total < line;
   }
+
   if (m === 'HCAP') {
     const hc = Number(leg.handicap || 0);
     if (o === '1H') return scoreHome - hc > scoreAway;
     if (o === '2H') return scoreAway + hc > scoreHome;
   }
-  return null; // unknown market → void leg
+
+  if (m === '1H1X2') {
+    if (!hasHT) return null;
+    if (o === '1') return htHome > htAway;
+    if (o === '2') return htAway > htHome;
+    if (o === 'X') return htHome === htAway;
+  }
+  if (m === '1HOU05') {
+    if (!hasHT) return null;
+    const htTotal = htHome + htAway;
+    if (o === 'Over') return htTotal > 0.5;
+    if (o === 'Under') return htTotal < 0.5;
+  }
+  if (m === '1HBTTS') {
+    if (!hasHT) return null;
+    const htBtts = htHome > 0 && htAway > 0;
+    if (o === 'Yes') return htBtts;
+    if (o === 'No') return !htBtts;
+  }
+
+  if (m === 'HTFT') {
+    if (!hasHT) return null;
+    const htResult = htHome > htAway ? '1' : htHome < htAway ? '2' : 'X';
+    const ftResult = homeWin ? '1' : awayWin ? '2' : 'X';
+    return o === `${htResult}/${ftResult}`;
+  }
+
+  if (m === 'WINBTTS') {
+    const resultPart = o.slice(0, -1);
+    const bttsPart = o.slice(-1);
+    const resultWon = resultPart === '1' ? homeWin : resultPart === '2' ? awayWin : resultPart === 'X' ? draw : false;
+    const bttsWon = bttsPart === 'Y' ? btts : !btts;
+    return resultWon && bttsWon;
+  }
+
+  if (m === 'WINOU25') {
+    const resultPart = o.slice(0, -1);
+    const ouPart = o.slice(-1);
+    const resultWon = resultPart === '1' ? homeWin : resultPart === '2' ? awayWin : resultPart === 'X' ? draw : false;
+    const ouWon = ouPart === 'O' ? total > 2.5 : total < 2.5;
+    return resultWon && ouWon;
+  }
+
+  if (m === 'BTTSOU25') {
+    const bttsPart = o[0];
+    const ouPart = o[1];
+    const bttsWon = bttsPart === 'Y' ? btts : !btts;
+    const ouWon = ouPart === 'O' ? total > 2.5 : total < 2.5;
+    return bttsWon && ouWon;
+  }
+
+  return null;
 }
 
 /* ------------ main tick ------------ */
@@ -190,7 +276,7 @@ export function settleNow() {
         allReady = false;
         break;
       }
-      const won = legWon(leg, res.scoreHome, res.scoreAway);
+      const won = legWon(leg, res.scoreHome, res.scoreAway, res.htHomeScore ?? null, res.htAwayScore ?? null);
       legResults.push({ leg, res, won });
     }
     if (!allReady) continue;
