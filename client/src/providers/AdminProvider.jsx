@@ -5,6 +5,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { setAdminTokens, clearAdminTokens, getAdminAccess, adminMe, adminLogout } from '../api/adminApi.js';
+import { getAdminSocket } from '../api/adminSocket.js';
 import { useTheme } from './ThemeProvider.jsx';
 
 const AdminCtx = createContext(null);
@@ -84,6 +85,25 @@ export function AdminProvider({ children }) {
     setMobileOpen(false);
   }, [loc.pathname]);
 
+  // Real-time Socket.IO connection for admin (singleton via adminSocket.js)
+  const [socket, setSocket] = useState(null);
+  const [socketReady, setSocketReady] = useState(false);
+
+  useEffect(() => {
+    if (!admin) return;
+    const s = getAdminSocket();
+    const onConnect = () => { setSocket(s); setSocketReady(true); };
+    const onDisconnect = () => { setSocketReady(false); };
+    if (s.connected) { onConnect(); }
+    s.on('connect', onConnect);
+    s.on('disconnect', onDisconnect);
+    setSocket(s);
+    return () => {
+      s.off('connect', onConnect);
+      s.off('disconnect', onDisconnect);
+    };
+  }, [admin?.id]);
+
   const value = useMemo(
     () => ({
       admin,
@@ -101,6 +121,8 @@ export function AdminProvider({ children }) {
       toast,
       showToast,
       hasRole,
+      socket,
+      socketReady,
     }),
     [
       admin,
@@ -112,10 +134,14 @@ export function AdminProvider({ children }) {
       setTheme,
       toggleTheme,
       collapsed,
+      setCollapsed,
       mobileOpen,
+      setMobileOpen,
       toast,
       showToast,
       hasRole,
+      socket,
+      socketReady,
     ],
   );
 

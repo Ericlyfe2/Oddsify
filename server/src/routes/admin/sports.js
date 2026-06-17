@@ -1,24 +1,9 @@
-/**
- * Sports & odds management.
- *  GET    /fixtures                 list compiled fixtures (live + admin overrides)
- *  GET    /fixtures/:id             single fixture (with current odds + suspension state)
- *  POST   /fixtures                 create custom fixture
- *  PATCH  /fixtures/:id             override fixture fields (kickoff, isLive, scores, …)
- *  DELETE /fixtures/:id             remove a custom fixture (only)
- *  PATCH  /fixtures/:id/odds        { market, key, odds } single-selection odds override
- *  POST   /fixtures/:id/suspend     { market?, selection?, all? } toggle suspension flags
- *  DELETE /fixtures/:id/suspend     clear all suspensions
- *  POST   /fixtures/:id/result      { scoreHome, scoreAway } record final score (triggers settle)
- *  POST   /fixtures/:id/settle      run settlement on all open bets touching this fixture
- *  GET    /leagues                  list leagues
- *  POST   /leagues                  create custom league
- */
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAdmin, requireRole, audit } from '../../middleware/adminAuth.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { badRequest, notFound } from '../../utils/httpError.js';
+import { badRequest, notFound, conflict } from '../../utils/httpError.js';
 import {
   compiledLeagues,
   adminListFixtures,
@@ -35,8 +20,10 @@ import {
   addMarketToFixture,
   removeMarketFromFixture,
   readSportsAdmin,
+  findDuplicateFixture,
 } from '../../db/sportsAdmin.js';
 import { settleNow } from '../../services/settlement.js';
+import { emitAdmin } from '../../services/realtime.js';
 
 const router = Router();
 
@@ -86,81 +73,148 @@ router.get('/leagues', requireAdmin, (_req, res) => {
   res.json({ leagues });
 });
 
+const createLeagueSchema = z.object({
+  name: z.string().min(2).max(100),
+  sport: z.enum(['football', 'basketball', 'tennis']),
+  region: z.string().default('admin'),
+  countryMeta: z.string().optional(),
+});
+
 router.post(
   '/leagues',
   requireAdmin,
   requireRole('odds_manager'),
-  validate(
-    z.object({
-      name: z.string().min(2),
-      sport: z.enum(['football', 'basketball', 'tennis']),
-      region: z.string().default('admin'),
-      countryMeta: z.string().optional(),
-    }),
-  ),
+  validate(createLeagueSchema),
   (req, res) => {
+    const { name, sport, region, countryMeta } = req.body;
+
+    const existingLeagues = compiledLeagues().flatMap((sp) =>
+      sp.id === sport ? (sp.leagues || []) : []
+    );
+    const duplicate = existingLeagues.find(
+      (l) => l.name.toLowerCase() === name.toLowerCase()
+    );
+    if (duplicate) {
+      throw conflict(`League "${name}" already exists in this sport.`);
+    }
+
     const id = `cust-${Math.random().toString(36).slice(2, 8)}`;
     const lg = {
       id,
-      sport: req.body.sport,
-      name: req.body.name,
-      region: req.body.region,
-      countryMeta: req.body.countryMeta || '',
+      sport,
+      name,
+      region,
+      countryMeta: countryMeta || '',
       crest: {
         style: 'background:linear-gradient(135deg,#7c5cff,#22d3ee);color:#fff',
-        label: req.body.name.slice(0, 3).toUpperCase(),
+        label: name.slice(0, 3).toUpperCase(),
       },
       matches: [],
       admin: true,
     };
     addCustomLeague(lg);
-    audit(req, { action: 'sports.league.create', target: id, targetType: 'league', meta: { name: lg.name } });
+    audit(req, { action: 'sports.league.create', target: id, targetType: 'league', meta: { name } });
+    emitAdmin('sports:league:created', { league: lg });
     res.status(201).json({ league: lg });
   },
 );
 
-const extraMarketItem = z
-  .object({
-    market: z.string().min(1),
-    type: z.enum(['overunder', 'yesno', 'dc']),
-    over: z.number().positive().optional(),
-    under: z.number().positive().optional(),
-    yes: z.number().positive().optional(),
-    no: z.number().positive().optional(),
-  })
-  .passthrough();
+const ODD_MIN = 1.01;
+const ODD_MAX = 1000;
+
+const oddsField = z.number().min(ODD_MIN, `Odds must be greater than ${ODD_MIN}`).max(ODD_MAX);
+
+const extraMarketItem = z.object({
+  market: z.string().min(1),
+  type: z.enum(['overunder', 'yesno', 'dc', 'dnb', 'ah', 'cs']),
+  over: oddsField.optional(),
+  under: oddsField.optional(),
+  yes: oddsField.optional(),
+  no: oddsField.optional(),
+  homeOdds: oddsField.optional(),
+  awayOdds: oddsField.optional(),
+  '1X': oddsField.optional(),
+  X2: oddsField.optional(),
+  '12': oddsField.optional(),
+}).passthrough();
 
 const createFixtureSchema = z.object({
   sport: z.enum(['football', 'basketball', 'tennis']),
   leagueId: z.string().min(1),
-  home: z.string().min(1),
-  away: z.string().min(1),
+  home: z.string().min(1).max(100),
+  away: z.string().min(1).max(100),
   kickoff: z.string().optional(),
   day: z.string().optional(),
+  matchDate: z.string().optional(),
+  venue: z.string().optional(),
   isLive: z.boolean().optional(),
+  status: z.string().optional(),
+  visibility: z.string().optional(),
+  featured: z.boolean().optional(),
   scoreHome: z.number().optional(),
   scoreAway: z.number().optional(),
   odds: z.object({
-    home: z.number().positive(),
-    draw: z.number().positive().optional(),
-    away: z.number().positive(),
+    home: oddsField,
+    draw: oddsField.optional(),
+    away: oddsField,
   }),
   extraMarkets: z.array(extraMarketItem).optional(),
+  correctScores: z.array(z.string()).optional(),
+  playerSpecials: z.array(z.object({
+    key: z.string(),
+    label: z.string(),
+    odds: oddsField,
+  })).optional(),
 });
 
 router.post('/fixtures', requireAdmin, requireRole('odds_manager'), validate(createFixtureSchema), (req, res) => {
   const b = req.body;
+
+  const trimmedHome = b.home.trim();
+  const trimmedAway = b.away.trim();
+
+  if (trimmedHome.toLowerCase() === trimmedAway.toLowerCase()) {
+    throw badRequest('Home and Away teams cannot be identical.');
+  }
+
+  if (/[<>{}|\\^~`]/.test(trimmedHome) || /[<>{}|\\^~`]/.test(trimmedAway)) {
+    throw badRequest('Team names contain invalid characters.');
+  }
+
+  if (b.odds.home < ODD_MIN || b.odds.away < ODD_MIN) {
+    throw badRequest(`Odds must be greater than ${ODD_MIN}.`);
+  }
+  if (b.odds.draw !== undefined && b.odds.draw < ODD_MIN) {
+    throw badRequest(`Draw odds must be greater than ${ODD_MIN}.`);
+  }
+
+  const duplicate = findDuplicateFixture(
+    trimmedHome,
+    trimmedAway,
+    b.leagueId,
+    b.matchDate || b.day || '',
+    b.kickoff || ''
+  );
+  if (duplicate) {
+    throw conflict('Fixture already exists. A match with these teams in this league already exists.');
+  }
+
   const id = `adm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const markets = buildFixtureMarkets(b);
+  const markets = buildFixtureMarkets(b, trimmedHome, trimmedAway);
   const fx = {
     id,
     sport: b.sport,
     leagueId: b.leagueId,
-    home: b.home,
-    away: b.away,
+    home: trimmedHome,
+    away: trimmedAway,
     kickoff: b.kickoff || '',
     day: b.day || 'Today',
     isLive: !!b.isLive,
+    status: b.status || (b.isLive ? 'live' : 'upcoming'),
+    venue: b.venue || '',
+    matchDate: b.matchDate || '',
+    visibility: b.visibility || 'public',
+    featured: !!b.featured,
     scoreHome: typeof b.scoreHome === 'number' ? b.scoreHome : undefined,
     scoreAway: typeof b.scoreAway === 'number' ? b.scoreAway : undefined,
     markets,
@@ -173,40 +227,74 @@ router.post('/fixtures', requireAdmin, requireRole('odds_manager'), validate(cre
     action: 'sports.fixture.create',
     target: id,
     targetType: 'fixture',
-    meta: { home: b.home, away: b.away },
+    meta: { home: trimmedHome, away: trimmedAway, leagueId: b.leagueId },
   });
+  emitAdmin('sports:fixture:created', { fixture: fx });
   res.status(201).json({ fixture: fx });
 });
 
-function buildFixtureMarkets(b) {
+function buildFixtureMarkets(b, home, away) {
   const extra = b.extraMarkets || [];
   const fromExtra = {};
+
   for (const em of extra) {
     if (em.type === 'overunder') {
+      const label = em.market === 'TP' ? 'Total Points' : `Over/Under ${em.market.replace('OU', '').replace(/^0/, '')}`;
       fromExtra[em.market] = {
-        name: em.market === 'TP' ? 'Total Points' : `Over/Under ${em.market.replace('OU', '').replace(/^0/, '')}`,
+        name: label,
         selections: [
-          { key: 'Over', label: 'Over', odds: em.over ?? 1.9 },
-          { key: 'Under', label: 'Under', odds: em.under ?? 1.9 },
+          { key: 'Over', label: 'Over', odds: Math.max(em.over ?? 1.9, ODD_MIN) },
+          { key: 'Under', label: 'Under', odds: Math.max(em.under ?? 1.9, ODD_MIN) },
         ],
       };
     } else if (em.type === 'yesno') {
       fromExtra[em.market] = {
         name: em.market === 'BTTS' ? 'Both Teams To Score' : em.market,
         selections: [
-          { key: 'Yes', label: 'Yes', odds: em.yes ?? 1.78 },
-          { key: 'No', label: 'No', odds: em.no ?? 1.98 },
+          { key: 'Yes', label: 'Yes', odds: Math.max(em.yes ?? 1.78, ODD_MIN) },
+          { key: 'No', label: 'No', odds: Math.max(em.no ?? 1.98, ODD_MIN) },
         ],
       };
     } else if (em.type === 'dc') {
       fromExtra[em.market] = {
         name: 'Double Chance',
         selections: [
-          { key: '1X', label: 'Home or Draw', odds: em['1X'] ?? 1.25 },
-          { key: 'X2', label: 'Draw or Away', odds: em.X2 ?? 1.35 },
-          { key: '12', label: 'Home or Away', odds: em['12'] ?? 1.2 },
+          { key: '1X', label: 'Home or Draw', odds: Math.max(em['1X'] ?? 1.25, ODD_MIN) },
+          { key: 'X2', label: 'Draw or Away', odds: Math.max(em.X2 ?? 1.35, ODD_MIN) },
+          { key: '12', label: 'Home or Away', odds: Math.max(em['12'] ?? 1.2, ODD_MIN) },
         ],
       };
+    } else if (em.type === 'dnb') {
+      fromExtra[em.market] = {
+        name: 'Draw No Bet',
+        selections: [
+          { key: '1', label: `${home}`, odds: Math.max(em.homeOdds ?? 1.8, ODD_MIN) },
+          { key: '2', label: `${away}`, odds: Math.max(em.awayOdds ?? 1.8, ODD_MIN) },
+        ],
+      };
+    } else if (em.type === 'ah') {
+      fromExtra[em.market] = {
+        name: em.name || 'Asian Handicap',
+        selections: [
+          { key: 'Home', label: `${home} ${em.handicap || ''}`, odds: Math.max(em.homeOdds ?? 1.85, ODD_MIN) },
+          { key: 'Away', label: `${away} ${em.handicapAway || ''}`, odds: Math.max(em.awayOdds ?? 1.85, ODD_MIN) },
+        ],
+      };
+    } else if (em.type === 'cs') {
+      const csSelections = (b.correctScores || []).map((s) => {
+        const [h, a] = s.split('-').map(Number);
+        return {
+          key: s,
+          label: `${h} - ${a}`,
+          odds: 7.0,
+        };
+      });
+      if (csSelections.length >= 2) {
+        fromExtra[em.market] = {
+          name: 'Correct Score',
+          selections: csSelections,
+        };
+      }
     }
   }
 
@@ -215,9 +303,9 @@ function buildFixtureMarkets(b) {
       '1X2': {
         name: 'Match Result',
         selections: [
-          { key: '1', label: `${b.home} to win`, odds: b.odds.home },
-          { key: 'X', label: 'Draw', odds: b.odds.draw ?? 3.2 },
-          { key: '2', label: `${b.away} to win`, odds: b.odds.away },
+          { key: '1', label: `${home} to win`, odds: Math.max(b.odds.home, ODD_MIN) },
+          { key: 'X', label: 'Draw', odds: Math.max(b.odds.draw ?? 3.2, ODD_MIN) },
+          { key: '2', label: `${away} to win`, odds: Math.max(b.odds.away, ODD_MIN) },
         ],
       },
       ...fromExtra,
@@ -228,8 +316,8 @@ function buildFixtureMarkets(b) {
       ML: {
         name: 'Money Line',
         selections: [
-          { key: '1', label: `${b.home} to win`, odds: b.odds.home },
-          { key: '2', label: `${b.away} to win`, odds: b.odds.away },
+          { key: '1', label: `${home} to win`, odds: Math.max(b.odds.home, ODD_MIN) },
+          { key: '2', label: `${away} to win`, odds: Math.max(b.odds.away, ODD_MIN) },
         ],
       },
       ...fromExtra,
@@ -239,8 +327,8 @@ function buildFixtureMarkets(b) {
     ML: {
       name: 'Match Winner',
       selections: [
-        { key: '1', label: b.home, odds: b.odds.home },
-        { key: '2', label: b.away, odds: b.odds.away },
+        { key: '1', label: home, odds: Math.max(b.odds.home, ODD_MIN) },
+        { key: '2', label: away, odds: Math.max(b.odds.away, ODD_MIN) },
       ],
     },
     ...fromExtra,
@@ -260,6 +348,7 @@ router.patch(
       scoreHome: z.number().optional(),
       scoreAway: z.number().optional(),
       minute: z.string().optional(),
+      status: z.string().optional(),
     }),
   ),
   (req, res, next) => {
@@ -268,13 +357,16 @@ router.patch(
     patchOverride(req.params.id, req.body);
     audit(req, { action: 'sports.fixture.patch', target: req.params.id, targetType: 'fixture', meta: req.body });
     const refreshed = adminLookupFixture(req.params.id);
-    res.json({ fixture: { ...refreshed.match, sport: refreshed.sport?.id, leagueId: refreshed.league?.id } });
+    const result = { fixture: { ...refreshed.match, sport: refreshed.sport?.id, leagueId: refreshed.league?.id } };
+    emitAdmin('sports:fixture:updated', result);
+    res.json(result);
   },
 );
 
 router.delete('/fixtures/:id', requireAdmin, requireRole('odds_manager'), (req, res) => {
   deleteCustomFixture(req.params.id);
   audit(req, { action: 'sports.fixture.delete', target: req.params.id, targetType: 'fixture' });
+  emitAdmin('sports:fixture:deleted', { id: req.params.id });
   res.json({ ok: true });
 });
 
@@ -286,7 +378,7 @@ router.patch(
     z.object({
       market: z.string(),
       key: z.string(),
-      odds: z.number().positive().max(1000),
+      odds: z.number().min(ODD_MIN).max(ODD_MAX),
     }),
   ),
   (req, res, next) => {
@@ -297,6 +389,7 @@ router.patch(
     if (!m.selections?.some((s) => s.key === req.body.key)) return next(badRequest('Unknown selection'));
     setOddsOverride(req.params.id, req.body.market, req.body.key, req.body.odds);
     audit(req, { action: 'sports.odds.override', target: req.params.id, targetType: 'fixture', meta: req.body });
+    emitAdmin('sports:odds:updated', { fixtureId: req.params.id, market: req.body.market, key: req.body.key, odds: req.body.odds });
     res.json({ ok: true });
   },
 );
@@ -304,6 +397,7 @@ router.patch(
 router.delete('/fixtures/:id/odds', requireAdmin, requireRole('odds_manager'), (req, res) => {
   clearOddsOverride(req.params.id);
   audit(req, { action: 'sports.odds.reset', target: req.params.id, targetType: 'fixture' });
+  emitAdmin('sports:odds:reset', { fixtureId: req.params.id });
   res.json({ ok: true });
 });
 
@@ -315,7 +409,7 @@ router.post(
     z.object({
       all: z.boolean().optional(),
       market: z.string().optional(),
-      selection: z.string().optional(), // 'MARKET:KEY'
+      selection: z.string().optional(),
     }),
   ),
   (req, res) => {
@@ -331,6 +425,7 @@ router.post(
       severity: 'warning',
       meta: req.body,
     });
+    emitAdmin('sports:suspend', { fixtureId: req.params.id, ...req.body });
     res.json({ ok: true });
   },
 );
@@ -338,6 +433,7 @@ router.post(
 router.delete('/fixtures/:id/suspend', requireAdmin, requireRole('odds_manager'), (req, res) => {
   clearSuspension(req.params.id);
   audit(req, { action: 'sports.suspend.clear', target: req.params.id, targetType: 'fixture' });
+  emitAdmin('sports:suspend:cleared', { fixtureId: req.params.id });
   res.json({ ok: true });
 });
 
@@ -365,6 +461,7 @@ router.post(
       severity: 'warning',
       meta: { ...req.body, settled },
     });
+    emitAdmin('sports:result', { fixtureId: req.params.id, scoreHome: req.body.scoreHome, scoreAway: req.body.scoreAway });
     res.json({ ok: true, settled });
   }),
 );
@@ -372,10 +469,9 @@ router.post(
 router.post('/fixtures/:id/settle', requireAdmin, requireRole('odds_manager'), (req, res) => {
   const settled = settleNow();
   audit(req, { action: 'sports.settle', target: req.params.id, targetType: 'fixture', meta: settled });
+  emitAdmin('sports:settled', { fixtureId: req.params.id });
   res.json({ ok: true, settled });
 });
-
-/* ------------ market management (custom fixtures only) ------------ */
 
 const addMarketSchema = z.object({
   marketKey: z.string().min(1),
@@ -385,7 +481,7 @@ const addMarketSchema = z.object({
       z.object({
         key: z.string().min(1),
         label: z.string().optional(),
-        odds: z.number().positive().max(1000),
+        odds: z.number().min(ODD_MIN).max(ODD_MAX),
       }),
     )
     .min(2, 'At least 2 selections required.'),
@@ -406,6 +502,7 @@ router.post(
       targetType: 'fixture',
       meta: { marketKey, name, selections: selections.length },
     });
+    emitAdmin('sports:market:added', { fixtureId: req.params.id, marketKey, name });
     res.status(201).json({ ok: true, market: result });
   },
 );
@@ -419,10 +516,10 @@ router.delete('/fixtures/:id/markets/:marketKey', requireAdmin, requireRole('odd
     targetType: 'fixture',
     meta: { marketKey: req.params.marketKey },
   });
+  emitAdmin('sports:market:removed', { fixtureId: req.params.id, marketKey: req.params.marketKey });
   res.json({ ok: true });
 });
 
-/* ─── Bulk fixture operations ─── */
 const bulkFixtureSchema = z.object({
   action: z.enum(['suspend', 'unsuspend', 'mark-live', 'mark-upcoming', 'set-result']),
   fixtureIds: z.array(z.string()).min(1).max(100),
@@ -451,7 +548,7 @@ router.post(
           continue;
         }
         const fixture = view.match || view;
-        const isCustom = fixture.source === 'custom';
+        const isCustom = fixture.source === 'custom' || fixture.adminCreated;
 
         if (action === 'suspend') {
           setSuspension(id, { all: true });
@@ -487,6 +584,7 @@ router.post(
       severity: 'warning',
       meta: { count: fixtureIds.length },
     });
+    emitAdmin('sports:bulk', { action, count: fixtureIds.length });
     res.json({ ok: true, results });
   }),
 );

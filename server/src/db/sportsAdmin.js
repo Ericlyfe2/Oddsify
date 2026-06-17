@@ -230,6 +230,25 @@ export function adminListFixtures() {
   return rows;
 }
 
+/** Check for duplicate fixture (home + away + league + date + time). */
+export function findDuplicateFixture(home, away, leagueId, day, kickoff) {
+  const haystack = adminListFixtures();
+  const normHome = home.toLowerCase().trim();
+  const normAway = away.toLowerCase().trim();
+  return haystack.find((m) => {
+    const mHome = (m.home || '').toLowerCase().trim();
+    const mAway = (m.away || '').toLowerCase().trim();
+    const sameTeams =
+      (mHome === normHome && mAway === normAway) ||
+      (mHome === normAway && mAway === normHome);
+    if (!sameTeams) return false;
+    if (m.leagueId !== leagueId) return false;
+    if (day && m.day && m.day.toLowerCase() !== day.toLowerCase()) return false;
+    if (kickoff && m.kickoff && m.kickoff !== kickoff) return false;
+    return true;
+  }) || null;
+}
+
 /** Convenience for the settlement engine and the storefront. */
 export function adminLookupSelection({ matchId, market, outcome }) {
   const view = adminLookupFixture(matchId);
