@@ -33,7 +33,15 @@ import adminNotificationsRouter from './routes/admin/notifications.js';
 import adminDepositsRouter from './routes/admin/deposits.js';
 import adminSettingsRouter from './routes/admin/settings.js';
 import adminSupportRouter from './routes/admin/support.js';
+import adminCatalogRouter from './routes/admin/catalog.js';
+import adminMgmtSportsRouter from './routes/admin/management-sports.js';
+import adminMgmtTeamsRouter from './routes/admin/management-teams.js';
+import adminMgmtLeaguesRouter from './routes/admin/management-leagues.js';
+import adminMgmtMatchesRouter from './routes/admin/management-matches.js';
+import adminMgmtMarketsRouter from './routes/admin/management-markets.js';
+import adminMgmtResultsRouter from './routes/admin/management-results.js';
 import { seedAdmins } from './db/seedAdmins.js';
+import { seedTemplates } from './db/marketTemplates.js';
 import { backfillVerification } from './db/backfillVerification.js';
 import { initStores } from './db/store.js';
 import { getSettings } from './db/settings.js';
@@ -145,6 +153,13 @@ app.use('/api/admin/deposits', adminDepositsRouter);
 app.use('/api/admin/referrals', adminReferralsRouter);
 app.use('/api/admin/settings', adminSettingsRouter);
 app.use('/api/admin/support', adminSupportRouter);
+app.use('/api/admin/catalog', adminCatalogRouter);
+app.use('/api/admin/management/sports', adminMgmtSportsRouter);
+app.use('/api/admin/management/teams', adminMgmtTeamsRouter);
+app.use('/api/admin/management/leagues', adminMgmtLeaguesRouter);
+app.use('/api/admin/management/matches', adminMgmtMatchesRouter);
+app.use('/api/admin/management/markets', adminMgmtMarketsRouter);
+app.use('/api/admin/management/results', adminMgmtResultsRouter);
 
 app.use('/api', notFoundHandler);
 
@@ -194,6 +209,10 @@ async function boot() {
     );
     process.exit(1);
   }
+
+  // Seed the canonical market templates so auto-attach works on first match.
+  const seeded = seedTemplates();
+  if (seeded > 0) log.info(`Seeded ${seeded} market templates`);
 
   // Only the super admin is seeded. No demo players, no demo bets, no
   // demo transactions, no seeded promotions — operators add real content

@@ -251,3 +251,60 @@ export const adminReverseReferral = (id, reason) => post(`/referrals/${encodeURI
 /* platform settings */
 export const adminGetSettings = () => get('/settings');
 export const adminUpdateSettings = (body) => put_('/settings', body);
+
+/* ── catalog (market templates) ─────────────────────────── */
+export const adminCatalog = (params) => get(`/catalog${qs(params)}`);
+export const adminGetTemplate = (id) => get(`/catalog/${encodeURIComponent(id)}`);
+export const adminCreateTemplate = (body) => post('/catalog', body);
+export const adminPatchTemplate = (id, body) => patch_(`/catalog/${encodeURIComponent(id)}`, body);
+export const adminDeleteTemplate = (id) => del(`/catalog/${encodeURIComponent(id)}`);
+
+/* ── management (sports, teams, leagues, matches, markets, results) ── */
+const MGMT = '/management';
+
+/* sports */
+export const mgmtListSports = () => get(`${MGMT}/sports`);
+export const mgmtGetSport = (id) => get(`${MGMT}/sports/${encodeURIComponent(id)}`);
+export const mgmtCreateSport = (body) => post(`${MGMT}/sports`, body);
+export const mgmtPatchSport = (id, body) => patch_(`${MGMT}/sports/${encodeURIComponent(id)}`, body);
+export const mgmtArchiveSport = (id) => post(`${MGMT}/sports/${encodeURIComponent(id)}/archive`);
+export const mgmtRestoreSport = (id) => post(`${MGMT}/sports/${encodeURIComponent(id)}/restore`);
+
+/* teams */
+export const mgmtListTeams = (params) => get(`${MGMT}/teams${qs(params)}`);
+export const mgmtGetTeam = (id) => get(`${MGMT}/teams/${encodeURIComponent(id)}`);
+export const mgmtCreateTeam = (body) => post(`${MGMT}/teams`, body);
+export const mgmtPatchTeam = (id, body) => patch_(`${MGMT}/teams/${encodeURIComponent(id)}`, body);
+export const mgmtArchiveTeam = (id) => post(`${MGMT}/teams/${encodeURIComponent(id)}/archive`);
+
+/* leagues */
+export const mgmtListLeagues = (params) => get(`${MGMT}/leagues${qs(params)}`);
+export const mgmtGetLeague = (id) => get(`${MGMT}/leagues/${encodeURIComponent(id)}`);
+export const mgmtCreateLeague = (body) => post(`${MGMT}/leagues`, body);
+export const mgmtPatchLeague = (id, body) => patch_(`${MGMT}/leagues/${encodeURIComponent(id)}`, body);
+export const mgmtArchiveLeague = (id) => post(`${MGMT}/leagues/${encodeURIComponent(id)}/archive`);
+export const mgmtRestoreLeague = (id) => post(`${MGMT}/leagues/${encodeURIComponent(id)}/restore`);
+
+/* matches */
+export const mgmtListMatches = (params) => get(`${MGMT}/matches${qs(params)}`);
+export const mgmtGetMatch = (id) => get(`${MGMT}/matches/${encodeURIComponent(id)}`);
+export const mgmtCreateMatch = (body) => post(`${MGMT}/matches`, body);
+export const mgmtPatchMatch = (id, body) => patch_(`${MGMT}/matches/${encodeURIComponent(id)}`, body);
+export const mgmtMatchStatus = (id, status, reason) => post(`${MGMT}/matches/${encodeURIComponent(id)}/status`, { status, reason });
+export const mgmtCancelMatch = (id, reason) => post(`${MGMT}/matches/${encodeURIComponent(id)}/cancel`, { reason });
+export const mgmtArchiveMatch = (id) => post(`${MGMT}/matches/${encodeURIComponent(id)}/archive`);
+
+/* markets */
+export const mgmtListMatchMarkets = (matchId) => get(`${MGMT}/markets/${encodeURIComponent(matchId)}`);
+export const mgmtGetMatchMarket = (matchId, marketId) => get(`${MGMT}/markets/${encodeURIComponent(matchId)}/${encodeURIComponent(marketId)}`);
+export const mgmtCreateMatchMarket = (matchId, body) => post(`${MGMT}/markets/${encodeURIComponent(matchId)}`, body);
+export const mgmtPatchMatchMarket = (matchId, marketId, body) => patch_(`${MGMT}/markets/${encodeURIComponent(matchId)}/${encodeURIComponent(marketId)}`, body);
+export const mgmtPatchSelection = (matchId, marketId, selId, body) => patch_(`${MGMT}/markets/${encodeURIComponent(matchId)}/${encodeURIComponent(marketId)}/selections/${encodeURIComponent(selId)}`, body);
+
+/* results */
+export const mgmtGetResult = (matchId) => get(`${MGMT}/results?matchId=${encodeURIComponent(matchId)}`);
+export const mgmtListResults = (params) => get(`${MGMT}/results${qs(params)}`);
+export const mgmtResultHistory = (matchId) => get(`${MGMT}/results/${encodeURIComponent(matchId)}/history`);
+export const mgmtEnterResult = (matchId, body) => post(`${MGMT}/results/${encodeURIComponent(matchId)}/enter`, body);
+export const mgmtConfirmResult = (matchId, reason) => post(`${MGMT}/results/${encodeURIComponent(matchId)}/confirm`, { reason });
+export const mgmtOverrideResult = (matchId, body) => post(`${MGMT}/results/${encodeURIComponent(matchId)}/override`, body);

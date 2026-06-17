@@ -51,6 +51,13 @@ const AdminProviders = lazy(() => import('./pages/admin/Providers.jsx'));
 const AdminHealth = lazy(() => import('./pages/admin/Health.jsx'));
 const AdminDeposits = lazy(() => import('./pages/admin/Deposits.jsx'));
 const AdminReferrals = lazy(() => import('./pages/admin/Referrals.jsx'));
+const AdminCatalog = lazy(() => import('./pages/admin/Catalog.jsx'));
+const AdminSportsMgmt = lazy(() => import('./pages/admin/SportsMgmt.jsx'));
+const AdminTeams = lazy(() => import('./pages/admin/Teams.jsx'));
+const AdminLeagues = lazy(() => import('./pages/admin/Leagues.jsx'));
+const AdminMatches = lazy(() => import('./pages/admin/Matches.jsx'));
+const AdminMarkets = lazy(() => import('./pages/admin/Markets.jsx'));
+const AdminResults = lazy(() => import('./pages/admin/Results.jsx'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage.jsx'));
 
 const PAGE_FALLBACK = <div className="page-loading" />;
@@ -87,6 +94,13 @@ function AdminApp() {
             <Route path="providers" element={<AdminProviders />} />
             <Route path="health" element={<AdminHealth />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="catalog" element={<AdminCatalog />} />
+            <Route path="management/sports" element={<AdminSportsMgmt />} />
+            <Route path="management/teams" element={<AdminTeams />} />
+            <Route path="management/leagues" element={<AdminLeagues />} />
+            <Route path="management/matches" element={<AdminMatches />} />
+            <Route path="management/markets" element={<AdminMarkets />} />
+            <Route path="management/results" element={<AdminResults />} />
           </Route>
         </Routes>
       </Suspense>

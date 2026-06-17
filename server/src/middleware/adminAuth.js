@@ -62,6 +62,41 @@ export const requireRole =
     next();
   };
 
+/**
+ * Permission-based gate. Looks up `permission` in the PERMISSIONS matrix and
+ * checks whether req.admin.adminRole is allowed. Super_admin always passes.
+ *
+ * Usage:
+ *   router.post('/matches', requireAdmin, requirePermission('matches.create'), handler)
+ */
+import { PERMISSIONS, PERMISSION_KEYS } from '../config/permissions.js';
+
+export const requirePermission =
+  (permission) =>
+  (req, _res, next) => {
+    if (!req.admin) return next(unauthorized('Admin sign in required.'));
+    if (req.admin.adminRole === 'super_admin') return next();
+
+    const allowed = PERMISSIONS[permission];
+    if (!allowed) {
+      const msg = `Unknown permission "${permission}". Valid: ${PERMISSION_KEYS.length} keys defined.`;
+      return next(forbidden(msg));
+    }
+    if (!allowed.includes(req.admin.adminRole)) {
+      recordAudit({
+        actorId: req.admin.id,
+        actorRole: req.admin.adminRole,
+        action: 'permission.denied',
+        severity: 'warning',
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+        meta: { path: req.originalUrl, permission, allowed },
+      });
+      return next(forbidden(`Requires permission: ${permission}`));
+    }
+    next();
+  };
+
 /** Convenience helper to record an audit entry from a request. */
 export function audit(req, entry) {
   const row = recordAudit({

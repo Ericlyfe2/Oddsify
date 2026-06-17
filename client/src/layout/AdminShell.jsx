@@ -55,6 +55,18 @@ const NAV = [
     ],
   },
   {
+    section: 'Management',
+    items: [
+      { to: '/admin/catalog', label: 'Market catalog', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/management/sports', label: 'Sports', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/management/teams', label: 'Teams', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/management/leagues', label: 'Leagues', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/management/matches', label: 'Matches', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/management/markets', label: 'Markets', icon: <IconBook />, roles: ['odds_manager'] },
+      { to: '/admin/management/results', label: 'Results', icon: <IconBook />, roles: ['odds_manager'] },
+    ],
+  },
+  {
     section: 'Trust & safety',
     items: [
       { to: '/admin/fraud', label: 'Fraud & AI', icon: <IconBot />, roles: ['moderator'] },
