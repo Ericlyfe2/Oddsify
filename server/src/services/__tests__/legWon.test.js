@@ -264,6 +264,45 @@ describe('legWon — market grading', () => {
     });
   });
 
+  // ── Money Line (no draw) ──
+  describe('ML', () => {
+    it('Home win → "1" wins', () => {
+      assert.strictEqual(legWon({ market: 'ML', outcome: '1' }, 110, 105), true);
+    });
+    it('Away win → "2" wins', () => {
+      assert.strictEqual(legWon({ market: 'ML', outcome: '2' }, 100, 112), true);
+    });
+    it('Home win → "2" loses', () => {
+      assert.strictEqual(legWon({ market: 'ML', outcome: '2' }, 110, 105), false);
+    });
+  });
+
+  // ── Total Points (basketball) ──
+  describe('TP', () => {
+    it('Total over line → Over wins', () => {
+      assert.strictEqual(legWon({ market: 'TP', outcome: 'Over', line: 220.5 }, 115, 110), true);
+    });
+    it('Total under line → Under wins', () => {
+      assert.strictEqual(legWon({ market: 'TP', outcome: 'Under', line: 220.5 }, 105, 110), true);
+    });
+    it('Total over default line → Over wins', () => {
+      assert.strictEqual(legWon({ market: 'TP', outcome: 'Over' }, 115, 110), true);
+    });
+  });
+
+  // ── Handicap (basketball) ──
+  describe('HCAP', () => {
+    it('Home covers spread → "1H" wins', () => {
+      assert.strictEqual(legWon({ market: 'HCAP', outcome: '1H', handicap: 5 }, 110, 100), true);
+    });
+    it('Home does not cover → "1H" loses', () => {
+      assert.strictEqual(legWon({ market: 'HCAP', outcome: '1H', handicap: 5 }, 106, 102), false);
+    });
+    it('Away with handicap → "2H" wins', () => {
+      assert.strictEqual(legWon({ market: 'HCAP', outcome: '2H', handicap: -5 }, 100, 110), true);
+    });
+  });
+
   // ── Unknown market → void
   describe('Unknown market', () => {
     it('Unknown market returns null (void)', () => {
