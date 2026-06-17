@@ -23,6 +23,7 @@ import {
   OddMatchCard,
   OddsifyWordmark,
   OddIcon,
+  MarketsSheet,
 } from '../components/odd/primitives.jsx';
 import { useTokens } from '../components/odd/tokens.jsx';
 import StatsStrip from '../components/odd/StatsStrip.jsx';
@@ -39,6 +40,7 @@ export default function Home() {
   const [leagues, setLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [sheetMatch, setSheetMatch] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -127,6 +129,7 @@ export default function Home() {
         matches={liveMatches}
         picks={picks}
         onPick={togglePick}
+        onMore={setSheetMatch}
         emptyLabel="No live matches right now — check back at kickoff."
       />
 
@@ -137,6 +140,7 @@ export default function Home() {
         matches={upcoming}
         picks={picks}
         onPick={togglePick}
+        onMore={setSheetMatch}
         emptyLabel="Nothing scheduled yet."
       />
 
@@ -145,6 +149,15 @@ export default function Home() {
       <GrandPrizeWinners />
 
       <OddsifyFooter />
+
+      {sheetMatch && (
+        <MarketsSheet
+          match={sheetMatch}
+          picks={picks}
+          onPick={(match, key, odds, market, label) => { togglePick(match, key, odds, market, label); }}
+          onClose={() => setSheetMatch(null)}
+        />
+      )}
     </div>
   );
 }
@@ -438,7 +451,7 @@ function SectionHeader({ icon, title, count, action, onAction }) {
   );
 }
 
-function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
+function MatchList({ loading, err, matches, picks, onPick, onMore, emptyLabel }) {
   const T = useTokens();
   if (loading) {
     return (
@@ -499,7 +512,7 @@ function MatchList({ loading, err, matches, picks, onPick, emptyLabel }) {
     <div className="odd-cardgrid" style={{ padding: '0 16px', gap: 10 }}>
       {matches.map((m, i) => (
         <div key={m.id} className="odd-rise" style={{ animationDelay: `${i * 60}ms` }}>
-          <OddMatchCard match={m} picks={picks} onPick={onPick} />
+          <OddMatchCard match={m} picks={picks} onPick={onPick} onMore={() => onMore?.(m)} />
         </div>
       ))}
     </div>

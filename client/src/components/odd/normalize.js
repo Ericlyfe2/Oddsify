@@ -18,12 +18,13 @@ export function normalizeMatch(m, leagueName = '') {
   if (market?.selections) {
     for (const sel of market.selections) flatOdds[sel.key] = sel.odds;
   }
+  const allMarkets = m.markets || {};
+  const marketCount = Object.keys(allMarkets).length;
+
   return {
     id: m.id,
     home: m.home,
     away: m.away,
-    // Provider-supplied crest URLs flow through unchanged; the rendering
-    // components fall back to the curated/static map when these are null.
     homeLogo: m.homeLogo || m.home_logo || null,
     awayLogo: m.awayLogo || m.away_logo || null,
     isLive: !!m.isLive,
@@ -34,7 +35,8 @@ export function normalizeMatch(m, leagueName = '') {
     time: m.kickoff || m.time,
     odds: flatOdds,
     market: '1X2',
-    marketCount: m.extraMarketCount,
+    marketCount: m.extraMarketCount || (marketCount > 1 ? marketCount - 1 : 0),
+    markets: allMarkets,
     sport: m.sport,
     featured: m.featured,
     leagueName,

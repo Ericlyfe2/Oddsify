@@ -962,5 +962,143 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
   );
 }
 
+/* ─── Markets bottom sheet ────────────────────────────────── */
+
+const MARKET_LABELS = {
+  '1X2': 'Match Result', DC: 'Double Chance', DNB: 'Draw No Bet',
+  BTTS: 'Both Teams To Score', CS: 'Correct Score',
+  HTFT: 'Half Time / Full Time', WINBTTS: 'Result & BTTS',
+  WINOU25: 'Result & Over/Under 2.5', BTTSOU25: 'BTTS & Over/Under 2.5',
+  '1H1X2': '1st Half Result', '1HBTTS': '1st Half BTTS', '1HOU05': '1st Half Over/Under 0.5',
+  ML: 'Moneyline', TP: 'Total Points', HCAP: 'Handicap',
+};
+function marketLabel(key, market) {
+  return market?.name || MARKET_LABELS[key] || key.replace(/([A-Z])/g, ' $1').trim();
+}
+
+export function MarketsSheet({ match, picks, onPick, onClose }) {
+  const T = useTokens();
+  if (!match) return null;
+  const markets = match.markets || {};
+  const entries = Object.entries(markets);
+  const pickedSel = picks?.[match.id];
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose?.();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 480, maxHeight: '85vh',
+          background: T.bg, borderRadius: '20px 20px 0 0',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}
+      >
+        {/* header */}
+        <div style={{
+          padding: '16px 16px 12px', borderBottom: `1px solid ${T.line}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{match.home} vs {match.away}</div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+              {entries.length} market{entries.length !== 1 ? 's' : ''} available
+            </div>
+          </div>
+          <button
+            type="button" onClick={onClose}
+            style={{
+              width: 32, height: 32, borderRadius: 999,
+              background: T.surfaceAlt, border: 0, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <OddIcon name="x" size={14} color={T.ink} />
+          </button>
+        </div>
+
+        {/* scrollable market list */}
+        <div style={{ overflowY: 'auto', padding: '8px 16px 24px', flex: 1 }}>
+          {entries.map(([key, mkt]) => {
+            const sels = mkt.selections || [];
+            const suspended = mkt.suspended;
+            return (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                  color: T.inkSoft, textTransform: 'uppercase', marginBottom: 6,
+                }}>
+                  {marketLabel(key, mkt)}
+                </div>
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', gap: 6,
+                }}>
+                  {sels.map((sel) => {
+                    const selected = pickedSel?.key === sel.key && pickedSel?.market === key;
+                    const locked = suspended || sel.suspended;
+                    return (
+                      <button
+                        key={sel.key} type="button" disabled={locked}
+                        onClick={() => onPick?.(match, sel.key, sel.odds, key, sel.label || sel.key)}
+                        className={selected ? 'odd-odd-pop' : undefined}
+                        style={{
+                          flex: sels.length <= 3 ? 1 : '0 0 calc(33.33% - 4px)',
+                          minWidth: 0, padding: '8px 6px', borderRadius: 10,
+                          background: selected ? T.greenBright : T.surfaceAlt,
+                          border: selected ? `1px solid ${T.greenBright}` : `1px solid ${T.line}`,
+                          cursor: locked ? 'not-allowed' : 'pointer',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                          transition: 'transform 80ms ease, background 120ms ease',
+                        }}
+                      >
+                        <span style={{
+                          fontSize: 10, color: locked ? T.inkDim : T.inkSoft,
+                          textAlign: 'center', lineHeight: 1.2,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                        }}>
+                          {sel.label || sel.key}
+                        </span>
+                        {locked ? (
+                          <OddIcon name="lock" size={12} color={T.inkDim} />
+                        ) : (
+                          <span style={{
+                            fontSize: 14, fontWeight: 700,
+                            color: selected ? T.goldDark : T.ink,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}>
+                            {Number(sel.odds).toFixed(2)}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {entries.length === 0 && (
+            <div style={{ padding: 24, textAlign: 'center', color: T.inkSoft, fontSize: 12 }}>
+              No markets available yet.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Re-export for one-liner imports from pages ──────────── */
 export { T, fmtCedi, useTokens, OddIcon };

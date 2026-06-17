@@ -711,7 +711,7 @@ export function OddBetSlip() {
                           </span>
                         </div>
                         <div style={{ fontSize: 11, color: T.inkSoft, marginBottom: 2 }}>
-                          {e.key === '1' ? `${e.match.home} to win` : e.key === '2' ? `${e.match.away} to win` : 'Draw'}
+                          {e.label || (e.key === '1' ? `${e.match.home} to win` : e.key === '2' ? `${e.match.away} to win` : 'Draw')}
                         </div>
                         <div
                           style={{

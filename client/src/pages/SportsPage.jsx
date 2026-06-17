@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchMatches } from '../api/betApi.js';
 import { useSlip } from '../providers/SlipProvider.jsx';
-import { useTokens, OddPageHeader, OddSegmented, OddMatchCard, OddIcon } from '../components/odd/primitives.jsx';
+import { useTokens, OddPageHeader, OddSegmented, OddMatchCard, OddIcon, MarketsSheet } from '../components/odd/primitives.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';
 
 const SPORTS = [
@@ -26,6 +26,7 @@ export default function SportsPage() {
   const [matches, setMatches] = useState([]);
   const [filter, setFilter] = useState('live');
   const [loading, setLoading] = useState(true);
+  const [sheetMatch, setSheetMatch] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -201,9 +202,18 @@ export default function SportsPage() {
             {filter === 'live' ? 'No live matches right now.' : 'Nothing scheduled.'}
           </div>
         ) : (
-          filtered.map((m) => <OddMatchCard key={m.id} match={m} picks={picks} onPick={togglePick} />)
+          filtered.map((m) => <OddMatchCard key={m.id} match={m} picks={picks} onPick={togglePick} onMore={() => setSheetMatch(m)} />)
         )}
       </div>
+
+      {sheetMatch && (
+        <MarketsSheet
+          match={sheetMatch}
+          picks={picks}
+          onPick={(match, key, odds, market, label) => { togglePick(match, key, odds, market, label); }}
+          onClose={() => setSheetMatch(null)}
+        />
+      )}
     </div>
   );
 }

@@ -114,16 +114,17 @@ export default function SlipProvider({ children }) {
     });
   }, []);
 
-  const togglePick = useCallback((match, key, val) => {
+  const togglePick = useCallback((match, key, val, market, label) => {
     setPicks((cur) => {
       const id = match.id;
+      const mkt = market || match.market || '1X2';
       const existing = cur[id];
-      if (existing && existing.key === key) {
+      if (existing && existing.key === key && existing.market === mkt) {
         const next = { ...cur };
         delete next[id];
         return next;
       }
-      return { ...cur, [id]: { match, key, val, market: match.market || '1X2' } };
+      return { ...cur, [id]: { match, key, val, market: mkt, label: label || null } };
     });
     setOpen((prev) => prev || true);
   }, []);
