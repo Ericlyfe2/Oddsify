@@ -187,218 +187,76 @@ function OddsifyFooter() {
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
-    <footer style={{ background: T.surface, borderTop: `1px solid ${T.line}` }}>
+    <footer style={{ background: '#0B1F3A', color: '#fff' }}>
       {/* 18+ badge + copyright */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 16px 0',
-        }}
-      >
-        <span
-          style={{
-            border: `1.5px solid ${T.inkDim}`,
-            borderRadius: 6,
-            color: T.inkSoft,
-            fontSize: 13,
-            fontWeight: 800,
-            padding: '2px 7px',
-            letterSpacing: 0.5,
-          }}
-        >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 0' }}>
+        <span style={{ border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 800, padding: '2px 7px', letterSpacing: 0.5 }}>
           18+
         </span>
-        <span style={{ fontSize: 11, color: T.inkDim }}>
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
           © {new Date().getFullYear()} Oddsify. All rights reserved.
         </span>
       </div>
 
       {/* Partner row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 14,
-          padding: '20px 16px 4px',
-        }}
-      >
-        <OddsifyWordmark size={18} color={T.ink} accent={T.greenBright} />
-        <span style={{ width: 1, height: 28, background: T.line }} />
-        <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600, lineHeight: 1.3, textAlign: 'left' }}>
-          Official Sports
-          <br />
-          Betting Partner
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '20px 16px 4px' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: '#E8B94A' }}>Oddsify</span>
+        <span style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.15)' }} />
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, lineHeight: 1.3 }}>
+          Official Sports<br />Betting Partner
         </span>
-        <span style={{ width: 1, height: 28, background: T.line }} />
-        <span style={{ fontSize: 13, color: T.greenBright, fontWeight: 800, letterSpacing: 0.5 }}>GHPL</span>
       </div>
 
       {/* Tagline */}
-      <div style={{ textAlign: 'center', padding: '12px 16px 0', fontSize: 14, fontWeight: 700, color: T.ink }}>
-        Ghana&rsquo;s fastest-growing betting platform
-      </div>
-
-      {/* Paybill */}
-      <div style={{ textAlign: 'center', padding: '18px 16px 0' }}>
-        <div style={{ fontSize: 12, color: T.inkSoft }}>Paybill ID:</div>
-        <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, letterSpacing: 1 }}>{PAYBILL_ID}</div>
+      <div style={{ textAlign: 'center', padding: '12px 16px 0', fontSize: 15, fontWeight: 700, color: '#fff' }}>
+        The world&rsquo;s fastest-growing betting platform
       </div>
 
       {/* Payment methods */}
       <div style={{ padding: '20px 16px 0' }}>
-        <div style={{ textAlign: 'center', fontSize: 12, color: T.inkSoft, marginBottom: 10 }}>Payment methods</div>
+        <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
+          Available Payment Methods
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {PAY_METHODS.map((m) => (
-            <div
-              key={m.key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                background: T.surfaceAlt,
-                border: `1px solid ${T.line}`,
-                borderRadius: 8,
-                padding: '12px 6px',
-              }}
-            >
-              <span
-                style={{
-                  width: 26,
-                  height: 18,
-                  borderRadius: 3,
-                  background: m.bg,
-                  color: m.fg,
-                  fontSize: 8,
-                  fontWeight: 900,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
+            <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 6px' }}>
+              <span style={{ width: 26, height: 18, borderRadius: 3, background: m.bg, color: m.fg, fontSize: 8, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {m.label.slice(0, 3).toUpperCase()}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: T.inkSoft }}>{m.label}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{m.label}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Region links */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-          padding: '18px 16px 0',
-          fontSize: 13,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => navigate('/info#licence')}
-          style={{
-            background: 'none',
-            border: 0,
-            color: T.greenBright,
-            fontWeight: 600,
-            cursor: 'pointer',
-            textDecoration: 'underline',
-          }}
-        >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '18px 16px 0', fontSize: 13 }}>
+        <button type="button" onClick={() => navigate('/info#licence')} style={{ background: 'none', border: 0, color: '#E8B94A', fontWeight: 700, cursor: 'pointer' }}>
           Oddsify GH
         </button>
-        <span style={{ color: T.inkDim }}>|</span>
-        <button
-          type="button"
-          onClick={() => navigate('/info#responsible-gaming')}
-          style={{
-            background: 'none',
-            border: 0,
-            color: T.greenBright,
-            fontWeight: 600,
-            cursor: 'pointer',
-            textDecoration: 'underline',
-          }}
-        >
-          Responsible Gaming
+        <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
+        <button type="button" onClick={() => navigate('/info#responsible-gaming')} style={{ background: 'none', border: 0, color: 'rgba(255,255,255,0.6)', fontWeight: 600, cursor: 'pointer' }}>
+          Oddsify NG
         </button>
-      </div>
-
-      {/* Disclaimer */}
-      <div
-        style={{
-          padding: '16px 20px 0',
-          textAlign: 'center',
-          fontSize: 11,
-          lineHeight: 1.6,
-          color: T.inkDim,
-        }}
-      >
-        Age 18 and above only. Play Responsibly. Betting is addictive and can be psychologically harmful. Oddsify Ghana
-        is licensed by the Gaming Commission of Ghana under Licence No. #ODSGH-2026.
       </div>
 
       {/* Legal links */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-          padding: '18px 16px 0',
-          fontSize: 13,
-          fontWeight: 600,
-        }}
-      >
-        {[
-          { label: 'Terms & Conditions', to: '/info#terms' },
-          { label: 'About Us', to: '/help' },
-          { label: 'System Status', to: '/help' },
-        ].map((l, i, arr) => (
-          <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => navigate(l.to)}
-              style={{
-                background: 'none',
-                border: 0,
-                color: T.ink,
-                fontWeight: 600,
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                textUnderlineOffset: 2,
-              }}
-            >
-              {l.label}
-            </button>
-            {i < arr.length - 1 && <span style={{ color: T.inkDim }}>|</span>}
-          </span>
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 16px 0', fontSize: 13, fontWeight: 600 }}>
+        <a href="/info#terms" onClick={(e) => { e.preventDefault(); navigate('/info#terms'); }} style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Terms &amp; Conditions</a>
+        <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
+        <a href="/help" onClick={(e) => { e.preventDefault(); navigate('/help'); }} style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>About Us</a>
+      </div>
+
+      {/* Disclaimer */}
+      <div style={{ padding: '16px 20px 0', textAlign: 'center', fontSize: 11, lineHeight: 1.6, color: 'rgba(255,255,255,0.4)', maxWidth: 340, margin: '0 auto' }}>
+        Oddsify is a registered company in Ghana, Nigeria, and Other Countries.
+        <br /><br />
+        <strong style={{ color: 'rgba(255,255,255,0.6)' }}>Age 18 and above only.</strong> Bet smart, enjoy the thrill,
+        and keep it within your limits. Oddsify is licensed by the Gaming Commission of Ghana.
       </div>
 
       {/* Back to Top */}
-      <button
-        type="button"
-        onClick={scrollTop}
-        style={{
-          marginTop: 18,
-          width: '100%',
-          background: T.surfaceAlt,
-          border: 0,
-          borderTop: `1px solid ${T.line}`,
-          color: T.ink,
-          fontSize: 14,
-          fontWeight: 600,
-          padding: '16px 0',
-          cursor: 'pointer',
-        }}
-      >
+      <button type="button" onClick={scrollTop} style={{ marginTop: 18, width: '100%', background: 'rgba(255,255,255,0.05)', border: 0, borderTop: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 14, fontWeight: 600, padding: '16px 0', cursor: 'pointer' }}>
         Back to Top
       </button>
     </footer>
