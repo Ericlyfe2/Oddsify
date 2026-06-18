@@ -187,7 +187,7 @@ function OddsifyFooter() {
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
-    <footer style={{ background: '#0B1F3A', color: '#fff' }}>
+    <footer style={{ background: '#0B1F3A', color: '#fff', paddingBottom: 100 }}>
       {/* 18+ badge + copyright */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 0' }}>
         <span style={{ border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 800, padding: '2px 7px', letterSpacing: 0.5 }}>

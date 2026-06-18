@@ -2856,9 +2856,6 @@ nav a:active {
   .app-header {
     display: none !important;
   }
-  footer {
-    display: none !important;
-  }
 }
 
 /* desktop presentation: hide new mobile-only bits */
