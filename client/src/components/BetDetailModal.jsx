@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fmtCedi, useTokens } from './odd/tokens.jsx';
 import { TeamLogo, LeagueLogo } from './odd/teamBranding.jsx';
 import BetTimeline from './BetTimeline.jsx';
+import { expandMarketName } from '../lib/marketNames.js';
 
 const STATUS_STYLE = {
   won: { bg: '#16a34a', label: 'Won' },
@@ -555,7 +556,7 @@ function MatchesTab({ bet, legs, T }) {
                 border: `1px solid ${T.line}`,
               }}
             >
-              <DetailItem label="Market" value={leg.market || 'Match Result'} T={T} />
+              <DetailItem label="Market" value={leg.marketName || expandMarketName(leg.market)} T={T} />
               <DetailItem
                 label="Selection"
                 value={
