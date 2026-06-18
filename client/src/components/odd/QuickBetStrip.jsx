@@ -133,9 +133,9 @@ function MatchCard({ match, picks, onPick }) {
         <div style={{ fontSize: 11, color: T.inkSoft }}>{relativeKickoff(match.time, match.day)}</div>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <OddsBtn label="1" value={odds['1']} active={isActive('1')} onClick={() => click('1')} />
-        <OddsBtn label="X" value={odds['X']} active={isActive('X')} onClick={() => click('X')} />
-        <OddsBtn label="2" value={odds['2']} active={isActive('2')} onClick={() => click('2')} />
+        <OddsBtn label={match.home || 'Home'} value={odds['1']} active={isActive('1')} onClick={() => click('1')} />
+        <OddsBtn label="Draw" value={odds['X']} active={isActive('X')} onClick={() => click('X')} />
+        <OddsBtn label={match.away || 'Away'} value={odds['2']} active={isActive('2')} onClick={() => click('2')} />
       </div>
     </article>
   );

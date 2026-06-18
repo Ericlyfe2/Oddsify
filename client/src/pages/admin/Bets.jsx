@@ -42,6 +42,7 @@ import {
   ago,
   dateShort,
 } from '../../components/admin/primitives.jsx';
+import { humanizePick } from '../../lib/marketNames.js';
 import {
   IconSearch,
   IconRefresh,
@@ -620,7 +621,7 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
                     </td>
                     <td>{l.marketName || l.market}</td>
                     <td>
-                      <Badge tone="brand">{l.outcome}</Badge>
+                      <Badge tone="brand">{humanizePick(l.outcome, l.home, l.away)}</Badge>
                     </td>
                     <td className="num">{Number(l.odds).toFixed(2)}</td>
                   </tr>

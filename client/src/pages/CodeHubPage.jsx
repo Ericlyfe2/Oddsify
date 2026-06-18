@@ -15,6 +15,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { useToast } from '../providers/AccountProvider.jsx';
 import { fmtCedi, useTokens, OddPageHeader, OddIcon } from '../components/odd/primitives.jsx';
+import { humanizePick } from '../lib/marketNames.js';
 
 const BOOKING_CODE_RE = /^[A-NP-Z]{2}[1-9]{5}$/;
 
@@ -271,7 +272,7 @@ export default function CodeHubPage() {
                 </div>
                 <div style={{ color: T.inkSoft, marginTop: 2 }}>
                   {leg.marketName || leg.market} ·{' '}
-                  <span style={{ color: T.greenBright, fontWeight: 700 }}>{leg.outcome}</span> ·{' '}
+                  <span style={{ color: T.greenBright, fontWeight: 700 }}>{humanizePick(leg.outcome, leg.home, leg.away)}</span> ·{' '}
                   {Number(leg.odds).toFixed(2)}x
                 </div>
               </div>

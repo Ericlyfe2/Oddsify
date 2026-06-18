@@ -10,6 +10,7 @@
  */
 import { Fragment, useEffect, useMemo, useState, useRef } from 'react';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
+import { humanizePick } from '../../lib/marketNames.js';
 import {
   adminListUsers,
   adminGetUser,
@@ -1176,7 +1177,7 @@ function BetSlipPreview({ bet }) {
                 {l.home} <span style={{ color: 'var(--text-dim)' }}>vs</span> {l.away}
               </td>
               <td>{l.marketName || l.market}</td>
-              <td>{l.outcome}</td>
+              <td>{humanizePick(l.outcome, l.home, l.away)}</td>
               <td className="num">{Number(l.odds || 0).toFixed(2)}</td>
               <td>{l.sport || '—'}</td>
             </tr>

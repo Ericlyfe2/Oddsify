@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fmtCedi, useTokens } from './odd/tokens.jsx';
 import { TeamLogo, LeagueLogo } from './odd/teamBranding.jsx';
 import BetTimeline from './BetTimeline.jsx';
-import { expandMarketName } from '../lib/marketNames.js';
+import { expandMarketName, humanizePick, getSelectionLabel } from '../lib/marketNames.js';
 
 const STATUS_STYLE = {
   won: { bg: '#16a34a', label: 'Won' },
@@ -561,7 +561,7 @@ function MatchesTab({ bet, legs, T }) {
                 label="Selection"
                 value={
                   <span style={{ color: T.greenBright, fontWeight: 700 }}>
-                    {leg.pickLabel || leg.label || leg.pick || leg.key}
+                    {humanizePick(getSelectionLabel(leg), leg.home, leg.away)}
                   </span>
                 }
                 T={T}

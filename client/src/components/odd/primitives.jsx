@@ -12,6 +12,7 @@ import { T, fmtCedi, useTokens } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
 import { TeamLogo, LeagueLogo } from './teamBranding.jsx';
 import { useTheme } from '../../providers/ThemeProvider.jsx';
+import { humanizePick } from '../../lib/marketNames.js';
 
 /* ─── Oddsify wordmark ─────────────────────────────────────── */
 export function OddsifyWordmark({ size = 22, color = '#ffffff', accent = T.greenBright }) {
@@ -910,7 +911,7 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
           oddsEntries.map(([key, value]) => (
             <OddsTile
               key={key}
-              label={key === 'X' ? 'DRAW' : key === '1' ? 'HOME' : 'AWAY'}
+              label={key === 'X' ? 'Draw' : key === '1' ? (match.home || 'Home') : (match.away || 'Away')}
               value={Number(value).toFixed(2)}
               selected={pickedKey === key}
               onClick={() => onPick?.(match, key, Number(value))}
@@ -1069,7 +1070,7 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           maxWidth: '100%',
                         }}>
-                          {sel.label || sel.key}
+                          {sel.label || humanizePick(sel.key, match.home, match.away)}
                         </span>
                         {locked ? (
                           <OddIcon name="lock" size={12} color={T.inkDim} />
