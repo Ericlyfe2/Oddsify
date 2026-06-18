@@ -465,7 +465,7 @@ export default function ProfilePage() {
                       background: account.verified ? '#18f0a1' : '#ffb547',
                     }}
                   />
-                  {account.verified ? 'Premium' : 'Unverified'}
+                  {account.verified ? 'Premium' : 'Standard'}
                 </span>
               </div>
             </div>
