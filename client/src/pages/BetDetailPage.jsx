@@ -19,7 +19,7 @@ import { fetchBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
-import { expandMarketName, getSelectionLabel } from '../lib/marketNames.js';
+import { expandMarketName, getSelectionLabel, humanizePick } from '../lib/marketNames.js';
 
 const MONO = '"JetBrains Mono", "SF Mono", ui-monospace, monospace';
 
@@ -478,7 +478,8 @@ function LegCard({ leg, bet, index, visible }) {
   const away = leg.away || '';
   const marketKey = leg.market || '1X2';
   const marketName = leg.marketName || expandMarketName(marketKey);
-  const selection = getSelectionLabel(leg);
+  const rawSelection = getSelectionLabel(leg);
+  const selection = humanizePick(rawSelection, home, away);
   const odds = Number(leg.odds || 0);
   const gameId = leg.gameId || leg.matchId || leg.id?.toString().slice(-6) || '—';
   const dt = leg.matchDate || leg.kickoff;

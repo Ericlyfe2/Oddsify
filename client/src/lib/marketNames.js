@@ -33,6 +33,17 @@ export function expandMarketName(market) {
   return market;
 }
 
+export function humanizePick(pick, home, away) {
+  const p = (pick || '').trim();
+  if (p === '1' && home) return home;
+  if (p === '2' && away) return away;
+  if (p === 'X' || p === 'x') return 'Draw';
+  if (p === '1X' && home) return `${home} or Draw`;
+  if (p === 'X2' && away) return `Draw or ${away}`;
+  if (p === '12' && home && away) return `${home} or ${away}`;
+  return pick;
+}
+
 export function getSelectionLabel(leg) {
   if (leg.pickLabel || leg.label) return leg.pickLabel || leg.label;
   if (leg.outcomeLabel) return leg.outcomeLabel;

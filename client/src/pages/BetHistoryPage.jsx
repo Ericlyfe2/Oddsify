@@ -36,7 +36,7 @@ import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
 import { useTokens, fmtCedi } from '../components/odd/tokens.jsx';
 import { useTheme } from '../providers/ThemeProvider.jsx';
-import { expandMarketName, getSelectionLabel } from '../lib/marketNames.js';
+import { expandMarketName, getSelectionLabel, humanizePick } from '../lib/marketNames.js';
 import CashoutConfirmModal from '../components/CashoutConfirmModal.jsx';
 import CashoutSuccessOverlay from '../components/CashoutSuccessOverlay.jsx';
 import BetTimeline from '../components/BetTimeline.jsx';
@@ -652,11 +652,12 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
 
 // ─── SelectionRow — clock + crosshair + underlined match name ────
 function SelectionRow({ leg, last }) {
-  const pick = getSelectionLabel(leg);
-  const market = leg.marketName || expandMarketName(leg.market);
-  const odds = Number(leg.odds || 0);
+  const rawPick = getSelectionLabel(leg);
   const home = leg.home || '';
   const away = leg.away || '';
+  const pick = humanizePick(rawPick, home, away);
+  const market = leg.marketName || expandMarketName(leg.market);
+  const odds = Number(leg.odds || 0);
   const dt = leg.matchDate || leg.kickoff;
   const dtFormatted = dt ? fmtDate(dt) : '';
 
