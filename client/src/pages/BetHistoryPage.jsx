@@ -489,9 +489,13 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
   const legs = bet.legs || bet.selections || [];
   const stake = Number(bet.stake || 0);
   const odds = Number(bet.totalOdds || bet.odds || 1);
-  const potential = Number(bet.potentialReturn || bet.win || stake * odds);
+  const potential = Number(bet.potentialWin || bet.potentialReturn || (stake * odds));
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
-  const offer = liveOffer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
+  const liveAmount = liveOffer?.cashOut || 0;
+  const storedOffer = bet.cashoutOffer || bet.lastCashOutOffer?.amount || 0;
+  const offer = liveAmount > 0 ? liveAmount : storedOffer;
+  const betId = bet.id?.slice(-8) || '—';
+  const bookingCode = bet.bookingCode || '—';
 
   const actions = [
     { Icon: RotateCcw, label: 'Rebet', handler: onRebook },
@@ -511,9 +515,14 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
           border: '1px solid var(--line)',
         }}
       >
-        {/* Header: type + Rebet/SIM/Share/Edit actions */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{betType}</span>
+        {/* Header: Bet ID + Booking Code + type + actions */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{betType}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: MONO }}>
+              #{betId}
+            </span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             {actions.map(({ Icon, label, handler }, i) => (
               <button
@@ -540,6 +549,15 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
               </button>
             ))}
           </div>
+        </div>
+        {/* Booking Code */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <span style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Code:
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', fontFamily: MONO, letterSpacing: 0.5 }}>
+            {bookingCode}
+          </span>
         </div>
 
         {/* Selection rows */}
@@ -580,13 +598,14 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
           </button>
         </div>
 
-        {/* Stake / Pot. Win — gated by toggle */}
+        {/* Stake / Odds / Pot. Win — gated by toggle */}
         {open && (
           <div>
             {[
               { l: 'Stake', v: stake },
+              { l: 'Total Odds', v: odds, isOdds: true },
               { l: 'Pot. Win', v: potential },
-            ].map(({ l, v }) => (
+            ].map(({ l, v, isOdds }) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                 <span style={{ color: 'var(--text-soft)', fontSize: 13, fontWeight: 500 }}>{l}</span>
                 <span
@@ -598,7 +617,7 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
-                  {fmt(v)}
+                  {isOdds ? v.toFixed(2) : fmt(v)}
                 </span>
               </div>
             ))}
@@ -750,19 +769,59 @@ function HistoryStatusPill({ status }) {
   );
 }
 
+function getBetReturn(bet) {
+  const status = bet.status || 'pending';
+  const stake = Number(bet.stake || 0);
+  const odds = Number(bet.totalOdds || bet.odds || 1);
+  const potentialWin = Number(bet.potentialWin || bet.potentialReturn || stake * odds);
+  const cashOut = Number(bet.cashOut || 0);
+  const settledReturn = bet.settledReturn != null ? Number(bet.settledReturn) : null;
+  const displayReturn = bet.displayReturn ?? bet.computedReturn ?? null;
+  const displayProfit = bet.displayProfit ?? bet.computedProfit ?? null;
+
+  if (settledReturn != null) {
+    return { returnAmount: settledReturn, profit: settledReturn - stake, cashOut };
+  }
+
+  if (status === 'won') {
+    const ret = displayReturn != null ? displayReturn : potentialWin;
+    const prof = displayProfit != null ? displayProfit : ret - stake;
+    return { returnAmount: ret, profit: prof, cashOut };
+  }
+  if (status === 'cashed_out') {
+    const ret = displayReturn != null ? displayReturn : (cashOut || displayProfit != null ? cashOut : cashOut);
+    const amt = cashOut || ret;
+    return { returnAmount: amt, profit: Number((amt - stake).toFixed(2)), cashOut: amt };
+  }
+  if (status === 'void' || status === 'refunded' || status === 'cancelled') {
+    const ret = displayReturn != null ? displayReturn : stake;
+    return { returnAmount: ret, profit: 0, cashOut };
+  }
+  if (bet.status === 'lost') {
+    return { returnAmount: 0, profit: -stake, cashOut };
+  }
+  return { returnAmount: 0, profit: 0, cashOut };
+}
+
 function HistoryRow({ bet, onOpen, onRebook }) {
   const legs = bet.legs || bet.selections || [];
   const stake = Number(bet.stake || 0);
-  const payout = Number(bet.payout || bet.winAmount || bet.cashOut || bet.win || 0);
+  const odds = Number(bet.totalOdds || bet.odds || 1);
   const status = bet.status || 'pending';
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
-  const isWon = status === 'won' || status === 'cashed_out';
+  const isWon = status === 'won';
+  const isCashedOut = status === 'cashed_out';
+  const isLost = status === 'lost';
+  const settled = status !== 'open' && status !== 'pending';
+  const { returnAmount, profit } = getBetReturn(bet);
+  const cashOut = Number(bet.cashOut || 0);
 
   const placed = new Date(bet.placedAt || bet.createdAt || Date.now());
   const day = placed.getDate();
   const month = MONTH_NAMES[placed.getMonth()];
+  const settlementTime = bet.settledAt ? fmtFull(bet.settledAt) : null;
 
-  const visible = legs.slice(0, 3);
+  const visible = legs.slice(0, 2);
   const extra = Math.max(0, legs.length - visible.length);
 
   return (
@@ -819,12 +878,27 @@ function HistoryRow({ bet, onOpen, onRebook }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 12px',
+            padding: '8px 12px',
             background: 'var(--surface-2)',
             borderBottom: '1px solid var(--line)',
           }}
         >
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                ID: {bet.id?.slice(-8) || '—'}
+              </span>
+              {bet.bookingCode && (
+                <>
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>·</span>
+                  <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, fontFamily: MONO }}>
+                    {bet.bookingCode}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <HistoryStatusPill status={status} />
             <span style={{ color: 'var(--text-dim)', display: 'inline-flex' }}>
@@ -835,28 +909,6 @@ function HistoryRow({ bet, onOpen, onRebook }) {
 
         {/* Body */}
         <div style={{ padding: '10px 12px' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              marginBottom: 6,
-            }}
-          >
-            <span style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 500 }}>Total Stake (GHS)</span>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: 'var(--text)',
-                fontFamily: MONO,
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {fmt(stake)}
-            </span>
-          </div>
-
           {/* Match list */}
           <div style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.55, marginBottom: 8 }}>
             {visible.map((m, i) => (
@@ -867,40 +919,172 @@ function HistoryRow({ bet, onOpen, onRebook }) {
             {extra > 0 && <div style={{ color: 'var(--text-dim)' }}>…(and {extra} other matches)</div>}
           </div>
 
-          {/* Total Return + Rebook */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingTop: 8,
-              borderTop: '1px solid var(--line)',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-dim)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  fontWeight: 600,
-                }}
-              >
-                Total Return
+          {/* Settlement time for settled bets */}
+          {settled && settlementTime && (
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6, fontFamily: MONO }}>
+              Settled: {settlementTime}
+            </div>
+          )}
+
+          {/* Stake + Odds row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 500 }}>Stake: GHS {fmt(stake)}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 500 }}>
+              Odds: <span style={{ fontWeight: 700, color: 'var(--text)', fontFamily: MONO }}>{odds.toFixed(2)}</span>
+            </span>
+          </div>
+
+          {/* Return section */}
+          {isCashedOut ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                borderTop: '1px solid var(--line)',
+                marginTop: 8,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Cashout Amount
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--accent)',
+                  }}
+                >
+                  GHS {fmt(cashOut || returnAmount)}
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  fontFamily: MONO,
-                  fontVariantNumeric: 'tabular-nums',
-                  color: isWon ? 'var(--accent)' : 'var(--text-dim)',
-                }}
-              >
-                {fmt(payout)}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Profit/Loss
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: profit >= 0 ? 'var(--accent)' : 'var(--danger)',
+                  }}
+                >
+                  {profit >= 0 ? '+' : ''}GHS {fmt(Math.abs(profit))}
+                </div>
               </div>
             </div>
+          ) : isWon ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                borderTop: '1px solid var(--line)',
+                marginTop: 8,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Total Return
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--accent)',
+                  }}
+                >
+                  GHS {fmt(returnAmount)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Profit
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--accent)',
+                  }}
+                >
+                  +GHS {fmt(profit)}
+                </div>
+              </div>
+            </div>
+          ) : isLost ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                borderTop: '1px solid var(--line)',
+                marginTop: 8,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Total Return
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--text-dim)',
+                  }}
+                >
+                  GHS 0.00
+                </div>
+              </div>
+              <HistoryStatusPill status={status} />
+            </div>
+          ) : settled ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 8,
+                borderTop: '1px solid var(--line)',
+                marginTop: 8,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Total Return
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    fontFamily: MONO,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--text-dim)',
+                  }}
+                >
+                  GHS {fmt(returnAmount)}
+                </div>
+              </div>
+              <HistoryStatusPill status={status} />
+            </div>
+          ) : null}
+
+          {/* Rebook button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 8 }}>
             <span
               onClick={(e) => {
                 e.stopPropagation();
@@ -916,7 +1100,7 @@ function HistoryRow({ bet, onOpen, onRebook }) {
                 color: 'var(--gold-ink)',
                 fontWeight: 700,
                 fontSize: 13,
-                padding: '8px 14px',
+                padding: '6px 12px',
                 borderRadius: 'var(--r-sm, 6px)',
                 cursor: 'pointer',
               }}

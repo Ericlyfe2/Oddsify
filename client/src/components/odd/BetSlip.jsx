@@ -19,6 +19,8 @@ import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
 import BetSuccessOverlay from '../BetSuccessOverlay.jsx';
 
+const BONUS_RATE = 0.08;
+
 export function OddBetSlipFAB() {
   const T = useTokens();
   const { count, open, openSlip } = useSlip();
@@ -107,7 +109,7 @@ export function OddBetSlip() {
   const [stake, setStake] = useState(1000);
   const [acceptChanges, setAcceptChanges] = useState(true);
   const [codeInput, setCodeInput] = useState('');
-  const potentialWin = useMemo(() => (Number(stake) || 0) * totalOdds, [stake, totalOdds]);
+  const potentialWin = useMemo(() => (Number(stake) || 0) * totalOdds * (1 + BONUS_RATE), [stake, totalOdds]);
 
   const copyCode = async (text) => {
     try {

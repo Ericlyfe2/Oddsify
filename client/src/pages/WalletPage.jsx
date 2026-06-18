@@ -3,10 +3,11 @@
  * Headline transaction count, filter pills, transaction rows with type icon,
  * status chip, and signed amount. Wired to /api/wallet/transactions.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchTransactions } from '../api/betApi.js';
 import { useAccount } from '../providers/AccountProvider.jsx';
+import { onLive } from '../api/socketClient.js';
 import { fmtCedi, useTokens, OddPageHeader, OddStatusChip, OddIcon } from '../components/odd/primitives.jsx';
 
 /**
@@ -71,24 +72,32 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [filterId, setFilterId] = useState('all');
 
+  const loadTxs = useCallback(async () => {
+    if (!account) return;
+    try {
+      const d = await fetchTransactions();
+      setTxs(d?.transactions || d?.items || []);
+    } catch {
+      setTxs([]);
+    }
+  }, [account]);
+
   useEffect(() => {
     if (!account) return;
     let alive = true;
     setLoading(true);
-    fetchTransactions()
-      .then((d) => {
-        if (alive) setTxs(d?.transactions || d?.items || []);
-      })
-      .catch(() => {
-        if (alive) setTxs([]);
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [account]);
+    loadTxs().finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [loadTxs]);
+
+  // Refresh transactions on wallet updates
+  useEffect(() => {
+    if (!account) return;
+    const off = onLive('wallet:update', () => {
+      loadTxs();
+    });
+    return () => off?.();
+  }, [account, loadTxs]);
 
   const normalized = useMemo(() => txs.map(normalizeTx), [txs]);
   const filtered = useMemo(() => {

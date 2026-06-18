@@ -59,17 +59,64 @@ function listUserBets(userId) {
   return Object.values(betsStore.all())
     .filter((b) => b.userId === userId)
     .sort((a, b) => (a.placedAt < b.placedAt ? 1 : -1))
+    .map(attachBetDisplayFields)
     .map(attachCashoutOffer);
+}
+
+/** Attach computed display fields for every bet so the client never sees 0.00 or blank values. */
+function attachBetDisplayFields(bet) {
+  const stake = Number(bet.stake || 0);
+  const odds = Number(bet.totalOdds || 1);
+  const potentialWin = Number(bet.potentialWin || stake * odds);
+  const cashOut = Number(bet.cashOut || 0);
+  const settledReturn = bet.settledReturn != null ? Number(bet.settledReturn) : null;
+  const settledProfit = bet.settledProfit != null ? Number(bet.settledProfit) : null;
+  const settled = bet.status !== 'open' && bet.status !== 'pending';
+
+  let returnAmount = 0;
+  let profit = 0;
+
+  if (settledReturn != null) {
+    returnAmount = settledReturn;
+    profit = settledProfit != null ? settledProfit : returnAmount - stake;
+  } else if (bet.status === 'won') {
+    returnAmount = potentialWin;
+    profit = returnAmount - stake;
+  } else if (bet.status === 'cashed_out') {
+    returnAmount = cashOut;
+    profit = returnAmount - stake;
+  } else if (bet.status === 'void' || bet.status === 'refunded') {
+    returnAmount = stake;
+    profit = 0;
+  } else if (settled) {
+    returnAmount = 0;
+    profit = -stake;
+  } else {
+    returnAmount = null;
+    profit = null;
+  }
+
+  return {
+    ...bet,
+    computedReturn: returnAmount != null ? Number(Number(returnAmount).toFixed(2)) : null,
+    computedProfit: profit != null ? Number(Number(profit).toFixed(2)) : null,
+    displayStake: stake,
+    displayOdds: odds,
+    displayPotentialWin: potentialWin,
+    displayCashOut: cashOut,
+    displayReturn: settledReturn != null ? Number(Number(settledReturn).toFixed(2)) : (returnAmount != null ? Number(Number(returnAmount).toFixed(2)) : null),
+    displayProfit: settledProfit != null ? Number(Number(settledProfit).toFixed(2)) : (profit != null ? Number(Number(profit).toFixed(2)) : null),
+  };
 }
 
 /** Attach the cash-out display value consistent with what the server would offer. */
 function attachCashoutOffer(bet) {
   if (bet.status !== 'open') return bet;
-  if (bet.lastCashOutOffer?.amount != null) return bet;
+  if (bet.lastCashOutOffer?.amount != null) return { ...bet, cashoutOffer: bet.lastCashOutOffer?.amount };
   const cashoutOffer =
     bet.mode === 'system'
       ? Number((bet.stake * bet.totalOdds * 0.6).toFixed(2))
-      : Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+      : Number((bet.stake * bet.totalOdds * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
   return { ...bet, cashoutOffer };
 }
 
@@ -577,7 +624,7 @@ router.get('/bets/:id/offer', requireAuth, (req, res, next) => {
   if (last && last.cashOut > 0) {
     return res.json({ eligible: true, cashOut: last.cashOut, ts: last.ts });
   }
-  const fallback = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+  const fallback = Number((bet.stake * bet.totalOdds * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
   if (fallback > 0) {
     return res.json({ eligible: true, cashOut: fallback, ts: Date.now(), estimated: true });
   }
@@ -611,7 +658,7 @@ router.delete(
       } else {
         // No live offer recorded yet (no tick has happened since /place).
         // Fall back to a conservative offer based on stake and the house margin.
-        cashOut = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+        cashOut = Number((bet.stake * bet.totalOdds * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
       }
       // Validate drift in both paths when client provided acceptedAmount.
       if (req.body?.acceptedAmount !== undefined) {
@@ -650,6 +697,8 @@ router.delete(
     bet.cashOut = cashedPortion;
     bet.cashOutFraction = fraction;
     bet.cashOutAt = new Date().toISOString();
+    bet.settledReturn = cashedPortion;
+    bet.settledProfit = Number((cashedPortion - bet.stake).toFixed(2));
     betsStore.set(bet.id, bet);
     cashOutEngine.unregisterBet(bet.id);
 

@@ -322,7 +322,7 @@ describe('Cashout betting flow', () => {
     betsStore.set(bet.id, bet);
 
     // Simulate cash-out process
-    const cashOut = Number((bet.stake * (1 - 0.05)).toFixed(2));
+    const cashOut = Number((bet.stake * bet.totalOdds * (1 - 0.05)).toFixed(2));
     bet.status = 'cashed_out';
     bet.cashOut = cashOut;
     bet.cashOutFraction = 1;
@@ -356,7 +356,7 @@ describe('Cashout betting flow', () => {
     betsStore.set(id, bet);
 
     const fraction = 0.5;
-    const cashOut = Number((bet.stake * (1 - 0.05)).toFixed(2));
+    const cashOut = Number((bet.stake * bet.totalOdds * (1 - 0.05)).toFixed(2));
     const cashedPortion = Number((cashOut * fraction).toFixed(2));
     const residualStake = Number((bet.stake * (1 - fraction)).toFixed(2));
 

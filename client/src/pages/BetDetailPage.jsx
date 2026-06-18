@@ -260,15 +260,34 @@ export default function BetDetailPage() {
   const ss = getStatusFromBet(bet);
   const stake = Number(bet.stake || 0);
   const odds = Number(bet.totalOdds || bet.odds || 1);
-  const payout = Number(bet.payout || bet.winAmount || bet.cashOut || bet.win || 0);
-  const potential = Number(bet.potentialReturn || bet.win || stake * odds);
+  const potential = Number(bet.potentialWin || bet.potentialReturn || stake * odds);
+  const cashOut = Number(bet.cashOut || 0);
+  const settledReturn = bet.settledReturn != null ? Number(bet.settledReturn) : null;
   const bonus = Number(bet.bonus || bet.bonusAmount || 0);
-  const isWon = status === 'won' || status === 'cashed_out';
-  const isSettled = status !== 'open' && status !== 'pending';
+  const isWon = status === 'won';
+  const isLost = status === 'lost';
   const isCashedOut = status === 'cashed_out';
+  const isSettled = status !== 'open' && status !== 'pending';
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
-  const totalReturn = isSettled ? payout : potential;
-  const profit = isWon ? totalReturn - stake : 0;
+
+  let totalReturn = potential;
+  let profit = 0;
+  if (settledReturn != null) {
+    totalReturn = settledReturn;
+    profit = Number((settledReturn - stake).toFixed(2));
+  } else if (status === 'won') {
+    totalReturn = potential;
+    profit = Number((totalReturn - stake).toFixed(2));
+  } else if (status === 'cashed_out') {
+    totalReturn = cashOut;
+    profit = Number((totalReturn - stake).toFixed(2));
+  } else if (status === 'lost') {
+    totalReturn = 0;
+    profit = -stake;
+  } else if (status === 'void' || status === 'refunded' || status === 'cancelled') {
+    totalReturn = stake;
+    profit = 0;
+  }
   const StatusIcon = ss.Icon;
 
   return (
@@ -327,7 +346,7 @@ export default function BetDetailPage() {
               </span>
               <span style={{
                 fontSize: 26, fontWeight: 800,
-                color: isWon ? '#16a34a' : 'var(--text)',
+                color: isWon || isCashedOut ? '#16a34a' : (isLost ? '#dc2626' : 'var(--text)'),
                 fontFamily: MONO, fontVariantNumeric: 'tabular-nums',
                 textShadow: isWon ? '0 0 20px rgba(22,163,74,0.3)' : 'none',
               }}>
@@ -340,10 +359,10 @@ export default function BetDetailPage() {
           <SummaryRow label="Total Odds" value={odds.toFixed(2)} />
           {bonus > 0 && <SummaryRow label="Bonus" value={`GHS ${fmtMoney(bonus)}`} accent />}
           {isSettled && (
-            <SummaryRow label="Profit / Loss" value={`${isWon ? '+' : ''}GHS ${fmtMoney(profit)}`} valueColor={isWon ? '#16a34a' : '#dc2626'} />
+            <SummaryRow label="Profit / Loss" value={`${profit >= 0 ? '+' : ''}GHS ${fmtMoney(profit)}`} valueColor={isWon || isCashedOut ? '#16a34a' : '#dc2626'} />
           )}
-          {isCashedOut && bet.cashOut != null && (
-            <SummaryRow label="Cashout Amount" value={`GHS ${fmtMoney(Number(bet.cashOut))}`} accentBlue />
+          {isCashedOut && cashOut > 0 && (
+            <SummaryRow label="Cashout Amount" value={`GHS ${fmtMoney(cashOut)}`} accentBlue />
           )}
 
           <div style={{ display: 'flex', gap: 10, padding: '14px 0' }}>

@@ -23,9 +23,10 @@ import { emitToUser, emitAdmin, emitScoreUpdate } from './realtime.js';
 const betsStore = createStore('bets', {});
 const txStore = createStore('transactions', {});
 
-const SETTLE_INTERVAL_MS = 30_000;
+const SETTLE_INTERVAL_MS = 10_000;
 const SIM_AFTER_MS = 110 * 60 * 1000; // ~110 minutes after kickoff
 const MATCH_DURATION_MS = 105 * 60 * 1000;
+const SIM_SETTLE_WAIT_MS = 2 * 60 * 1000; // 2 minutes after simulated result, settle automatically
 
 let timer = null;
 
@@ -97,6 +98,8 @@ function kickoffTs(match) {
 }
 
 /** Ensure a final score exists for a fixture; returns the result row or null. */
+const resultsStore = createStore('sports_admin', {});
+
 function ensureResult(match, sport) {
   const existing = getResult(match.id);
   if (existing) return existing;
@@ -109,6 +112,13 @@ function ensureResult(match, sport) {
   if (Date.now() - ko < SIM_AFTER_MS) return null;
   const [h, a] = simulateScore(sport, match);
   setResult(match.id, h, a, 'simulated');
+  // Tag the simulated result with a creation timestamp so settleNow can
+  // apply the SIM_SETTLE_WAIT_MS grace period before auto-settling.
+  const cur = resultsStore.get('results') || {};
+  if (cur[match.id]) {
+    cur[match.id].settledAt = new Date().toISOString();
+    resultsStore.set('results', cur);
+  }
   return getResult(match.id);
 }
 
@@ -269,10 +279,15 @@ export function settleNow() {
       const view = adminLookupFixture(leg.matchId);
       const sport = view?.sport?.id || view?.sport || 'football';
       const res = view ? ensureResult(view.match, sport) : null;
-      // Only count a leg as ready when it has a real authoritative result
-      // (admin-set or feed). Auto-simulated results don't move a bet from
-      // Open to Bet History — admins or a live feed have to confirm first.
-      if (!res || (res.source !== 'manual' && res.source !== 'feed')) {
+      // Auto-simulated results settle after a grace period so admins have
+      // time to override them. Manual or feed results settle immediately.
+      if (res && res.source === 'simulated') {
+        const simulatedAt = res.settledAt ? new Date(res.settledAt).getTime() : Date.now();
+        if (Date.now() - simulatedAt < SIM_SETTLE_WAIT_MS) {
+          allReady = false;
+          break;
+        }
+      } else if (!res || (res.source !== 'manual' && res.source !== 'feed')) {
         allReady = false;
         break;
       }
@@ -294,6 +309,8 @@ export function settleNow() {
       status,
       settledAt: new Date().toISOString(),
       settledBy: 'auto',
+      settledReturn: credit,
+      settledProfit: Number((credit - bet.stake).toFixed(2)),
       legsResolved: legResults.map((r) => ({
         matchId: r.leg.matchId,
         market: r.leg.market,
