@@ -17,7 +17,6 @@
 import { Outlet } from 'react-router-dom';
 import SlipProvider from '../providers/SlipProvider.jsx';
 import OddBottomNav from '../components/odd/BottomNav.jsx';
-import OddFooter from '../components/odd/Footer.jsx';
 import { OddBetSlipFAB, OddBetSlip } from '../components/odd/BetSlip.jsx';
 import { OddSupportBubble, OddWithdrawNotices } from '../components/odd/Ambient.jsx';
 export { useAccount, useToast } from '../providers/AccountProvider.jsx';
@@ -33,7 +32,6 @@ export default function AppShell() {
         }}
       >
         <Outlet />
-        <OddFooter />
       </div>
       <OddBetSlipFAB />
       <OddBetSlip />
