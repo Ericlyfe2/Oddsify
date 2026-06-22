@@ -1009,6 +1009,10 @@ export function OddBetSlip() {
         }}
         onCopy={(code) => copyCode(code)}
         onShare={() => {}}
+        onLoadCode={(bet) => {
+          clearSuccessModal();
+          loadFromSlip(bet);
+        }}
         onRebook={() => {
           clearSuccessModal();
           loadFromSlip(lastBet);
