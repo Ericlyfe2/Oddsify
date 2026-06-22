@@ -24,21 +24,21 @@ import { expandMarketName, getSelectionLabel, humanizePick } from '../lib/market
 const MONO = '"JetBrains Mono", "SF Mono", ui-monospace, monospace';
 
 const STATUS = {
-  won: { color: '#16a34a', bg: 'rgba(22,163,74,0.12)', border: '#16a34a', label: 'Won', Icon: Trophy },
-  cashed_out: { color: '#2563eb', bg: 'rgba(37,99,235,0.12)', border: '#2563eb', label: 'Cashed Out', Icon: Copy },
-  lost: { color: '#dc2626', bg: 'rgba(220,38,38,0.12)', border: '#dc2626', label: 'Lost', Icon: XCircle },
-  pending: { color: '#d97706', bg: 'rgba(217,119,6,0.12)', border: '#d97706', label: 'Pending', Icon: Clock },
-  open: { color: '#d97706', bg: 'rgba(217,119,6,0.12)', border: '#d97706', label: 'Open', Icon: Clock },
-  void: { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', border: '#6b7280', label: 'Void', Icon: Ban },
-  cancelled: { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', border: '#6b7280', label: 'Cancelled', Icon: Ban },
+  won: { color: 'var(--win)', bg: 'rgba(var(--accent-rgb), 0.12)', border: 'var(--win)', label: 'Won', Icon: Trophy },
+  cashed_out: { color: 'var(--accent-warm)', bg: 'rgba(var(--accent-rgb), 0.12)', border: 'var(--accent-warm)', label: 'Cashed Out', Icon: Copy },
+  lost: { color: 'var(--danger)', bg: 'rgba(var(--danger-rgb), 0.12)', border: 'var(--danger)', label: 'Lost', Icon: XCircle },
+  pending: { color: 'var(--warn)', bg: 'rgba(var(--warn-rgb), 0.12)', border: 'var(--warn)', label: 'Pending', Icon: Clock },
+  open: { color: 'var(--warn)', bg: 'rgba(var(--warn-rgb), 0.12)', border: 'var(--warn)', label: 'Open', Icon: Clock },
+  void: { color: 'var(--text-dim)', bg: 'rgba(var(--text), 0.06)', border: 'var(--text-dim)', label: 'Void', Icon: Ban },
+  cancelled: { color: 'var(--text-dim)', bg: 'rgba(var(--text), 0.06)', border: 'var(--text-dim)', label: 'Cancelled', Icon: Ban },
 };
 
 const LEG_STATUS = {
-  won: { icon: CheckCircle2, color: '#16a34a', bg: 'rgba(22,163,74,0.15)', border: '#16a34a', label: 'WON' },
-  lost: { icon: XCircle, color: '#dc2626', bg: 'rgba(220,38,38,0.15)', border: '#dc2626', label: 'LOST' },
-  pending: { icon: Clock, color: '#d97706', bg: 'rgba(217,119,6,0.1)', border: '#d97706', label: 'PENDING' },
-  live: { icon: Clock, color: '#2563eb', bg: 'rgba(37,99,235,0.1)', border: '#2563eb', label: 'LIVE' },
-  void: { icon: Ban, color: '#6b7280', bg: 'rgba(107,114,128,0.1)', border: '#6b7280', label: 'VOID' },
+  won: { icon: CheckCircle2, color: 'var(--win)', bg: 'rgba(var(--accent-rgb), 0.15)', border: 'var(--win)', label: 'WON' },
+  lost: { icon: XCircle, color: 'var(--danger)', bg: 'rgba(var(--danger-rgb), 0.15)', border: 'var(--danger)', label: 'LOST' },
+  pending: { icon: Clock, color: 'var(--warn)', bg: 'rgba(var(--warn-rgb), 0.1)', border: 'var(--warn)', label: 'PENDING' },
+  live: { icon: Clock, color: 'var(--accent-hot)', bg: 'rgba(var(--danger-rgb), 0.1)', border: 'var(--accent-hot)', label: 'LIVE' },
+  void: { icon: Ban, color: 'var(--text-dim)', bg: 'rgba(var(--text), 0.06)', border: 'var(--text-dim)', label: 'VOID' },
 };
 
 function fmtMoney(n) {
@@ -298,9 +298,9 @@ export default function BetDetailPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           padding: '14px 16px', borderRadius: 12, fontWeight: 800, fontSize: 16,
           letterSpacing: 0.5, textTransform: 'uppercase',
-          background: isCashedOut ? 'rgba(37,99,235,0.15)' : ss.bg,
-          color: isCashedOut ? '#2563eb' : ss.color,
-          border: `1px solid ${isCashedOut ? 'rgba(37,99,235,0.3)' : ss.border}`,
+          background: ss.bg,
+          color: ss.color,
+          border: `1px solid ${ss.border}`,
         }}>
           <StatusIcon size={22} />
           <span>{isCashedOut ? 'CASHED OUT' : ss.label.toUpperCase()}</span>
@@ -330,8 +330,8 @@ export default function BetDetailPage() {
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '4px 12px', borderRadius: 999,
-              background: isCashedOut ? 'rgba(37,99,235,0.15)' : ss.bg,
-              color: isCashedOut ? '#2563eb' : ss.color,
+              background: ss.bg,
+              color: ss.color,
               fontWeight: 700, fontSize: 12,
             }}>
               <StatusIcon size={14} />
@@ -346,9 +346,9 @@ export default function BetDetailPage() {
               </span>
               <span style={{
                 fontSize: 26, fontWeight: 800,
-                color: isWon || isCashedOut ? '#16a34a' : (isLost ? '#dc2626' : 'var(--text)'),
+                color: isWon || isCashedOut ? 'var(--win)' : (isLost ? 'var(--danger)' : 'var(--text)'),
                 fontFamily: MONO, fontVariantNumeric: 'tabular-nums',
-                textShadow: isWon ? '0 0 20px rgba(22,163,74,0.3)' : 'none',
+                textShadow: isWon ? '0 0 20px rgba(var(--accent-rgb), 0.3)' : 'none',
               }}>
                 GHS {fmtMoney(totalReturn)}
               </span>
@@ -359,7 +359,7 @@ export default function BetDetailPage() {
           <SummaryRow label="Total Odds" value={odds.toFixed(2)} />
           {bonus > 0 && <SummaryRow label="Bonus" value={`GHS ${fmtMoney(bonus)}`} accent />}
           {isSettled && (
-            <SummaryRow label="Profit / Loss" value={`${profit >= 0 ? '+' : ''}GHS ${fmtMoney(profit)}`} valueColor={isWon || isCashedOut ? '#16a34a' : '#dc2626'} />
+            <SummaryRow label="Profit / Loss" value={`${profit >= 0 ? '+' : ''}GHS ${fmtMoney(profit)}`} valueColor={isWon || isCashedOut ? 'var(--win)' : 'var(--danger)'} />
           )}
           {isCashedOut && cashOut > 0 && (
             <SummaryRow label="Cashout Amount" value={`GHS ${fmtMoney(cashOut)}`} accentBlue />
@@ -476,7 +476,7 @@ function Frame({ onBack, children }) {
 }
 
 function SummaryRow({ label, value, valueColor, accent, accentBlue }) {
-  const c = accent ? 'var(--accent)' : accentBlue ? '#2563eb' : valueColor || 'var(--text)';
+  const c = accent ? 'var(--accent)' : accentBlue ? 'var(--accent-warm)' : valueColor || 'var(--text)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 0' }}>
       <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{label}</span>
@@ -565,12 +565,12 @@ function LegCard({ leg, bet, index, visible }) {
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 10px',
           padding: '10px 12px', borderRadius: 8,
-          background: won ? 'rgba(22,163,74,0.06)' : lost ? 'rgba(220,38,38,0.06)' : 'var(--bg)',
-          border: `1px solid ${won ? 'rgba(22,163,74,0.2)' : lost ? 'rgba(220,38,38,0.2)' : 'var(--line)'}`,
+          background: won ? 'rgba(var(--accent-rgb), 0.06)' : lost ? 'rgba(var(--danger-rgb), 0.06)' : 'var(--bg)',
+          border: `1px solid ${won ? 'rgba(var(--accent-rgb), 0.2)' : lost ? 'rgba(var(--danger-rgb), 0.2)' : 'var(--line)'}`,
         }}>
-          <DetailItem label="Pick" value={selection} valueColor={won ? '#16a34a' : lost ? '#dc2626' : 'var(--accent)'} />
+          <DetailItem label="Pick" value={selection} valueColor={won ? 'var(--win)' : lost ? 'var(--danger)' : 'var(--accent)'} />
           <DetailItem label="Market" value={marketName} />
-          <DetailItem label="Selection" value={selection} valueColor={won ? '#16a34a' : lost ? '#dc2626' : 'var(--text)'} />
+          <DetailItem label="Selection" value={selection} valueColor={won ? 'var(--win)' : lost ? 'var(--danger)' : 'var(--text)'} />
           <DetailItem label="Odds" value={odds > 0 ? odds.toFixed(2) : '—'} mono />
           {hasScore && <DetailItem label="Final Score" value={`${score.scoreHome} - ${score.scoreAway}`} mono />}
           <DetailItem label="Result" value={

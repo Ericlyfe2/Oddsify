@@ -25,91 +25,35 @@ const bet = {
   balance: 0.01,
 };
 
-const S = {
-  tabBar: { height: 48, background: '#0B1F3A' },
-  tabActive: {
-    background: '#FFFFFF',
-    color: '#0B1F3A',
-    fontWeight: 600,
-    fontSize: 15,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    border: 0,
-    outline: 'none',
-  },
-  tabInactive: {
-    background: '#0B1F3A',
-    color: '#FFFFFF',
-    fontWeight: 500,
-    fontSize: 15,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    border: 0,
-    outline: 'none',
-  },
-  balancePill: {
-    background: '#1FAA4A',
-    padding: '4px 10px',
-    borderRadius: 999,
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 600,
-  },
-  chipActive: { background: '#0B1F3A', color: '#FFFFFF' },
-  chipInactive: { background: '#F2F4F7', color: '#3A4A5C' },
-  card: { background: '#FFFFFF', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', padding: '14px 16px' },
-  cashoutBtn: {
-    background: '#1FAA4A',
-    borderRadius: 8,
-    border: 0,
-    outline: 'none',
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 700,
-    letterSpacing: 0.2,
-  },
-  divider: { borderTop: '1px solid #E5E7EB' },
-  green: '#1FAA4A',
-  navy: '#0B1F3A',
-  muted: '#6B7280',
-  lightMuted: '#9CA3AF',
-  bodyText: '#3A4A5C',
-  pageBg: '#F2F4F7',
-};
-
 function SkeletonPulse() {
   return (
     <div className="space-y-3" style={{ padding: '14px 16px' }}>
       <div className="flex justify-between items-center">
-        <div style={{ width: 80, height: 18, background: '#E5E7EB', borderRadius: 4 }} />
-        <div style={{ width: 120, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+        <div className="skl" style={{ width: 80, height: 18, borderRadius: 4 }} />
+        <div className="skl" style={{ width: 120, height: 14, borderRadius: 4 }} />
       </div>
       {[1, 2].map((i) => (
         <div
           key={i}
           className="flex items-start"
-          style={{ gap: 12, padding: '12px 0', borderBottom: i < 2 ? '1px solid #E5E7EB' : 'none' }}
+          style={{ gap: 12, padding: '12px 0', borderBottom: i < 2 ? '1px solid var(--line)' : 'none' }}
         >
-          <div style={{ width: 18, height: 18, background: '#E5E7EB', borderRadius: 999, flexShrink: 0 }} />
+          <div className="skl" style={{ width: 18, height: 18, borderRadius: 999, flexShrink: 0 }} />
           <div className="flex-1 space-y-2">
-            <div style={{ width: '60%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
-            <div style={{ width: '80%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
-            <div style={{ width: '40%', height: 12, background: '#E5E7EB', borderRadius: 4 }} />
+            <div className="skl" style={{ width: '60%', height: 14, borderRadius: 4 }} />
+            <div className="skl" style={{ width: '80%', height: 14, borderRadius: 4 }} />
+            <div className="skl" style={{ width: '40%', height: 12, borderRadius: 4 }} />
           </div>
         </div>
       ))}
-      <div style={{ width: '100%', height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+      <div className="skl" style={{ width: '100%', height: 14, borderRadius: 4 }} />
       <div className="flex justify-between">
-        <div style={{ width: 60, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
-        <div style={{ width: 50, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+        <div className="skl" style={{ width: 60, height: 14, borderRadius: 4 }} />
+        <div className="skl" style={{ width: 50, height: 14, borderRadius: 4 }} />
       </div>
       <div className="flex justify-between">
-        <div style={{ width: 60, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
-        <div style={{ width: 50, height: 14, background: '#E5E7EB', borderRadius: 4 }} />
+        <div className="skl" style={{ width: 60, height: 14, borderRadius: 4 }} />
+        <div className="skl" style={{ width: 50, height: 14, borderRadius: 4 }} />
       </div>
     </div>
   );
@@ -120,7 +64,18 @@ function CashoutButton({ currency, amount }) {
     <button
       type="button"
       className="group relative w-full flex items-center justify-center cursor-pointer overflow-hidden select-none"
-      style={S.cashoutBtn}
+      style={{
+        background: 'var(--accent)',
+        borderRadius: 8,
+        border: 0,
+        outline: 'none',
+        color: 'var(--gold-ink)',
+        fontSize: 15,
+        fontWeight: 700,
+        letterSpacing: 0.2,
+        padding: '14px 16px',
+        transition: 'opacity 0.15s, transform 0.15s',
+      }}
       aria-label={`Cashout ${currency} ${amount.toFixed(2)}`}
     >
       <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -146,27 +101,54 @@ export default function OpenBetsScreen() {
     type: 'button',
     onClick: () => setActiveTab(tab),
     className: 'flex-1 flex items-center justify-center cursor-pointer',
-    style: activeTab === tab ? S.tabActive : S.tabInactive,
+    style: {
+      background: activeTab === tab ? 'var(--surface)' : 'transparent',
+      color: activeTab === tab ? 'var(--text)' : 'var(--text-soft)',
+      fontWeight: activeTab === tab ? 700 : 500,
+      fontSize: 15,
+      border: 0,
+      outline: 'none',
+      padding: '12px 16px',
+      borderRadius: 8,
+      transition: 'background 0.2s, color 0.2s',
+    },
   });
 
   return (
-    <div className="min-h-screen flex items-start justify-center" style={{ background: '#0B1F3A' }}>
+    <div className="min-h-screen flex items-start justify-center" style={{ background: 'var(--bg)' }}>
       <div
         className="w-full flex flex-col"
         style={{
           maxWidth: 414,
           minHeight: '100vh',
-          background: S.pageBg,
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          background: 'var(--bg)',
+          fontFamily: 'var(--font-body)',
         }}
       >
         {/* ── Top tab bar ── */}
-        <div className="relative flex" style={S.tabBar}>
+        <div
+          className="relative flex items-center gap-2"
+          style={{
+            background: 'var(--surface-2)',
+            padding: '8px 12px',
+            margin: '12px 12px 0',
+            borderRadius: 12,
+          }}
+        >
           <button {...tabProps('open')}>Open Bets (1)</button>
           <button {...tabProps('history')}>Bet History</button>
           <div
-            className="absolute flex items-center gap-1 cursor-default"
-            style={{ top: 8, right: 12, ...S.balancePill }}
+            className="flex items-center gap-1 cursor-default"
+            style={{
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'var(--accent)',
+              color: 'var(--gold-ink)',
+              fontSize: 12,
+              fontWeight: 600,
+              marginLeft: 'auto',
+              whiteSpace: 'nowrap',
+            }}
           >
             <Wallet size={12} />
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -176,7 +158,7 @@ export default function OpenBetsScreen() {
         </div>
 
         {/* ── Filter chip row ── */}
-        <div className="flex items-center justify-between" style={{ background: '#FFFFFF', padding: '12px 16px' }}>
+        <div className="flex items-center justify-between" style={{ padding: '12px 16px' }}>
           <div className="flex items-center" style={{ gap: 8 }}>
             {[
               { key: 'all', label: 'All' },
@@ -191,13 +173,15 @@ export default function OpenBetsScreen() {
                   onClick={() => setActiveFilter(key)}
                   className="cursor-pointer select-none"
                   style={{
-                    ...(active ? S.chipActive : S.chipInactive),
+                    background: active ? 'var(--text)' : 'var(--surface)',
+                    color: active ? 'var(--bg)' : 'var(--text-soft)',
                     fontSize: 13,
                     fontWeight: 600,
                     padding: '6px 14px',
                     borderRadius: 16,
-                    border: 0,
+                    border: active ? '1px solid var(--text)' : '1px solid var(--line)',
                     outline: 'none',
+                    transition: 'background 0.2s, color 0.2s, border-color 0.2s',
                   }}
                 >
                   {label}
@@ -208,26 +192,33 @@ export default function OpenBetsScreen() {
           <button
             type="button"
             className="cursor-pointer"
-            style={{ background: 'none', border: 0, padding: 0, outline: 'none' }}
+            style={{ background: 'none', border: 0, padding: 0, outline: 'none', color: 'var(--text-dim)' }}
             aria-label="Toggle view"
           >
-            <LayoutGrid size={20} color="#6B7280" />
+            <LayoutGrid size={20} />
           </button>
         </div>
 
         {/* ── Page content ── */}
-        <div style={{ padding: '12px 12px 0' }}>
+        <div style={{ padding: '0 12px' }}>
           {loading ? (
-            <div style={{ background: '#FFFFFF', borderRadius: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--line)' }}>
               <SkeletonPulse />
             </div>
           ) : (
             <>
               {/* ── Bet card ── */}
-              <div style={S.card}>
+              <div
+                style={{
+                  background: 'var(--surface)',
+                  borderRadius: 10,
+                  border: '1px solid var(--line)',
+                  padding: '14px 16px',
+                }}
+              >
                 {/* Card header */}
                 <div className="flex items-center justify-between">
-                  <span style={{ fontWeight: 700, fontSize: 15, color: S.navy }}>{bet.type}</span>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{bet.type}</span>
                   <div className="flex items-center" style={{ gap: 14 }}>
                     {[
                       { icon: RotateCcw, label: 'Rebet', aria: 'Rebet' },
@@ -239,11 +230,11 @@ export default function OpenBetsScreen() {
                         key={aria}
                         type="button"
                         className="flex items-center gap-1 cursor-pointer"
-                        style={{ background: 'none', border: 0, padding: 0, outline: 'none' }}
+                        style={{ background: 'none', border: 0, padding: 0, outline: 'none', color: 'var(--accent)' }}
                         aria-label={aria}
                       >
-                        <Icon size={14} color={S.green} {...(fill ? { fill: S.green } : {})} />
-                        {label && <span style={{ color: S.green, fontSize: 12, fontWeight: 500 }}>{label}</span>}
+                        <Icon size={14} color="var(--accent)" {...(fill ? { fill: 'var(--accent)' } : {})} />
+                        {label && <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 500 }}>{label}</span>}
                       </button>
                     ))}
                   </div>
@@ -257,36 +248,37 @@ export default function OpenBetsScreen() {
                     style={{
                       gap: 12,
                       padding: '12px 0',
-                      borderBottom: i < bet.selections.length - 1 ? '1px solid #E5E7EB' : 'none',
+                      borderBottom: i < bet.selections.length - 1 ? '1px solid var(--line)' : 'none',
                     }}
                   >
                     <div style={{ flexShrink: 0, paddingTop: 2 }}>
-                      <Clock size={18} color={S.muted} />
+                      <Clock size={18} color="var(--text-dim)" />
                     </div>
                     <div className="flex-1" style={{ minWidth: 0 }}>
                       <div className="flex items-center" style={{ gap: 6 }}>
-                        <Crosshair size={14} color={S.navy} />
+                        <Crosshair size={14} color="var(--text-soft)" />
                         <span
-                          style={{ fontWeight: 700, fontSize: 14, color: S.navy, fontVariantNumeric: 'tabular-nums' }}
+                          style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}
                         >
                           {sel.pick} @ {sel.odds.toFixed(2)}
                         </span>
-                        <span style={{ fontWeight: 400, fontSize: 12, color: S.lightMuted }}>{sel.market}</span>
+                        <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-dim)' }}>{sel.market}</span>
                       </div>
                       <div style={{ marginTop: 4 }}>
                         <span
                           style={{
-                            color: S.navy,
+                            color: 'var(--text)',
                             fontSize: 14,
                             fontWeight: 500,
                             textDecoration: 'underline',
                             textUnderlineOffset: 2,
+                            textDecorationColor: 'var(--line-strong)',
                           }}
                         >
                           {sel.match}
                         </span>
                       </div>
-                      <div style={{ marginTop: 4, color: S.lightMuted, fontSize: 12, fontWeight: 400 }}>
+                      <div style={{ marginTop: 4, color: 'var(--text-dim)', fontSize: 12, fontWeight: 400 }}>
                         {sel.datetime}
                       </div>
                     </div>
@@ -294,7 +286,7 @@ export default function OpenBetsScreen() {
                 ))}
 
                 {/* Hide / Show Match Details */}
-                <div style={S.divider}>
+                <div style={{ borderTop: '1px solid var(--line)' }}>
                   <button
                     type="button"
                     onClick={() => setShowDetails(!showDetails)}
@@ -305,7 +297,7 @@ export default function OpenBetsScreen() {
                       background: 'none',
                       border: 0,
                       outline: 'none',
-                      color: S.green,
+                      color: 'var(--accent)',
                       fontSize: 13,
                       fontWeight: 500,
                     }}
@@ -313,7 +305,6 @@ export default function OpenBetsScreen() {
                     {showDetails ? 'Hide Match Details' : 'Show Match Details'}
                     <ChevronUp
                       size={14}
-                      color={S.green}
                       style={{
                         transition: 'transform 200ms',
                         transform: showDetails ? 'rotate(0deg)' : 'rotate(180deg)',
@@ -329,9 +320,9 @@ export default function OpenBetsScreen() {
                     { label: 'Pot. Win', value: bet.potentialWin },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between" style={{ padding: '4px 0' }}>
-                      <span style={{ color: S.bodyText, fontSize: 13, fontWeight: 500 }}>{label}</span>
+                      <span style={{ color: 'var(--text-soft)', fontSize: 13, fontWeight: 500 }}>{label}</span>
                       <span
-                        style={{ color: S.navy, fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                        style={{ color: 'var(--text)', fontSize: 14, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
                       >
                         {value.toFixed(2)}
                       </span>

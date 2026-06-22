@@ -450,7 +450,26 @@ html[data-theme='light'] {
   margin: 0;
   padding: 0;
 }
-html,
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+/* Disable transitions on page load to avoid flash */
+html.preload *,
+html.preload *::before,
+html.preload *::after {
+  transition-duration: 0s !important;
+}
+html {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
 body {
   background: var(--bg);
   color: var(--text);
@@ -458,9 +477,6 @@ body {
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  transition:
-    background-color 0.25s ease,
-    color 0.25s ease;
 }
 body {
   background:
@@ -578,19 +594,24 @@ html[data-theme='light'] .skl {
   padding: 0 !important;
   border-radius: 10px;
   color: var(--text-soft);
-  transition:
-    color 0.2s,
-    background 0.2s,
-    transform 0.2s,
-    border-color 0.2s;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
 .theme-toggle:hover {
   color: var(--accent);
   background: var(--surface-2);
-  transform: rotate(15deg);
+  transform: rotate(15deg) scale(1.08);
+}
+.theme-toggle:active {
+  transform: rotate(15deg) scale(0.92);
 }
 .theme-toggle svg {
   display: block;
+  transition: transform 0.3s ease;
+}
+.theme-toggle:hover svg {
+  transform: scale(1.12);
 }
 
 /* ===== HEADER ===== */

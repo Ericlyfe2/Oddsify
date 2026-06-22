@@ -6,20 +6,20 @@ import BetTimeline from './BetTimeline.jsx';
 import { expandMarketName, humanizePick, getSelectionLabel } from '../lib/marketNames.js';
 
 const STATUS_STYLE = {
-  won: { bg: '#16a34a', label: 'Won' },
-  lost: { bg: '#dc2626', label: 'Lost' },
-  pending: { bg: '#d97706', label: 'Pending' },
-  cashed_out: { bg: '#2563eb', label: 'Cashed Out' },
-  void: { bg: '#4b5563', label: 'Void' },
-  open: { bg: '#d97706', label: 'Open' },
-  cancelled: { bg: '#6b7280', label: 'Cancelled' },
+  won: { bg: 'var(--win)', label: 'Won' },
+  lost: { bg: 'var(--danger)', label: 'Lost' },
+  pending: { bg: 'var(--warn)', label: 'Pending' },
+  cashed_out: { bg: 'var(--accent-warm)', label: 'Cashed Out' },
+  void: { bg: 'var(--text-dim)', label: 'Void' },
+  open: { bg: 'var(--warn)', label: 'Open' },
+  cancelled: { bg: 'var(--text-dim)', label: 'Cancelled' },
 };
 
 const LEG_STATUS_COLORS = {
-  won: '#16a34a',
-  lost: '#dc2626',
-  pending: '#d97706',
-  live: '#2563eb',
+  won: 'var(--win)',
+  lost: 'var(--danger)',
+  pending: 'var(--warn)',
+  live: 'var(--accent-hot)',
 };
 
 function getStatusStyle(status) {
@@ -344,13 +344,13 @@ function OverviewTab({
         <InfoRow
           label={isSettled ? 'Actual Winnings' : 'Potential Winnings'}
           value={`GHS ${fmtCedi(isSettled ? payout : potential)}`}
-          color={isSettled ? (isWon ? '#16a34a' : T.inkDim) : T.greenBright}
+          color={isSettled ? (isWon ? 'var(--win)' : T.inkDim) : T.greenBright}
           T={T}
         />
         <InfoRow
           label="Profit / Loss"
           value={`${isWon ? '+' : ''}GHS ${fmtCedi(profitLoss)}`}
-          color={isWon ? '#16a34a' : '#dc2626'}
+          color={isWon ? 'var(--win)' : 'var(--danger)'}
           T={T}
         />
         <InfoRow label="Bet Type" value={bet.type || (legs.length > 1 ? 'Multiple' : 'Single')} T={T} />
@@ -360,7 +360,7 @@ function OverviewTab({
         {isSettled && <InfoRow label="Settled" value={fmtFull(bet.settledAt || bet.cashOutAt)} T={T} />}
         {bet.cashOutAt && <InfoRow label="Cashout At" value={fmtFull(bet.cashOutAt)} T={T} />}
         {bet.cashOut != null && (
-          <InfoRow label="Cashout Amount" value={`GHS ${fmtCedi(Number(bet.cashOut))}`} color="#2563eb" T={T} />
+          <InfoRow label="Cashout Amount" value={`GHS ${fmtCedi(Number(bet.cashOut))}`} color="var(--accent-warm)" T={T} />
         )}
       </InfoPanel>
 
@@ -458,7 +458,7 @@ function OverviewTab({
             <InfoRow
               label="Net Result"
               value={`${isWon ? '+' : ''}GHS ${fmtCedi(profitLoss)}`}
-              color={isWon ? '#16a34a' : '#dc2626'}
+              color={isWon ? 'var(--win)' : 'var(--danger)'}
               T={T}
             />
           </InfoPanel>
@@ -577,7 +577,7 @@ function MatchesTab({ bet, legs, T }) {
                 <DetailItem
                   label="Odds Change"
                   value={
-                    <span style={{ color: oddsChange > 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                    <span style={{ color: oddsChange > 0 ? 'var(--win)' : 'var(--danger)', fontWeight: 700 }}>
                       {oddsChange > 0 ? '+' : ''}
                       {oddsChange.toFixed(2)} {oddsChange > 0 ? '↑' : '↓'}
                     </span>
@@ -636,7 +636,7 @@ function FinanceTab({ bet, stake, payout, isWon, isCashedOut, profitLoss, T }) {
         <InfoRow
           label="Net Profit / Loss"
           value={`${isWon ? '+' : ''}GHS ${fmtCedi(profitLoss)}`}
-          color={isWon ? '#16a34a' : '#dc2626'}
+          color={isWon ? 'var(--win)' : 'var(--danger)'}
           T={T}
         />
         {walletAfter != null && <InfoRow label="Wallet After" value={`GHS ${fmtCedi(walletAfter)}`} T={T} />}
