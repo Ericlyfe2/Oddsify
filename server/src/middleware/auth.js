@@ -12,7 +12,6 @@ export function requireAuth(req, _res, next) {
     const user = getUserById(claims.sub);
     if (!user) return next(unauthorized('Account no longer exists.'));
     if (user.suspended) return next(forbidden('Account suspended. Contact support.'));
-    if (!user.emailVerified) return next(forbidden('Email not verified.'));
     req.user = user;
     next();
   } catch {
