@@ -9,6 +9,8 @@
 // In production (Vercel), set VITE_API_BASE to the deployed backend, e.g.
 //   VITE_API_BASE=https://oddsify.onrender.com
 // If unset in production, falls back to the Render backend automatically.
+// NOTE: Vite bakes this value into the JS at BUILD time — changing the env
+// var requires a full redeploy (push a commit or click Redeploy on Vercel).
 const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify.onrender.com' : '';
 const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_PROD_API) + '/api';
 const ACCESS_KEY = 'bv_access';
