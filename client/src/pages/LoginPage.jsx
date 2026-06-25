@@ -10,40 +10,18 @@ import {
 } from '../api/betApi.js';
 import { setAdminTokens } from '../api/adminApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
-import { useTheme } from '../providers/ThemeProvider.jsx';
-import CountrySelect from '../components/CountrySelect.jsx';
-import PageBack from '../components/PageBack.jsx';
+import { COUNTRIES, countryByCode } from '../data/countries.js';
 import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
 import { getDeviceId } from '../lib/device.js';
 
 function EyeIcon({ open }) {
   return open ? (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
   ) : (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.58 19.58 0 0 1 4.22-5.36" />
       <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.16 3.19" />
       <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
@@ -52,22 +30,12 @@ function EyeIcon({ open }) {
   );
 }
 
-// Block open-redirects via ?next= / ?redirect= — only allow same-origin
-// paths that start with a single "/" (rejects "//evil.com", "http://...",
-// "javascript:", etc).
 function safePath(raw, fallback = '/') {
   if (typeof raw !== 'string') return fallback;
   if (!raw.startsWith('/')) return fallback;
   if (raw.startsWith('//') || raw.startsWith('/\\')) return fallback;
   return raw;
 }
-
-const PROMO_BENEFITS = [
-  ['🎁', '200% welcome bonus on your first deposit'],
-  ['⚡', 'Instant MoMo, Vodafone Cash & card deposits'],
-  ['🏆', 'Mega-13 jackpot · GHS 1.84M up for grabs'],
-  ['📈', 'Sharper odds across 30+ leagues, live & pre-match'],
-];
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -89,26 +57,22 @@ export default function LoginPage() {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [authConfig, setAuthConfig] = useState({ googleEnabled: false, googleClientId: null });
-  const [refInfo, setRefInfo] = useState(null); // { code, referrerName }
+  const [refInfo, setRefInfo] = useState(null);
   const [refCodeInput, setRefCodeInput] = useState('');
-  const [refState, setRefState] = useState('idle'); // idle | checking | valid | invalid
+  const [refState, setRefState] = useState('idle');
+  const [countryOpen, setCountryOpen] = useState(false);
 
-  // Referral capture: ?ref=CODE on any visit to this page is remembered so
-  // the relationship survives the user browsing around before registering.
+  const selectedCountry = countryByCode(country);
+  const dialCode = selectedCountry?.dial || '+233';
+
   useEffect(() => {
     const fromUrl = (params.get('ref') || '').trim().toUpperCase();
     if (fromUrl) {
-      try {
-        localStorage.setItem('oddsify_ref', fromUrl);
-      } catch {}
+      try { localStorage.setItem('oddsify_ref', fromUrl); } catch {}
       recordReferralClick(fromUrl).catch(() => {});
     }
     const code = fromUrl || (() => {
-      try {
-        return localStorage.getItem('oddsify_ref') || '';
-      } catch {
-        return '';
-      }
+      try { return localStorage.getItem('oddsify_ref') || ''; } catch { return ''; }
     })();
     if (!code) return;
     validateReferralCode(code)
@@ -123,24 +87,17 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Manual referral-code entry on the register form. Debounced live
-  // validation; a valid code becomes the refInfo used at submit.
   useEffect(() => {
     const code = refCodeInput.trim().toUpperCase();
     if (!code) {
       setRefState('idle');
       if (refInfo) {
         setRefInfo(null);
-        try {
-          localStorage.removeItem('oddsify_ref');
-        } catch {}
+        try { localStorage.removeItem('oddsify_ref'); } catch {}
       }
       return undefined;
     }
-    if (refInfo?.code === code) {
-      setRefState('valid');
-      return undefined;
-    }
+    if (refInfo?.code === code) { setRefState('valid'); return undefined; }
     setRefState('checking');
     const t = setTimeout(() => {
       validateReferralCode(code)
@@ -148,15 +105,11 @@ export default function LoginPage() {
           if (r?.valid) {
             setRefInfo({ code, referrerName: r.referrerName });
             setRefState('valid');
-            try {
-              localStorage.setItem('oddsify_ref', code);
-            } catch {}
+            try { localStorage.setItem('oddsify_ref', code); } catch {}
           } else {
             setRefInfo(null);
             setRefState('invalid');
-            try {
-              localStorage.removeItem('oddsify_ref');
-            } catch {}
+            try { localStorage.removeItem('oddsify_ref'); } catch {}
           }
         })
         .catch(() => setRefState('idle'));
@@ -174,19 +127,14 @@ export default function LoginPage() {
       return;
     }
     if (account) navigate(next, { replace: true });
-    fetchAuthConfig()
-      .then(setAuthConfig)
-      .catch(() => {});
+    fetchAuthConfig().then(setAuthConfig).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!authConfig.googleEnabled) return;
     const id = 'gsi-script';
-    if (document.getElementById(id)) {
-      renderGoogle();
-      return;
-    }
+    if (document.getElementById(id)) { renderGoogle(); return; }
     const s = document.createElement('script');
     s.id = id;
     s.src = 'https://accounts.google.com/gsi/client';
@@ -205,21 +153,15 @@ export default function LoginPage() {
       callback: async ({ credential }) => {
         try {
           setBusy(true);
-          // refInfo may be stale inside this once-registered callback; fall
-          // back to the persisted code captured from ?ref=.
           let refCode = refInfo?.code || null;
           if (!refCode) {
-            try {
-              refCode = localStorage.getItem('oddsify_ref') || null;
-            } catch {}
+            try { refCode = localStorage.getItem('oddsify_ref') || null; } catch {}
           }
           const data = await googleSignIn(credential, country, {
             ...(refCode ? { referralCode: refCode } : {}),
             ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
           });
-          try {
-            localStorage.removeItem('oddsify_ref');
-          } catch {}
+          try { localStorage.removeItem('oddsify_ref'); } catch {}
           signIn(data);
           navigate('/', { replace: true });
         } catch (e) {
@@ -270,11 +212,9 @@ export default function LoginPage() {
       if (password.length < 8) return 'Password must be at least 8 characters.';
       if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) return 'Password must mix upper- and lower-case letters.';
       if (!/\d/.test(password)) return 'Password must include a digit.';
-      if (password !== confirm) return 'Passwords don\u2019t match.';
+      if (password !== confirm) return "Passwords don't match.";
       if (!agree) return 'Accept the terms to create an account.';
-      if (refCodeInput.trim() && refState === 'invalid') {
-        return 'That referral code isn’t valid — correct it or clear the field.';
-      }
+      if (refCodeInput.trim() && refState === 'invalid') return 'That referral code isn\'t valid — correct it or clear the field.';
       return null;
     }
     if (!identifier.trim()) return 'Enter your phone or email.';
@@ -300,10 +240,7 @@ export default function LoginPage() {
     e.preventDefault();
     reset();
     const v = validate();
-    if (v) {
-      setErr(v);
-      return;
-    }
+    if (v) { setErr(v); return; }
     try {
       setBusy(true);
       if (mode === 'register') {
@@ -317,23 +254,12 @@ export default function LoginPage() {
           ...(refInfo?.code ? { referralCode: refInfo.code } : {}),
           ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
         });
-        try {
-          localStorage.removeItem('oddsify_ref');
-        } catch {}
-        // Surface the exact identifier that was stored on the server.
-        // The whole "I keep losing my account" problem is usually that
-        // a different format was typed on the next login (e.g. no '+',
-        // wrong case on email). Echoing it here makes the value the
-        // user has to remember explicit.
+        try { localStorage.removeItem('oddsify_ref'); } catch {}
         const storedId = data.account?.email || idValue;
         toast(`Account created. Sign in next time with ${storedId} — write it down.`, 'success', { ttl: 12000 });
         routeAfterLogin(data);
       } else {
-        const data = await login({
-          email: identifier.trim(),
-          password,
-          country,
-        });
+        const data = await login({ email: identifier.trim(), password, country });
         routeAfterLogin(data);
       }
     } catch (e) {
@@ -343,387 +269,207 @@ export default function LoginPage() {
     }
   };
 
-  const { theme, toggleTheme } = useTheme();
-
   return (
-    <div className="login-page-v2">
-      <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <PageBack fallback="/" />
-        <button
-          onClick={toggleTheme}
-          type="button"
-          className="theme-toggle"
-          aria-label="Toggle theme"
-        >
-          {theme === 'dark' ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    <div className="lp">
+      <div className="lp-glow" />
+
+      <div className="lp-brand">
+        <span className="lp-brand-text">ODDSIFY</span>
+      </div>
+
+      <h1 className="lp-title">
+        {mode === 'signin' ? 'Log In to Oddsify' : 'Sign Up for Oddsify'}
+      </h1>
+
+      <form className="lp-form" onSubmit={submit} noValidate>
+        {/* Country selector */}
+        <div className="lp-country-wrap">
+          <button
+            type="button"
+            className="lp-country-btn"
+            onClick={() => setCountryOpen((v) => !v)}
+          >
+            <span className="lp-country-flag">{selectedCountry?.flag || '🏳️'}</span>
+            <span className="lp-country-name">
+              {selectedCountry ? `${selectedCountry.name} (${dialCode})` : 'Select country'}
+            </span>
+            <svg className="lp-country-caret" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
+          </button>
+          {countryOpen && (
+            <div className="lp-country-drop">
+              {COUNTRIES.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  className={`lp-country-opt${c.code === country ? ' active' : ''}`}
+                  onClick={() => { setCountry(c.code); setCountryOpen(false); }}
+                >
+                  <span className="lp-country-flag">{c.flag}</span>
+                  <span>{c.name} ({c.dial})</span>
+                </button>
+              ))}
+            </div>
           )}
+        </div>
+
+        {mode === 'register' && (
+          <>
+            <div className="lp-row-2">
+              <div className="lp-field">
+                <input
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="lp-field">
+                <input
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Phone field with dial code */}
+        <div className="lp-field lp-phone-field">
+          <span className="lp-dial-badge">{dialCode}</span>
+          <input
+            type="text"
+            inputMode="tel"
+            autoComplete={mode === 'signin' ? 'username' : 'tel'}
+            placeholder="Phone Number"
+            value={mode === 'signin' ? identifier : phone}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const formatted = raw.includes('@') ? raw : autoFormatPhoneInput(raw);
+              mode === 'signin' ? setIdentifier(formatted) : setPhone(formatted);
+            }}
+            autoFocus
+          />
+        </div>
+        {mode === 'signin' && identifier && parsedId.error && (
+          <p className="lp-err-hint">{parsedId.error.message}</p>
+        )}
+        {mode === 'register' && phone && parsedPhone.error && (
+          <p className="lp-err-hint">{parsedPhone.error.message}</p>
+        )}
+
+        {/* Password */}
+        <div className="lp-field">
+          <input
+            type={showPw ? 'text' : 'password'}
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            type="button"
+            className="lp-eye"
+            onClick={() => setShowPw((v) => !v)}
+            aria-label={showPw ? 'Hide password' : 'Show password'}
+          >
+            <EyeIcon open={showPw} />
+          </button>
+        </div>
+
+        {mode === 'register' && (
+          <>
+            <div className="lp-pw-strength">
+              {[1, 2, 3, 4].map((i) => (
+                <span key={i} className={`lp-pw-bar${pwStrength >= i ? ' filled' : ''}`}
+                  data-level={pwStrength} />
+              ))}
+              <span className="lp-pw-label">
+                {['', 'Weak', 'Okay', 'Strong', 'Excellent'][pwStrength] || ''}
+              </span>
+            </div>
+
+            <div className="lp-field">
+              <input
+                type={showPw ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="Confirm password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </div>
+
+            <div className="lp-field">
+              <input
+                type="text"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="Referral code (optional)"
+                value={refCodeInput}
+                onChange={(e) => setRefCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+                style={{ textTransform: 'uppercase', letterSpacing: '.08em' }}
+              />
+              {refState === 'checking' && <span className="lp-ref-status">…</span>}
+              {refState === 'valid' && <span className="lp-ref-status valid">✓</span>}
+            </div>
+            {refState === 'valid' && refInfo && (
+              <p className="lp-ref-msg">
+                🎁 Invited by <strong>{refInfo.referrerName}</strong>
+              </p>
+            )}
+            {refState === 'invalid' && <p className="lp-err-hint">This referral code isn&rsquo;t valid.</p>}
+          </>
+        )}
+
+        {mode === 'register' && (
+          <label className="lp-check">
+            <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+            <span>
+              I am 18+ and accept the{' '}
+              <Link className="lp-link" to="/info#terms" target="_blank" rel="noopener noreferrer">Terms</Link>
+              {' '}and{' '}
+              <Link className="lp-link" to="/info#responsible-gaming" target="_blank" rel="noopener noreferrer">Responsible Gaming Policy</Link>
+            </span>
+          </label>
+        )}
+
+        {err && <div className="lp-error" aria-live="polite">{err}</div>}
+
+        <button type="submit" className="lp-submit" disabled={busy}>
+          {busy
+            ? (mode === 'signin' ? 'Signing in…' : 'Creating account…')
+            : (mode === 'signin' ? 'Login' : 'Sign Up')}
         </button>
-      </div>
-      <Link className="back" to="/">
-        ← Back to sports
-      </Link>
 
-      <div className="auth-shell">
-        <aside className="auth-aside">
-          <div className="logo">
-            <div className="logo-mark">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2.2" />
-                <circle cx="11" cy="11" r="3.5" stroke="currentColor" strokeWidth="1.8" />
-                <circle cx="11" cy="11" r="1.2" fill="currentColor" />
-              </svg>
-            </div>
-            <div className="logo-text">
-              Odd<em>sify</em>
-            </div>
-          </div>
-          <h2 className="auth-tagline">
-            {mode === 'signin' ? 'Welcome back. Your slip is waiting.' : 'Join thousands betting smarter.'}
-          </h2>
-          <ul className="auth-benefits">
-            {PROMO_BENEFITS.map(([icon, text]) => (
-              <li key={text}>
-                <span className="b-icon">{icon}</span>
-                {text}
-              </li>
-            ))}
-          </ul>
-          <div className="auth-trust">
-            <span>🛡️ Licensed by Gaming Commission of Ghana · 18+</span>
-          </div>
-        </aside>
+        {/* Toggle mode */}
+        <button
+          type="button"
+          className="lp-toggle"
+          onClick={() => { setMode(mode === 'signin' ? 'register' : 'signin'); reset(); }}
+        >
+          {mode === 'signin' ? 'Sign up' : 'Sign in'}
+        </button>
 
-        <main className="auth-card">
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={`auth-tab${mode === 'signin' ? ' active' : ''}`}
-              onClick={() => {
-                setMode('signin');
-                reset();
-              }}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              className={`auth-tab${mode === 'register' ? ' active' : ''}`}
-              onClick={() => {
-                setMode('register');
-                reset();
-              }}
-            >
-              Create account
-            </button>
-          </div>
+        {/* Google sign in */}
+        {authConfig.googleEnabled && (
+          <>
+            <div className="lp-divider"><span>or</span></div>
+            <div id="google-btn-mount" style={{ display: 'flex', justifyContent: 'center' }} />
+          </>
+        )}
 
-          <h1 className="auth-h1">{mode === 'signin' ? 'Sign in to Oddsify' : 'Create your account'}</h1>
-          <p className="auth-sub">
-            {mode === 'signin'
-              ? 'Use your phone or email and password.'
-              : 'Sign up in 30 seconds and claim a GHS 50 starter bonus.'}
-          </p>
-
-          <form onSubmit={submit} noValidate>
-            {mode === 'register' ? (
-              <>
-                <div className="name-grid">
-                  <div>
-                    <label htmlFor="auth-fn">First name</label>
-                    <div className="field">
-                      <span className="field-icon">👤</span>
-                      <input
-                        id="auth-fn"
-                        type="text"
-                        autoComplete="given-name"
-                        placeholder="First name"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="auth-ln">Last name</label>
-                    <div className="field">
-                      <span className="field-icon">👤</span>
-                      <input
-                        id="auth-ln"
-                        type="text"
-                        autoComplete="family-name"
-                        placeholder="Last name"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <label htmlFor="auth-phone">Phone or email</label>
-                <div
-                  className={`field${phone && !regIdValid && !!parsedPhone.error ? ' invalid' : ''}${phone && regIdValid ? ' valid' : ''}`}
-                >
-                  <span className="field-icon">{regIsEmail ? '✉' : regIsPhone ? '📱' : '👤'}</span>
-                  <input
-                    id="auth-phone"
-                    type="text"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    placeholder={E164_PLACEHOLDER + ' or you@email.com'}
-                    value={phone}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      setPhone(raw.includes('@') ? raw : autoFormatPhoneInput(raw));
-                    }}
-                  />
-                </div>
-                {phone && parsedPhone.error && <p className="phone-error">{parsedPhone.error.message}</p>}
-
-                <label htmlFor="auth-pw">Password</label>
-                <div className="field">
-                  <span className="field-icon">🔒</span>
-                  <input
-                    id="auth-pw"
-                    type={showPw ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="At least 8 chars, with a digit and mixed case"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="field-suffix field-eye"
-                    onClick={() => setShowPw((v) => !v)}
-                    aria-label={showPw ? 'Hide password' : 'Show password'}
-                    title={showPw ? 'Hide password' : 'Show password'}
-                  >
-                    <EyeIcon open={showPw} />
-                  </button>
-                </div>
-
-                <div className="pw-strength">
-                  <span className={`s s-${pwStrength}`} />
-                  <span className={`s s-${pwStrength}`} />
-                  <span className={`s s-${pwStrength}`} />
-                  <span className={`s s-${pwStrength}`} />
-                  <span className="s-label">
-                    {['Too short', 'Weak', 'Okay', 'Strong', 'Excellent'][pwStrength] || ''}
-                  </span>
-                </div>
-
-                <label htmlFor="auth-pw2">Confirm password</label>
-                <div className={`field${confirm && confirm !== password ? ' invalid' : ''}`}>
-                  <span className="field-icon">🔒</span>
-                  <input
-                    id="auth-pw2"
-                    type={showPw ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="Re-enter your password"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                  />
-                </div>
-
-                <label htmlFor="auth-country" style={{ marginTop: 12 }}>
-                  Country
-                </label>
-                <CountrySelect
-                  id="auth-country"
-                  value={country}
-                  onChange={setCountry}
-                  invalid={!country}
-                  placeholder="Select your country…"
-                />
-
-                <label htmlFor="auth-ref" style={{ marginTop: 12 }}>
-                  Referral code <span style={{ opacity: 0.55, fontWeight: 400 }}>(optional)</span>
-                </label>
-                <div
-                  className={`field${refState === 'invalid' ? ' invalid' : ''}${refState === 'valid' ? ' valid' : ''}`}
-                >
-                  <span className="field-icon" aria-hidden>
-                    🎁
-                  </span>
-                  <input
-                    id="auth-ref"
-                    type="text"
-                    autoComplete="off"
-                    autoCapitalize="characters"
-                    spellCheck={false}
-                    placeholder="Enter a friend's code, e.g. KWAM483"
-                    value={refCodeInput}
-                    onChange={(e) => setRefCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
-                    style={{ textTransform: 'uppercase', letterSpacing: '.08em' }}
-                  />
-                  {refState === 'checking' && (
-                    <span className="field-suffix" aria-hidden>
-                      …
-                    </span>
-                  )}
-                  {refState === 'valid' && (
-                    <span className="field-suffix" style={{ color: '#3ddc84' }} aria-hidden>
-                      ✓
-                    </span>
-                  )}
-                </div>
-                {refState === 'valid' && refInfo && (
-                  <p style={{ margin: '6px 2px 0', fontSize: 12.5, color: '#f7c948' }} aria-live="polite">
-                    🎁 Invited by <strong>{refInfo.referrerName}</strong> — your accounts will be linked when you sign
-                    up.
-                  </p>
-                )}
-                {refState === 'invalid' && <p className="phone-error">This referral code isn&rsquo;t valid.</p>}
-              </>
-            ) : (
-              <>
-                <label htmlFor="auth-id">Phone or email</label>
-                <div
-                  className={`field${identifier && !idValid && !!parsedId.error ? ' invalid' : ''}${identifier && idValid ? ' valid' : ''}`}
-                >
-                  <span className="field-icon">{isEmail ? '✉' : isPhone ? '📱' : '👤'}</span>
-                  <input
-                    id="auth-id"
-                    type="text"
-                    autoComplete="username"
-                    placeholder={E164_PLACEHOLDER + ' or you@email.com'}
-                    value={identifier}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      setIdentifier(raw.includes('@') ? raw : autoFormatPhoneInput(raw));
-                    }}
-                    autoFocus
-                  />
-                </div>
-                {identifier && parsedId.error && <p className="phone-error">{parsedId.error.message}</p>}
-
-                <label htmlFor="auth-pw">Password</label>
-                <div className="field">
-                  <span className="field-icon">🔒</span>
-                  <input
-                    id="auth-pw"
-                    type={showPw ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="field-suffix field-eye"
-                    onClick={() => setShowPw((v) => !v)}
-                    aria-label={showPw ? 'Hide password' : 'Show password'}
-                    title={showPw ? 'Hide password' : 'Show password'}
-                  >
-                    <EyeIcon open={showPw} />
-                  </button>
-                </div>
-
-                <label htmlFor="auth-country" style={{ marginTop: 12 }}>
-                  Country
-                </label>
-                <CountrySelect
-                  id="auth-country"
-                  value={country}
-                  onChange={setCountry}
-                  invalid={!country}
-                  placeholder="Select your country…"
-                />
-              </>
-            )}
-
-            {mode === 'register' && (
-              <label className="check check-block" style={{ marginTop: 14 }}>
-                <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I am 18+ and
-                accept the{' '}
-                <Link className="link" to="/info#terms" target="_blank" rel="noopener noreferrer">
-                  Terms
-                </Link>{' '}
-                and{' '}
-                <Link className="link" to="/info#responsible-gaming" target="_blank" rel="noopener noreferrer">
-                  Responsible Gaming Policy
-                </Link>
-                .
-              </label>
-            )}
-
-            <div className="err" aria-live="polite">
-              {err}
-            </div>
-
-            <button type="submit" className="auth-primary" disabled={busy}>
-              {busy
-                ? mode === 'signin'
-                  ? 'Signing in…'
-                  : 'Creating account…'
-                : mode === 'signin'
-                  ? 'Sign in'
-                  : 'Create account'}
-            </button>
-
-            <div className="auth-divider">
-              <span>or continue with</span>
-            </div>
-            {authConfig.googleEnabled ? (
-              <div id="google-btn-mount" style={{ display: 'flex', justifyContent: 'center' }} />
-            ) : (
-              <button
-                type="button"
-                className="provider"
-                onClick={() =>
-                  setErr('Google sign-in is not configured on this server. Set GOOGLE_CLIENT_ID in .env to enable it.')
-                }
-              >
-                <span className="p-icon">G</span> Continue with Google
-              </button>
-            )}
-
-            <p className="auth-foot">
-              {mode === 'signin' ? (
-                <>
-                  New to Oddsify?{' '}
-                  <a
-                    className="link"
-                    onClick={() => {
-                      setMode('register');
-                      reset();
-                    }}
-                  >
-                    Create an account
-                  </a>
-                </>
-              ) : (
-                <>
-                  Already have an account?{' '}
-                  <a
-                    className="link"
-                    onClick={() => {
-                      setMode('signin');
-                      reset();
-                    }}
-                  >
-                    Sign in
-                  </a>
-                </>
-              )}
-            </p>
-          </form>
-        </main>
-      </div>
+        <p className="lp-terms">
+          By {mode === 'signin' ? 'logging in' : 'signing up'}, you agree to our{' '}
+          <Link className="lp-link" to="/info#terms">Terms &amp; Conditions</Link> and
+          confirm that you are at least 18 yrs old.
+        </p>
+      </form>
     </div>
   );
 }
