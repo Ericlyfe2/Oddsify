@@ -53,29 +53,24 @@ describe('validatePhone', () => {
     assert.equal(validatePhone('+2348012345678'), null);
   });
 
-  test('detects missing +', () => {
-    const r = validatePhone('233596651140');
-    assert.notEqual(r, null);
-    assert.equal(r.code, 'missing_plus');
-    assert.match(r.message, /\+/);
+  test('accepts number without + prefix', () => {
+    assert.equal(validatePhone('233596651140'), null);
   });
 
-  test('detects spaces', () => {
-    const r = validatePhone('+233 596 651 140');
-    assert.notEqual(r, null);
-    assert.equal(r.code, 'has_spaces');
+  test('accepts local format starting with 0', () => {
+    assert.equal(validatePhone('0596651140'), null);
   });
 
-  test('detects dashes', () => {
-    const r = validatePhone('+233-596-651-140');
-    assert.notEqual(r, null);
-    assert.equal(r.code, 'has_dashes');
+  test('auto-strips spaces', () => {
+    assert.equal(validatePhone('+233 596 651 140'), null);
   });
 
-  test('detects brackets', () => {
-    const r = validatePhone('+233(596)651140');
-    assert.notEqual(r, null);
-    assert.equal(r.code, 'has_special');
+  test('auto-strips dashes', () => {
+    assert.equal(validatePhone('+233-596-651-140'), null);
+  });
+
+  test('auto-strips brackets', () => {
+    assert.equal(validatePhone('+233(596)651140'), null);
   });
 
   test('detects letters', () => {
@@ -84,10 +79,8 @@ describe('validatePhone', () => {
     assert.equal(r.code, 'has_letters');
   });
 
-  test('detects special characters', () => {
-    const r = validatePhone('+233#596651140');
-    assert.notEqual(r, null);
-    assert.equal(r.code, 'has_special');
+  test('accepts number with no prefix (adds country code)', () => {
+    assert.equal(validatePhone('596651140'), null);
   });
 
   test('detects too short', () => {
@@ -137,10 +130,10 @@ describe('parseIdentifier', () => {
     assert.equal(r.error.code, 'empty');
   });
 
-  test('rejects invalid email', () => {
+  test('rejects invalid phone (no digits)', () => {
     const r = parseIdentifier('notanemail');
     assert.notEqual(r.error, undefined);
-    assert.equal(r.error.code, 'missing_plus');
+    assert.equal(r.error.code, 'invalid_phone');
   });
 
   test('rejects bad email format', () => {
@@ -152,6 +145,6 @@ describe('parseIdentifier', () => {
   test('rejects phone with letters', () => {
     const r = parseIdentifier('+233abc');
     assert.notEqual(r.error, undefined);
-    assert.equal(r.error.code, 'has_letters');
+    assert.equal(r.error.code, 'invalid_phone');
   });
 });
