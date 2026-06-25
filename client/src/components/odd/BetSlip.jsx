@@ -18,6 +18,7 @@ import { TeamLogo } from './teamBranding.jsx';
 import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
 import BetSuccessOverlay from '../BetSuccessOverlay.jsx';
+import BookingCodeShareModal from '../bets/BookingCodeShareModal.jsx';
 
 const BONUS_RATE = 0.08;
 
@@ -935,63 +936,15 @@ export function OddBetSlip() {
                     </span>
                   </button>
                 </div>
-                {lastBooking && (
-                  <div
-                    style={{
-                      margin: '0 16px 16px',
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      background: T.surfaceAlt,
-                      border: `1px dashed ${T.lineStrong}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.6 }}>
-                        BOOKING CODE
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 20,
-                          fontWeight: 800,
-                          letterSpacing: 1.2,
-                          fontVariantNumeric: 'tabular-nums',
-                          color: T.ink,
-                        }}
-                      >
-                        {lastBooking.bookingCode}
-                      </div>
-                      <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
-                        Share or save this code — anyone can load the same selections via My Bets → "Load by code".
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          navigator.clipboard?.writeText(lastBooking.bookingCode);
-                        } catch {
-                          /* ignore */
-                        }
-                        clearLastBooking();
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        background: T.greenBright,
-                        color: T.goldDark,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        border: 0,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Copy
-                    </button>
-                  </div>
-                )}
+                <BookingCodeShareModal
+                  isOpen={!!lastBooking}
+                  onClose={clearLastBooking}
+                  bookingCode={lastBooking?.bookingCode || ''}
+                  generatedAt={lastBooking?.createdAt || new Date().toISOString()}
+                  loadCodeLink={lastBooking ? `${window.location.origin}/code/${lastBooking.bookingCode}` : ''}
+                  shareUrl={lastBooking ? `${window.location.origin}/code/${lastBooking.bookingCode}` : ''}
+                  externalWebsite="oddsify.com"
+                />
               </div>
             )}
           </>
