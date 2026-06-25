@@ -183,23 +183,17 @@ export function OddBetSlip() {
         className="betslip-panel"
         style={{
           position: 'fixed',
-          right: 12,
-          bottom: 100,
+          inset: 0,
           zIndex: 91,
-          width: 380,
-          maxWidth: 'calc(100vw - 24px)',
-          maxHeight: '70vh',
-          borderRadius: 16,
           background: T.surface,
           color: T.ink,
-          boxShadow: '0 12px 40px -8px rgba(0,0,0,0.4)',
           display: 'flex',
           flexDirection: 'column',
           opacity: open || lastBet ? 1 : 0,
-          transform: open || lastBet ? 'scale(1)' : 'scale(0.92)',
-          transformOrigin: 'bottom right',
+          transform: open || lastBet ? 'translateY(0)' : 'translateY(100%)',
           transition: 'opacity 200ms ease, transform 200ms ease',
           pointerEvents: open || lastBet ? 'auto' : 'none',
+          overflowY: 'auto',
         }}
       >
         {/* header bar */}
