@@ -585,8 +585,11 @@ function GrandPrizeWinners() {
 
   return (
     <div style={{ padding: '16px 0 0' }}>
-      <div style={{ padding: '0 16px' }}>
-        <SectionHeader title="Grand Prize Winners" count={rows.length} />
+      <div style={{ textAlign: 'center', padding: '4px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: -0.2, fontFamily: '"Space Grotesk", system-ui, sans-serif', margin: 0 }}>
+          Grand Prize Winners
+        </h3>
+        <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>{rows.length}</span>
       </div>
       <div
         style={{
