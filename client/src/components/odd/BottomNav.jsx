@@ -2,12 +2,10 @@
  * Bottom navigation — port of the Claude Design Oddsify.html OddBottomNav.
  * Five tabs (Home / AZ Menu / Bet History / Wallet / Account) routed through
  * react-router NavLink. Active tab gets a gold top dash + tinted icon/label.
- * Hidden when the bet slip is open so the slip's CTA owns the bottom safe area.
  */
 import { useLocation, useNavigate } from 'react-router-dom';
 import { T, useTokens } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
-import { useSlip } from '../../providers/SlipProvider.jsx';
 import { useAccount } from '../../providers/AccountProvider.jsx';
 
 const ITEMS = [
@@ -26,10 +24,8 @@ function isActive(pathname, to) {
 export default function OddBottomNav() {
   const loc = useLocation();
   const navigate = useNavigate();
-  const { open: slipOpen } = useSlip();
   const { account } = useAccount();
   const T = useTokens();
-  if (slipOpen) return null;
 
   return (
     <div

@@ -406,6 +406,17 @@ html[data-theme='light'] {
   }
 }
 
+/* ── Corner betslip panel ──────────────────────────────────────── */
+.betslip-panel {
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .betslip-panel {
+    width: 380px !important;
+    max-height: 60vh !important;
+  }
+}
+
 /* ── Responsive shell + card grids ───────────────────────────────────────
    Mobile is untouched: single 560px column. On laptop/desktop the column
    widens and list pages flow into 2–3 columns so the extra space is used. */

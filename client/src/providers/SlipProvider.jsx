@@ -126,7 +126,6 @@ export default function SlipProvider({ children }) {
       }
       return { ...cur, [id]: { match, key, val, market: mkt, label: label || null } };
     });
-    setOpen((prev) => prev || true);
   }, []);
 
   const removePick = useCallback((id) => {

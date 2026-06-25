@@ -126,14 +126,14 @@ export function OddBetSlip() {
 
   return (
     <>
-      {/* scrim — only covers the page, not the bottom nav */}
+      {/* scrim */}
       {open && (
         <div
           onClick={closeSlip}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.45)',
+            background: 'rgba(0,0,0,0.35)',
             zIndex: 88,
             transition: 'opacity 200ms',
           }}
@@ -179,92 +179,94 @@ export function OddBetSlip() {
       <div
         role="dialog"
         aria-label="Bet slip"
+        className="betslip-panel"
         style={{
           position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
+          right: 12,
+          bottom: 100,
+          zIndex: 91,
+          width: 380,
+          maxWidth: 'calc(100vw - 24px)',
+          maxHeight: '70vh',
+          borderRadius: 16,
           background: T.surface,
           color: T.ink,
-          borderTopLeftRadius: 22,
-          borderTopRightRadius: 22,
-          zIndex: 91,
-          transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1)',
-          // In the empty state we drive interaction through the floating
-          // "Load code" FAB above instead of a peek bar, so the sheet stays
-          // fully translated off-screen until the user opens it.
-          transform:
-            open || lastBet ? 'translateY(0)' : emptyState ? 'translateY(100%)' : 'translateY(calc(100% - 56px))',
-          boxShadow: '0 -16px 40px -10px rgba(0,0,0,0.25)',
-          maxHeight: '88vh',
+          boxShadow: '0 12px 40px -8px rgba(0,0,0,0.4)',
           display: 'flex',
           flexDirection: 'column',
-          width: '100%',
-          maxWidth: 560,
-          margin: '0 auto',
-          pointerEvents: emptyState && !open ? 'none' : 'auto',
+          opacity: open || lastBet ? 1 : 0,
+          transform: open || lastBet ? 'scale(1)' : 'scale(0.92)',
+          transformOrigin: 'bottom right',
+          transition: 'opacity 200ms ease, transform 200ms ease',
+          pointerEvents: open || lastBet ? 'auto' : 'none',
         }}
       >
-        {/* condensed bar / drag handle */}
-        <button
-          onClick={() => {
-            if (lastBet) {
-              clearLastBet();
-              closeSlip();
-            } else {
-              open ? closeSlip() : openSlip();
-            }
-          }}
-          type="button"
+        {/* header bar */}
+        <div
           style={{
-            padding: '10px 16px',
+            padding: '12px 14px 10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            cursor: 'pointer',
-            width: '100%',
-            background: 'transparent',
-            border: 0,
-            color: 'inherit',
+            borderBottom: `1px solid ${T.line}`,
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineStrong, alignSelf: 'center' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.3 }}>
-                {lastBet ? '✅ Bet Placed' : emptyState ? 'Load booking code' : 'Betslip'}
-              </span>
-              {!lastBet && count > 0 && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    background: T.greenSoft,
-                    color: T.greenBright,
-                  }}
-                >
-                  {count}
-                </span>
-              )}
-              {!lastBet && emptyState && (
-                <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>or pick odds</span>
-              )}
-            </div>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.2 }}>
+              {lastBet ? '✅ Bet Placed' : 'Betslip'}
+            </span>
+            {!lastBet && count > 0 && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: 999,
+                  background: T.greenSoft,
+                  color: T.greenBright,
+                }}
+              >
+                {count}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {!lastBet && (
               <>
-                <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>Balance</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 10, color: T.inkSoft, fontWeight: 600 }}>Bal</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
                   GHS {fmtCedi(balance)}
                 </span>
               </>
             )}
-            <OddIcon name={open ? 'chevD' : 'chevU'} size={16} color={T.inkSoft} />
+            <button
+              onClick={() => {
+                if (lastBet) {
+                  clearLastBet();
+                  closeSlip();
+                } else {
+                  closeSlip();
+                }
+              }}
+              type="button"
+              aria-label="Close bet slip"
+              style={{
+                background: T.surfaceAlt,
+                border: 0,
+                borderRadius: 8,
+                width: 28,
+                height: 28,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: T.inkDim,
+              }}
+            >
+              <OddIcon name="x" size={14} />
+            </button>
           </div>
-        </button>
+        </div>
 
         {/* ─── Bet placed confirmation (inline fallback) ─── */}
         {lastBet ? (
