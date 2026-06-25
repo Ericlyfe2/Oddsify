@@ -115,8 +115,8 @@ function attachCashoutOffer(bet) {
   if (bet.lastCashOutOffer?.amount != null) return { ...bet, cashoutOffer: bet.lastCashOutOffer?.amount };
   const cashoutOffer =
     bet.mode === 'system'
-      ? Number((bet.stake * bet.totalOdds * 0.6).toFixed(2))
-      : Number((bet.stake * bet.totalOdds * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+      ? Number((bet.stake * 0.6).toFixed(2))
+      : Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
   return { ...bet, cashoutOffer };
 }
 
@@ -624,7 +624,7 @@ router.get('/bets/:id/offer', requireAuth, (req, res, next) => {
   if (last && last.cashOut > 0) {
     return res.json({ eligible: true, cashOut: last.cashOut, ts: last.ts });
   }
-  const fallback = Number((bet.stake * bet.totalOdds * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+  const fallback = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
   if (fallback > 0) {
     return res.json({ eligible: true, cashOut: fallback, ts: Date.now(), estimated: true });
   }
@@ -658,7 +658,7 @@ router.delete(
       } else {
         // No live offer recorded yet (no tick has happened since /place).
         // Fall back to a conservative offer based on stake and the house margin.
-        cashOut = Number((bet.stake * bet.totalOdds * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
+        cashOut = Number((bet.stake * (1 - LIVE_BETTING.houseMargin)).toFixed(2));
       }
       // Validate drift in both paths when client provided acceptedAmount.
       if (req.body?.acceptedAmount !== undefined) {
