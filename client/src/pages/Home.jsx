@@ -105,6 +105,8 @@ export default function Home() {
 
       <OddLeagueRow leagues={leagues.length ? leagues : undefined} onPick={() => navigate('/sports')} />
 
+      <GrandPrizeWinners />
+
       <SectionHeader
         icon={
           <span
@@ -145,8 +147,6 @@ export default function Home() {
       />
 
       <StatsStrip />
-
-      <GrandPrizeWinners />
 
       <OddsifyFooter />
 

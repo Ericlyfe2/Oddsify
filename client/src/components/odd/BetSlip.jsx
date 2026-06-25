@@ -110,7 +110,15 @@ export function OddBetSlip() {
   const [stake, setStake] = useState(1000);
   const [acceptChanges, setAcceptChanges] = useState(true);
   const [codeInput, setCodeInput] = useState('');
-  const potentialWin = useMemo(() => (Number(stake) || 0) * totalOdds * (1 + BONUS_RATE), [stake, totalOdds]);
+  const [betMode, setBetMode] = useState('single');
+  const displayOdds = betMode === 'multiple' ? totalOdds : (entries.length === 1 ? (entries[0]?.val || 1) : totalOdds);
+  const potentialWin = useMemo(() => {
+    const s = Number(stake) || 0;
+    if (betMode === 'single' && entries.length > 1) {
+      return entries.reduce((sum, e) => sum + s * Number(e.val) * (1 + BONUS_RATE), 0);
+    }
+    return s * totalOdds * (1 + BONUS_RATE);
+  }, [stake, totalOdds, betMode, entries]);
 
   const copyCode = async (text) => {
     try {
@@ -233,6 +241,27 @@ export function OddBetSlip() {
                   GHS {fmtCedi(balance)}
                 </span>
               </>
+            )}
+            {!lastBet && count > 0 && (
+              <button
+                type="button"
+                onClick={clearSlip}
+                aria-label="Remove all selections"
+                style={{
+                  background: T.surfaceAlt,
+                  border: 0,
+                  borderRadius: 8,
+                  width: 28,
+                  height: 28,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: T.inkDim,
+                }}
+              >
+                <OddIcon name="trash" size={14} />
+              </button>
             )}
             <button
               onClick={() => {
@@ -380,54 +409,42 @@ export function OddBetSlip() {
           </>
         ) : open ? (
           <>
-            {/* action bar */}
+            {/* Single / Multiple toggle */}
             <div
               style={{
-                padding: '0 16px 12px',
+                margin: '0 16px 12px',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                borderRadius: 10,
+                background: T.surfaceAlt,
+                padding: 3,
               }}
             >
-              <button
-                type="button"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  background: T.surfaceAlt,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: 0,
-                  color: T.ink,
-                  cursor: 'pointer',
-                }}
-              >
-                Standard mode <OddIcon name="chevD" size={12} />
-              </button>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button
-                  type="button"
-                  onClick={clearSlip}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: `1px solid ${T.line}`,
-                    fontSize: 11,
-                    color: T.inkSoft,
-                    fontWeight: 600,
-                    background: 'transparent',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <OddIcon name="trash" size={12} /> Remove all
-                </button>
-              </div>
+              {['single', 'multiple'].map((mode) => {
+                const active = betMode === mode;
+                const disabled = mode === 'multiple' && entries.length < 2;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => !disabled && setBetMode(mode)}
+                    disabled={disabled}
+                    style={{
+                      flex: 1,
+                      padding: '8px 0',
+                      borderRadius: 8,
+                      border: 0,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      background: active ? T.greenBright : 'transparent',
+                      color: active ? T.goldDark : disabled ? T.inkDim : T.inkSoft,
+                      transition: 'background 150ms, color 150ms',
+                    }}
+                  >
+                    {mode === 'single' ? 'Single' : 'Multiple'}
+                  </button>
+                );
+              })}
             </div>
 
             {/* booking code lookup */}
@@ -706,7 +723,7 @@ export function OddBetSlip() {
                               color: T.inkSoft,
                             }}
                           >
-                            Single
+                            {betMode === 'multiple' ? 'Multiple' : 'Single'}
                           </span>
                         </div>
                         <div style={{ fontSize: 11, color: T.inkSoft, marginBottom: 2 }}>
@@ -755,7 +772,7 @@ export function OddBetSlip() {
                         letterSpacing: 0.6,
                       }}
                     >
-                      {entries.length === 1 ? 'SINGLES' : 'MULTIPLE'} · {entries.length}X
+                      {betMode === 'multiple' ? 'MULTIPLE' : 'SINGLES'} · {entries.length}X
                     </div>
                     <div
                       style={{
@@ -765,7 +782,7 @@ export function OddBetSlip() {
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {totalOdds.toFixed(2)}
+                      {displayOdds.toFixed(2)}
                     </div>
                   </div>
                   <div
