@@ -3,24 +3,21 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { updateUser, publicUser, logActivity } from '../db/users.js';
-import { validatePhone, sanitizePhone } from '../lib/phone.js';
+import { normalizePhone } from '../lib/phone.js';
 import { log } from '../utils/logger.js';
 
 const router = Router();
 
-// Strict E.164 only — same rules as the auth identifier. Empty string is
-// allowed so the user can clear their stored number; anything else must
-// match the spec or it's rejected with the user-facing error message.
 const phoneSchema = z.string().transform((raw, ctx) => {
   const trimmed = String(raw ?? '').trim();
   if (!trimmed) return null;
-  const err = validatePhone(trimmed);
-  if (err) {
-    log.warn(`phone validation failure (profile update): ${err.code} — input "${trimmed}"`);
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: err.message });
+  const normalized = normalizePhone(trimmed);
+  if (!normalized) {
+    log.warn(`phone normalization failure (profile update): input masked`);
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid phone number.' });
     return z.NEVER;
   }
-  return sanitizePhone(trimmed);
+  return normalized;
 });
 
 const profileSchema = z.object({
@@ -36,10 +33,6 @@ const profileSchema = z.object({
       selfExcludedUntil: z.string().nullable().optional(),
     })
     .optional(),
-  // Notification routing toggles surfaced on the Account screen.
-  // All three default to true on the server when the user record
-  // hasn't been touched; explicit boolean here lets the player opt
-  // any channel off.
   commsPrefs: z
     .object({
       email: z.boolean().optional(),
@@ -54,10 +47,6 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 router.patch('/', requireAuth, validate(profileSchema), (req, res) => {
-  // Shallow merge isn't enough for the nested settings groups — sending
-  // { responsibleGaming: { dailyDepositLimit: 100 } } would otherwise
-  // wipe out the weekly/monthly entries. Merge nested groups against the
-  // existing user record before persisting.
   const patch = { ...req.body };
   if (patch.responsibleGaming) {
     patch.responsibleGaming = {

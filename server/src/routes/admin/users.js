@@ -445,14 +445,7 @@ router.post(
   requireRole(),
   validate(
     z.object({
-      email: z.string().transform((raw, ctx) => {
-        const parsed = parseIdentifier(raw);
-        if (parsed.error) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: parsed.error.message });
-          return z.NEVER;
-        }
-        return parsed.value;
-      }),
+      email: z.string().min(1),
       password: z.string().min(8),
       displayName: z.string().trim().max(60).optional(),
       country: z
@@ -465,7 +458,10 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
-    const { email, password, displayName, country, balance } = req.body;
+    const { email: rawEmail, password, displayName, country, balance } = req.body;
+    const parsed = parseIdentifier(rawEmail, country);
+    if (parsed.error) throw badRequest(parsed.error.message);
+    const email = parsed.value;
     const issues = passwordIssues(password);
     if (issues.length) throw badRequest(issues[0], { issues });
     if (findByEmail(email)) throw conflict('An account with this email already exists.');

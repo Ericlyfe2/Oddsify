@@ -8,6 +8,7 @@ import {
   updateUser,
   publicUser,
   logActivity,
+  findUserByPhone,
 } from '../db/users.js';
 import { hashPassword, verifyPassword, passwordIssues } from '../services/password.js';
 import {
@@ -30,26 +31,9 @@ import { GOOGLE } from '../config/env.js';
 import { log } from '../utils/logger.js';
 import { parseIdentifier } from '../lib/phone.js';
 import { ensureReferralCode, attachReferral } from '../services/referrals.js';
+import { issueOtp, checkOtp, consumeOtp } from '../services/otp.js';
 
 const router = Router();
-
-/* ------------ Schemas ------------ */
-// "Phone or email" identifier. Runs the same parseIdentifier the client
-// uses, surfacing the spec's exact error messages when the input isn't a
-// valid email or E.164 phone. The transform normalizes to lowercase for
-// emails and sanitized-E.164 for phones, so we never store two formats
-// of the same number.
-const emailLike = z.string().transform((raw, ctx) => {
-  const parsed = parseIdentifier(raw);
-  if (parsed.error) {
-    if (parsed.error.code !== 'invalid_email' && parsed.error.code !== 'empty') {
-      log.warn(`phone validation failure (auth): ${parsed.error.code} — input masked`);
-    }
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: parsed.error.message });
-    return z.NEVER;
-  }
-  return parsed.value;
-});
 
 const country = z
   .string()
@@ -57,8 +41,10 @@ const country = z
   .toUpperCase()
   .regex(/^[A-Z]{2}$/, 'Select your country.');
 
+const emailField = z.string().min(1, 'Enter your phone or email.');
+
 const registerSchema = z.object({
-  email: emailLike,
+  email: emailField,
   password: z.string(),
   displayName: z.string().trim().max(60).optional(),
   country,
@@ -67,7 +53,7 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: emailLike,
+  email: emailField,
   password: z.string().min(1, 'Password is required.'),
   country: country.optional(),
 });
@@ -84,7 +70,12 @@ const googleSchema = z.object({
   deviceId: z.string().trim().max(80).optional(),
 });
 
-/* ------------ Helpers ------------ */
+function resolveIdentifier(raw, countryCode) {
+  const parsed = parseIdentifier(raw, countryCode);
+  if (parsed.error) throw badRequest(parsed.error.message);
+  return parsed.value;
+}
+
 function issueSession(user, req) {
   const access = signAccessToken(user);
   const refresh = issueRefreshToken(user.id, {
@@ -99,8 +90,6 @@ function passwordOrThrow(pw) {
   if (issues.length) throw badRequest(issues[0], { issues });
 }
 
-/* ------------ Endpoints ------------ */
-
 router.get('/config', (_req, res) => {
   res.json({
     googleEnabled: GOOGLE.enabled,
@@ -108,15 +97,17 @@ router.get('/config', (_req, res) => {
   });
 });
 
-/** Register — creates account, immediately signs in (no OTP). */
 router.post(
   '/register',
   validate(registerSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, displayName, country: countryCode, referralCode, deviceId } = req.body;
+    const { email: rawEmail, password, displayName, country: countryCode, referralCode, deviceId } = req.body;
     passwordOrThrow(password);
 
-    if (findByEmail(email)) throw conflict('An account with this email already exists.');
+    const email = resolveIdentifier(rawEmail, countryCode);
+
+    const existing = findByEmail(email) || findUserByPhone(email);
+    if (existing) throw conflict('An account with this email already exists.');
 
     const passwordHash = await hashPassword(password);
     const user = createUser({
@@ -148,17 +139,16 @@ router.post(
   }),
 );
 
-/** Login — single step, no OTP, no email verification gate. */
 router.post(
   '/login',
   loginLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
-    const { email, password, country: submittedCountry } = req.body;
-    const user = findByEmail(email);
+    const { email: rawEmail, password, country: submittedCountry } = req.body;
+    const email = resolveIdentifier(rawEmail, submittedCountry);
+    const user = findByEmail(email) || findUserByPhone(email);
     if (!user || !user.passwordHash) throw unauthorized('Incorrect email or password.');
 
-    /* ---- admin path ---- */
     if (user.role === 'admin') {
       bruteCheck(email);
       const ok = await verifyPassword(password, user.passwordHash);
@@ -196,7 +186,6 @@ router.post(
       return res.json({ ok: true, kind: 'admin', admin: publicAdmin(user), ...session });
     }
 
-    /* ---- user path ---- */
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
       logActivity(user.id, { kind: 'login_failed', ip: req.ip });
@@ -224,8 +213,6 @@ router.post(
       throw unauthorized('Account suspended. Contact support.');
     }
 
-    // Country validation: if user has a country on file, the submitted one must match.
-    // If user has no country (legacy account), accept and persist the submitted value.
     let patch = null;
     if (submittedCountry) {
       if (user.country && user.country !== submittedCountry) {
@@ -339,11 +326,72 @@ router.post(
   }),
 );
 
+const forgotSchema = z.object({
+  email: emailField,
+  country: country.optional(),
+});
+
+const resetSchema = z.object({
+  email: emailField,
+  code: z.string().min(4).max(8),
+  password: z.string(),
+  country: country.optional(),
+});
+
+router.post(
+  '/forgot-password',
+  validate(forgotSchema),
+  asyncHandler(async (req, res) => {
+    const { email: rawEmail, country: countryCode } = req.body;
+    const email = resolveIdentifier(rawEmail, countryCode);
+    const user = findByEmail(email) || findUserByPhone(email);
+    if (!user) {
+      res.json({ ok: true, message: 'If an account exists, a reset code has been sent.' });
+      return;
+    }
+    await issueOtp(email, 'reset');
+    log.info(`reset OTP sent to ${email}`);
+    recordAudit({
+      actorId: user.id,
+      action: 'user.forgot-password',
+      target: user.id,
+      targetType: 'user',
+      ip: req.ip,
+      meta: { email },
+    });
+    res.json({ ok: true, message: 'If an account exists, a reset code has been sent.' });
+  }),
+);
+
+router.post(
+  '/reset-password',
+  validate(resetSchema),
+  asyncHandler(async (req, res) => {
+    const { email: rawEmail, code, password, country: countryCode } = req.body;
+    const email = resolveIdentifier(rawEmail, countryCode);
+    const user = findByEmail(email) || findUserByPhone(email);
+    if (!user) throw badRequest('Account not found.');
+    passwordOrThrow(password);
+    checkOtp(email, 'reset', code);
+    const passwordHash = await hashPassword(password);
+    updateUser(user.id, { passwordHash });
+    consumeOtp(email, 'reset');
+    revokeAllForAccount(user.id);
+    logActivity(user.id, { kind: 'password_reset', ip: req.ip });
+    recordAudit({
+      actorId: user.id,
+      action: 'user.password.reset',
+      target: user.id,
+      targetType: 'user',
+      severity: 'warning',
+      ip: req.ip,
+      meta: { email },
+    });
+    res.json({ ok: true, message: 'Password reset successfully.' });
+  }),
+);
+
 router.get('/me', requireAuth, (req, res) => {
-  // Guarantee every authenticated account carries a real referral code.
-  // Legacy users created before codes were minted at signup get one lazily
-  // here, so the Refer & Earn and Profile screens never fall back to a
-  // truncated account id.
   ensureReferralCode(req.user.id);
   res.json({ account: publicUser(getUserById(req.user.id)) });
 });

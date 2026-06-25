@@ -143,6 +143,8 @@ export const changePassword = (body) => post('/auth/change-password', body);
 export const fetchMe = () => get('/auth/me');
 export const fetchActivity = () => get('/auth/activity');
 export const googleSignIn = (credential, country, extra = {}) => post('/auth/google', { credential, country, ...extra });
+export const forgotPassword = (email) => post('/auth/forgot-password', { email });
+export const resetPassword = (email, code, password) => post('/auth/reset-password', { email, code, password });
 
 /* referrals */
 export const fetchReferralInfo = () => get('/referrals/me');

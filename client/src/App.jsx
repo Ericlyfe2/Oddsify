@@ -8,6 +8,8 @@ import AppShell from './layout/AppShell.jsx';
 import Home from './pages/Home.jsx';
 import SportsPage from './pages/SportsPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import WalletPage from './pages/WalletPage.jsx';
 import BetHistoryPage from './pages/BetHistoryPage.jsx';
@@ -131,8 +133,8 @@ export default function App() {
                 <Route path="/register" element={<RegisterRedirect />} />
                 <Route path="/signup" element={<RegisterRedirect />} />
                 <Route path="/verify" element={<Navigate to="/login" replace />} />
-                <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
-                <Route path="/reset-password" element={<Navigate to="/login" replace />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route element={<AppShell />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/sports" element={<SportsPage />} />

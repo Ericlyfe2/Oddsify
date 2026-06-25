@@ -289,6 +289,29 @@
   margin: -4px 2px 0;
 }
 
+/* Hint text */
+.lp-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: -4px 2px 0;
+  text-align: center;
+}
+
+/* Forgot password link */
+.lp-forgot {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(255, 255, 255, 0.15);
+  margin-top: 2px;
+  transition: color 0.15s;
+}
+.lp-forgot:hover {
+  color: var(--accent);
+}
+
 /* Submit button */
 .lp-submit {
   width: 100%;

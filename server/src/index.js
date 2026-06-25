@@ -14,6 +14,7 @@ import { metricsMiddleware } from './services/metrics.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
 import authRouter from './routes/auth.js';
+import otpRouter from './routes/otp.js';
 import betRouter from './routes/bet.js';
 import walletRouter from './routes/wallet.js';
 import profileRouter from './routes/profile.js';
@@ -133,6 +134,7 @@ app.get('/api/settings/public', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/otp', otpRouter);
 app.use('/api/bet', betRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/profile', profileRouter);

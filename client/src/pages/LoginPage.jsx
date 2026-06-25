@@ -11,7 +11,7 @@ import {
 import { setAdminTokens } from '../api/adminApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { COUNTRIES, countryByCode } from '../data/countries.js';
-import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
+import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER, E164_HINT } from '../lib/phone.js';
 import { getDeviceId } from '../lib/device.js';
 
 function EyeIcon({ open }) {
@@ -178,7 +178,7 @@ export default function LoginPage() {
     }
   }
 
-  const parsedId = useMemo(() => parseIdentifier(identifier), [identifier]);
+  const parsedId = useMemo(() => parseIdentifier(identifier, country), [identifier, country]);
   const isEmail = parsedId.kind === 'email';
   const isPhone = parsedId.kind === 'phone';
   const idValid = isEmail || isPhone;
@@ -196,7 +196,7 @@ export default function LoginPage() {
 
   const reset = () => setErr('');
 
-  const parsedPhone = useMemo(() => parseIdentifier(phone), [phone]);
+  const parsedPhone = useMemo(() => parseIdentifier(phone, country), [phone, country]);
   const regIsEmail = parsedPhone.kind === 'email';
   const regIsPhone = parsedPhone.kind === 'phone';
   const regIdValid = regIsEmail || regIsPhone;
@@ -346,7 +346,7 @@ export default function LoginPage() {
             type="text"
             inputMode="tel"
             autoComplete={mode === 'signin' ? 'username' : 'tel'}
-            placeholder="Phone Number"
+            placeholder={`e.g. ${dialCode}596651140 or 0596651140`}
             value={mode === 'signin' ? identifier : phone}
             onChange={(e) => {
               const raw = e.target.value;
@@ -446,6 +446,10 @@ export default function LoginPage() {
             ? (mode === 'signin' ? 'Signing in…' : 'Creating account…')
             : (mode === 'signin' ? 'Login' : 'Sign Up')}
         </button>
+
+        {mode === 'signin' && (
+          <Link to="/forgot-password" className="lp-forgot">Forgot password?</Link>
+        )}
 
         {/* Toggle mode */}
         <button
