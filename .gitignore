@@ -12,6 +12,7 @@ build/
 
 # Runtime data store
 server/data/*.json
+server/data/*.json.tmp
 
 # Logs
 *.log
