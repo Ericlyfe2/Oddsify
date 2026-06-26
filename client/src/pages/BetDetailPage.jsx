@@ -199,16 +199,6 @@ export default function BetDetailPage() {
 
   return (
     <Shell onBack={() => navigate(-1)}>
-      {/* Status Banner */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        padding: '14px 16px', margin: '0 12px 0', borderRadius: 10,
-        background: `${statusColor}18`, border: `1px solid ${statusColor}40`,
-        color: statusColor, fontWeight: 800, fontSize: 15, textTransform: 'uppercase',
-      }}>
-        {statusLabel}
-      </div>
-
       {/* Ticket Info Card */}
       <div style={{
         margin: '10px 12px 0', borderRadius: 10,
@@ -419,21 +409,22 @@ function Shell({ onBack, children }) {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 414, minHeight: '100vh', background: 'var(--bg)' }}>
-        {/* Red Header */}
+        {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '13px 14px', background: '#c41e1e',
+          padding: '13px 14px', background: 'var(--bg-soft)',
+          borderBottom: '1px solid var(--line)',
           position: 'sticky', top: 0, zIndex: 10,
         }}>
           <button type="button" onClick={onBack} style={{
             display: 'flex', alignItems: 'center', gap: 2,
-            background: 'none', border: 0, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            background: 'none', border: 0, color: 'var(--accent)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}>
             <ChevronLeft size={20} /> Back
           </button>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>Ticket Details</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Ticket Details</span>
           <button type="button" onClick={() => navigate('/')} style={{
-            background: 'none', border: 0, color: '#fff', cursor: 'pointer', padding: 0,
+            background: 'none', border: 0, color: 'var(--text-soft)', cursor: 'pointer', padding: 0,
           }}>
             <Home size={18} />
           </button>
