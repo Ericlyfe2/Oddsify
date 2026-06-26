@@ -111,14 +111,28 @@ export function OddBetSlip() {
   const [acceptChanges, setAcceptChanges] = useState(true);
   const [codeInput, setCodeInput] = useState('');
   const [betMode, setBetMode] = useState('single');
-  const displayOdds = betMode === 'multiple' ? totalOdds : (entries.length === 1 ? (entries[0]?.val || 1) : totalOdds);
+  const [singleStakes, setSingleStakes] = useState({});
+
+  const setSingleStake = (matchId, val) => {
+    setSingleStakes((prev) => ({ ...prev, [matchId]: val }));
+  };
+
+  const singleWin = (e) => {
+    const s = Number(singleStakes[e.match.id]) || 0;
+    return s * Number(e.val);
+  };
+
+  const totalSingleStake = useMemo(
+    () => entries.reduce((sum, e) => sum + (Number(singleStakes[e.match.id]) || 0), 0),
+    [entries, singleStakes],
+  );
+
   const potentialWin = useMemo(() => {
-    const s = Number(stake) || 0;
-    if (betMode === 'single' && entries.length > 1) {
-      return entries.reduce((sum, e) => sum + s * Number(e.val) * (1 + BONUS_RATE), 0);
+    if (betMode === 'single') {
+      return entries.reduce((sum, e) => sum + singleWin(e), 0);
     }
-    return s * totalOdds * (1 + BONUS_RATE);
-  }, [stake, totalOdds, betMode, entries]);
+    return (Number(stake) || 0) * totalOdds * (1 + BONUS_RATE);
+  }, [stake, totalOdds, betMode, entries, singleStakes]);
 
   const copyCode = async (text) => {
     try {
@@ -673,80 +687,96 @@ export function OddBetSlip() {
                       borderBottom: `1px solid ${T.line}`,
                     }}
                   >
+                    {/* match header */}
                     <div
                       style={{
                         display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: 8,
+                        marginBottom: 4,
                       }}
                     >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: T.ink,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        <TeamLogo name={e.match.home} size={14} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {e.match.home} vs {e.match.away}
+                        </span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => removePick(e.match.id)}
                         aria-label={`Remove ${e.match.home} vs ${e.match.away}`}
                         style={{
-                          marginTop: 2,
                           color: T.inkDim,
                           background: 'transparent',
                           border: 0,
                           cursor: 'pointer',
+                          marginLeft: 8,
                         }}
                       >
-                        <OddIcon name="x" size={14} color={T.inkDim} />
+                        <OddIcon name="x" size={14} color={T.danger} />
                       </button>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
+                    </div>
+
+                    {/* selection + odds */}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.greenBright, marginBottom: 8 }}>
+                      {e.label || (e.key === '1' ? e.match.home : e.key === '2' ? e.match.away : 'Draw')} @ {Number(e.val).toFixed(2)}
+                    </div>
+
+                    {/* per-pick stake input (Single mode) */}
+                    {betMode === 'single' && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                        }}
+                      >
+                        <input
+                          value={singleStakes[e.match.id] ?? ''}
+                          onChange={(ev) => setSingleStake(e.match.id, Number(ev.target.value.replace(/[^\d]/g, '')) || 0)}
+                          placeholder="Enter stake (GHS)"
+                          inputMode="numeric"
+                          aria-label={`Stake for ${e.match.home} vs ${e.match.away}`}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            marginBottom: 4,
+                            flex: 1,
+                            padding: '9px 12px',
+                            borderRadius: 10,
+                            border: `1px solid ${T.line}`,
+                            background: T.surfaceAlt,
+                            color: T.ink,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            outline: 'none',
+                            fontVariantNumeric: 'tabular-nums',
                           }}
-                        >
-                          <span
+                        />
+                        <div style={{ textAlign: 'right', minWidth: 70 }}>
+                          <div style={{ fontSize: 10, color: T.inkSoft, fontWeight: 600 }}>Single Win</div>
+                          <div
                             style={{
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: 700,
-                              color: e.match.isLive ? T.danger : T.ink,
+                              color: T.greenBright,
                               fontVariantNumeric: 'tabular-nums',
                             }}
                           >
-                            {e.match.isLive ? `${e.match.scoreH ?? 0}-${e.match.scoreA ?? 0} ` : ''}
-                            {Number(e.val).toFixed(2)}
-                          </span>
-                          <span
-                            style={{
-                              marginLeft: 'auto',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              color: T.inkSoft,
-                            }}
-                          >
-                            {betMode === 'multiple' ? 'Multiple' : 'Single'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 11, color: T.inkSoft, marginBottom: 2 }}>
-                          {e.label || (e.key === '1' ? e.match.home : e.key === '2' ? e.match.away : 'Draw')}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: T.inkDim,
-                            letterSpacing: -0.1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                        >
-                          <TeamLogo name={e.match.home} size={14} />
-                          {e.match.home}
-                          <span style={{ opacity: 0.4 }}>vs</span>
-                          <TeamLogo name={e.match.away} size={14} />
-                          {e.match.away}
+                            GHS {fmtCedi(singleWin(e))}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))
               )}
@@ -755,146 +785,194 @@ export function OddBetSlip() {
             {/* stake + totals + place */}
             {entries.length > 0 && (
               <div style={{ borderTop: `1px solid ${T.line}`, background: T.surface }}>
-                <div
-                  style={{
-                    padding: '14px 16px 0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
+
+                {/* ── Single mode summary ── */}
+                {betMode === 'single' && (
+                  <div style={{ padding: '12px 16px 0' }}>
+                    {[
+                      { label: 'Selections', value: String(entries.length) },
+                      { label: 'Total Stake', value: `GHS ${fmtCedi(totalSingleStake)}` },
+                      { label: 'Potential Win', value: `GHS ${fmtCedi(potentialWin)}` },
+                    ].map((row) => (
+                      <div
+                        key={row.label}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '4px 0',
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ color: T.inkSoft, fontWeight: 600 }}>{row.label}</span>
+                        <span style={{ fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
+                          {row.value}
+                        </span>
+                      </div>
+                    ))}
+                    {totalSingleStake === 0 && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          background: 'rgba(232,185,74,0.1)',
+                          border: `1px solid rgba(232,185,74,0.2)`,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: T.greenBright,
+                        }}
+                      >
+                        Enter stake on each selection above.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Multiple mode: combined odds + single stake ── */}
+                {betMode === 'multiple' && (
+                  <>
                     <div
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: T.inkSoft,
-                        letterSpacing: 0.6,
+                        padding: '14px 16px 0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      {betMode === 'multiple' ? 'MULTIPLE' : 'SINGLES'} · {entries.length}X
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: T.inkSoft,
+                            letterSpacing: 0.6,
+                          }}
+                        >
+                          MULTIPLE · {entries.length}X
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 700,
+                            color: T.ink,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {totalOdds.toFixed(2)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          background: T.surfaceAlt,
+                          borderRadius: 12,
+                          padding: 4,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setStake((s) => Math.max(10, s - 100))}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 8,
+                            background: T.surface,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: 0,
+                            color: T.ink,
+                            cursor: 'pointer',
+                          }}
+                          aria-label="Decrease stake"
+                        >
+                          <OddIcon name="minus" size={14} />
+                        </button>
+                        <input
+                          value={stake}
+                          onChange={(e) => setStake(Number(e.target.value.replace(/[^\d]/g, '')) || 0)}
+                          aria-label="Stake amount"
+                          style={{
+                            width: 80,
+                            textAlign: 'center',
+                            background: 'transparent',
+                            border: 0,
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: T.ink,
+                            outline: 'none',
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setStake((s) => s + 100)}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 8,
+                            background: T.surface,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: 0,
+                            color: T.ink,
+                            cursor: 'pointer',
+                          }}
+                          aria-label="Increase stake"
+                        >
+                          <OddIcon name="plus" size={14} />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* quick stake chips */}
+                    <div style={{ display: 'flex', gap: 6, padding: '8px 16px 4px' }}>
+                      {[50, 100, 500, 1000, 'MAX'].map((v, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setStake(v === 'MAX' ? Math.floor(balance) : v)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 0',
+                            borderRadius: 8,
+                            background: T.surfaceAlt,
+                            color: T.ink,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: 0,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {v === 'MAX' ? 'MAX' : `+${v}`}
+                        </button>
+                      ))}
+                    </div>
+
                     <div
                       style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: T.ink,
-                        fontVariantNumeric: 'tabular-nums',
+                        padding: '8px 16px 0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 12,
                       }}
                     >
-                      {displayOdds.toFixed(2)}
+                      <span style={{ color: T.inkSoft, fontWeight: 600 }}>To Return</span>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          color: T.ink,
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        GHS {fmtCedi(potentialWin)}
+                      </span>
                     </div>
-                  </div>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      background: T.surfaceAlt,
-                      borderRadius: 12,
-                      padding: 4,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setStake((s) => Math.max(10, s - 100))}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 8,
-                        background: T.surface,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: 0,
-                        color: T.ink,
-                        cursor: 'pointer',
-                      }}
-                      aria-label="Decrease stake"
-                    >
-                      <OddIcon name="minus" size={14} />
-                    </button>
-                    <input
-                      value={stake}
-                      onChange={(e) => setStake(Number(e.target.value.replace(/[^\d]/g, '')) || 0)}
-                      aria-label="Stake amount"
-                      style={{
-                        width: 80,
-                        textAlign: 'center',
-                        background: 'transparent',
-                        border: 0,
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: T.ink,
-                        outline: 'none',
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setStake((s) => s + 100)}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 8,
-                        background: T.surface,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: 0,
-                        color: T.ink,
-                        cursor: 'pointer',
-                      }}
-                      aria-label="Increase stake"
-                    >
-                      <OddIcon name="plus" size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* quick stake chips */}
-                <div style={{ display: 'flex', gap: 6, padding: '8px 16px 4px' }}>
-                  {[50, 100, 500, 1000, 'MAX'].map((v, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setStake(v === 'MAX' ? Math.floor(balance) : v)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 0',
-                        borderRadius: 8,
-                        background: T.surfaceAlt,
-                        color: T.ink,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        border: 0,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {v === 'MAX' ? 'MAX' : `+${v}`}
-                    </button>
-                  ))}
-                </div>
-
-                <div
-                  style={{
-                    padding: '8px 16px 0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: 12,
-                  }}
-                >
-                  <span style={{ color: T.inkSoft, fontWeight: 600 }}>To Return</span>
-                  <span
-                    style={{
-                      fontWeight: 700,
-                      color: T.ink,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    GHS {fmtCedi(potentialWin)}
-                  </span>
-                </div>
+                  </>
+                )}
 
                 <div style={{ display: 'flex', gap: 8, padding: '12px 16px 16px' }}>
                   <button
