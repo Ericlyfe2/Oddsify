@@ -265,26 +265,31 @@ function publicMatch(m) {
   return rest;
 }
 
+const isBettable = (m) => !(m.finished && (m.finalSource === 'feed' || m.finalSource === 'manual'));
+
 /** Build a getOddsSnapshot-style payload that reflects all admin overrides. */
 export function buildPublicSnapshot(sportId = 'football', seedSlipFn) {
   const sports = compiledLeagues();
   const sport = sports.find((s) => s.id === sportId) || sports[0];
-  return {
-    sport: sport.id,
-    sports: sports.map((s) => ({
-      id: s.id,
-      name: s.name,
-      count: (s.leagues || []).reduce((n, l) => n + (l.matches?.length || 0), 0),
-    })),
-    featuredMatchId: sport.leagues[0]?.matches[0]?.id || null,
-    seedSlip: sport.id === 'football' && typeof seedSlipFn === 'function' ? seedSlipFn() : [],
-    leagues: (sport.leagues || []).map((lg) => ({
+  const buildLeagues = (s) => (s.leagues || [])
+    .map((lg) => ({
       id: lg.id,
       name: lg.name,
       region: lg.region,
       countryMeta: lg.countryMeta,
       crest: lg.crest,
-      matches: (lg.matches || []).map(publicMatch),
+      matches: (lg.matches || []).filter(isBettable).map(publicMatch),
+    }))
+    .filter((lg) => lg.matches.length > 0);
+  return {
+    sport: sport.id,
+    sports: sports.map((s) => ({
+      id: s.id,
+      name: s.name,
+      count: (s.leagues || []).reduce((n, l) => n + (l.matches || []).filter(isBettable).length, 0),
     })),
+    featuredMatchId: buildLeagues(sport)[0]?.matches[0]?.id || null,
+    seedSlip: sport.id === 'football' && typeof seedSlipFn === 'function' ? seedSlipFn() : [],
+    leagues: buildLeagues(sport),
   };
 }
