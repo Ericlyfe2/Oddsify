@@ -206,10 +206,15 @@ export function OddBetSlip() {
         className="betslip-panel"
         style={{
           position: 'fixed',
-          inset: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
           zIndex: 91,
+          maxHeight: '85vh',
+          borderRadius: '20px 20px 0 0',
           background: T.surface,
           color: T.ink,
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
           display: 'flex',
           flexDirection: 'column',
           opacity: open || lastBet ? 1 : 0,
