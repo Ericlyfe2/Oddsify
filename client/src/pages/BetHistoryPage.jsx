@@ -821,6 +821,25 @@ function HistoryRow({ bet, onOpen, onRebook }) {
   const visible = legs.slice(0, 2);
   const extra = Math.max(0, legs.length - visible.length);
 
+  // Outcome-based card tone: won/cashed out → green, lost → ash/grey
+  const tone = (() => {
+    if (isWon || isCashedOut) {
+      return {
+        card: 'rgba(34, 197, 94, 0.12)',
+        strip: 'rgba(34, 197, 94, 0.20)',
+        border: 'rgba(34, 197, 94, 0.45)',
+      };
+    }
+    if (isLost) {
+      return {
+        card: 'rgba(120, 120, 130, 0.14)',
+        strip: 'rgba(120, 120, 130, 0.22)',
+        border: 'rgba(120, 120, 130, 0.40)',
+      };
+    }
+    return { card: 'var(--surface)', strip: 'var(--surface-2)', border: 'var(--line)' };
+  })();
+
   return (
     <div style={{ display: 'flex', gap: 12 }}>
       {/* Date rail */}
@@ -859,9 +878,9 @@ function HistoryRow({ bet, onOpen, onRebook }) {
           flex: 1,
           minWidth: 0,
           textAlign: 'left',
-          background: 'var(--surface)',
+          background: tone.card,
           borderRadius: 'var(--r-md, 10px)',
-          border: '1px solid var(--line)',
+          border: `1px solid ${tone.border}`,
           boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.12))',
           overflow: 'hidden',
           cursor: 'pointer',
@@ -876,8 +895,8 @@ function HistoryRow({ bet, onOpen, onRebook }) {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '8px 12px',
-            background: 'var(--surface-2)',
-            borderBottom: '1px solid var(--line)',
+            background: tone.strip,
+            borderBottom: `1px solid ${tone.border}`,
           }}
         >
           <div>

@@ -153,6 +153,14 @@ export default function BetDetailPage() {
   else if (isCashedOut) totalReturn = cashOut;
   else if (isLost) totalReturn = 0;
 
+  // Outcome-based ticket tone: won/cashed out → green, lost → ash/grey
+  const tone =
+    isWon || isCashedOut
+      ? 'rgba(34, 197, 94, 0.12)'
+      : isLost
+        ? 'rgba(120, 120, 130, 0.14)'
+        : 'var(--bg)';
+
   const handleRebook = () => {
     if (!legs.length) return toast('No selections to rebook.', 'warn');
     const c = bet.bookingCode || bet.code || bet.id;
@@ -173,7 +181,7 @@ export default function BetDetailPage() {
   };
 
   return (
-    <Shell onBack={() => navigate(-1)}>
+    <Shell onBack={() => navigate(-1)} tone={tone}>
       {/* Ticket ID + Date */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
@@ -349,11 +357,11 @@ export default function BetDetailPage() {
   );
 }
 
-function Shell({ onBack, children }) {
+function Shell({ onBack, children, tone = 'var(--bg)' }) {
   const navigate = useNavigate();
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 414, minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{ width: '100%', maxWidth: 414, minHeight: '100vh', background: tone }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '13px 14px', background: 'var(--bg-soft)',
