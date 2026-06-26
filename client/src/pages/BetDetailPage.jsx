@@ -46,22 +46,12 @@ function getLegScore(leg, bet) {
   return null;
 }
 
-const STATUS_COLORS = {
-  won: '#16a34a',
-  lost: '#dc2626',
-  cashed_out: '#2563eb',
-  pending: '#eab308',
-  open: '#eab308',
-  void: '#6b7280',
-  cancelled: '#6b7280',
-};
-
 const LEG_COLORS = {
-  won: '#16a34a',
-  lost: '#dc2626',
-  pending: '#eab308',
-  live: '#f97316',
-  void: '#6b7280',
+  won: 'var(--win)',
+  lost: 'var(--danger)',
+  pending: 'var(--warn)',
+  live: 'var(--accent-hot)',
+  void: 'var(--text-dim)',
 };
 
 export default function BetDetailPage() {
@@ -123,7 +113,7 @@ export default function BetDetailPage() {
     return (
       <Shell onBack={() => navigate(-1)}>
         <div style={{ padding: 16 }}>
-          {[60, 200, 120, 120].map((h, i) => (
+          {[180, 100, 100].map((h, i) => (
             <div key={i} style={{ height: h, background: 'var(--surface)', borderRadius: 10, marginBottom: 10, opacity: 0.4 }} />
           ))}
         </div>
@@ -156,27 +146,12 @@ export default function BetDetailPage() {
   const isWon = status === 'won';
   const isCashedOut = status === 'cashed_out';
   const isLost = status === 'lost';
-  const isSettled = status !== 'open' && status !== 'pending';
   const betType = bet.type || (legs.length > 1 ? 'Multiple' : 'Single');
 
   let totalReturn = potential;
-  let profit = 0;
-  if (settledReturn != null) {
-    totalReturn = settledReturn;
-    profit = Number((settledReturn - stake).toFixed(2));
-  } else if (isWon) {
-    totalReturn = potential;
-    profit = Number((totalReturn - stake).toFixed(2));
-  } else if (isCashedOut) {
-    totalReturn = cashOut;
-    profit = Number((totalReturn - stake).toFixed(2));
-  } else if (isLost) {
-    totalReturn = 0;
-    profit = -stake;
-  }
-
-  const statusLabel = isCashedOut ? 'Cashed Out' : status.charAt(0).toUpperCase() + status.slice(1);
-  const statusColor = STATUS_COLORS[status] || '#eab308';
+  if (settledReturn != null) totalReturn = settledReturn;
+  else if (isCashedOut) totalReturn = cashOut;
+  else if (isLost) totalReturn = 0;
 
   const handleRebook = () => {
     if (!legs.length) return toast('No selections to rebook.', 'warn');
@@ -199,132 +174,114 @@ export default function BetDetailPage() {
 
   return (
     <Shell onBack={() => navigate(-1)}>
-      {/* Ticket Info Card */}
+      {/* Ticket ID + Date */}
       <div style={{
-        margin: '10px 12px 0', borderRadius: 10,
-        background: 'var(--surface)', border: '1px solid var(--line)',
-        padding: '14px 16px',
+        display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
+        borderBottom: '1px solid var(--line)',
       }}>
-        {/* Ticket ID + Date */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-            TICKET <span style={{ fontWeight: 700, color: 'var(--accent)', fontFamily: MONO }}>{code}</span>
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: MONO }}>
-            {fmtDate(bet.placedAt || bet.createdAt)}
-          </span>
-        </div>
-
-        {/* Bet Type + Status Badge */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
-          <span style={{
-            padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 700,
-            background: statusColor, color: '#fff',
-          }}>
-            {statusLabel}
-          </span>
-        </div>
-
-        {/* Total Return - big */}
-        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginBottom: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Return</span>
-            <span style={{
-              fontSize: 24, fontWeight: 800, fontFamily: MONO,
-              color: isWon || isCashedOut ? '#16a34a' : isLost ? '#dc2626' : 'var(--text)',
-            }}>
-              GHS {fmtMoney(totalReturn)}
-            </span>
-          </div>
-        </div>
-
-        {/* Summary rows */}
-        <InfoRow label="Total Stake" value={`GHS ${fmtMoney(stake)}`} />
-        <InfoRow label="Total Odds" value={odds.toFixed(2)} />
-        {isSettled && (
-          <InfoRow label="Profit / Loss"
-            value={`${profit >= 0 ? '+' : ''}GHS ${fmtMoney(profit)}`}
-            color={profit >= 0 ? '#16a34a' : '#dc2626'} />
-        )}
-        {isCashedOut && cashOut > 0 && (
-          <InfoRow label="Cashout Amount" value={`GHS ${fmtMoney(cashOut)}`} color="#2563eb" />
-        )}
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: 10, paddingTop: 14 }}>
-          <button type="button" onClick={handleShare} style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '11px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            background: 'var(--surface-2)', color: 'var(--text)',
-            border: '1px solid var(--line-strong)',
-          }}>
-            <Share2 size={15} /> Show Off
-          </button>
-          <button type="button" onClick={handleRebook} style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '11px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            background: 'var(--accent)', color: 'var(--gold-ink)', border: 'none',
-          }}>
-            <RotateCcw size={15} /> Remix Bet
-          </button>
-        </div>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          Ticket ID: <span style={{ fontWeight: 700, color: 'var(--accent)', fontFamily: MONO }}>{code}</span>
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: MONO }}>
+          {fmtDate(bet.placedAt || bet.createdAt)}
+        </span>
       </div>
 
-      {/* Booking Code Row */}
+      {/* Bet Type + Status */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 16px', borderBottom: '1px solid var(--line)',
+      }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
+      </div>
+
+      {/* Total Return */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 16px', borderBottom: '1px solid var(--line)',
+      }}>
+        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Return</span>
+        <span style={{
+          fontSize: 18, fontWeight: 800, fontFamily: MONO,
+          color: isWon || isCashedOut ? 'var(--win)' : 'var(--text)',
+        }}>
+          {fmtMoney(totalReturn)}
+        </span>
+      </div>
+
+      {/* Total Stake */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 16px', borderBottom: '1px solid var(--line)',
+      }}>
+        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Stake</span>
+        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: 'var(--text)' }}>
+          {fmtMoney(stake)}
+        </span>
+      </div>
+
+      {/* Total Odds */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 16px', borderBottom: '1px solid var(--line)',
+      }}>
+        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Odds</span>
+        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: 'var(--text)' }}>
+          {odds.toFixed(2)}
+        </span>
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
+        <button type="button" onClick={handleShare} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          padding: '11px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          background: 'var(--surface)', color: 'var(--text)',
+          border: '1px solid var(--line)',
+        }}>
+          <Share2 size={15} /> Show Off
+        </button>
+        <button type="button" onClick={handleRebook} style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          padding: '11px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          background: 'var(--accent)', color: 'var(--gold-ink)', border: 'none',
+        }}>
+          <RotateCcw size={15} /> Remix Bet
+        </button>
+      </div>
+
+      {/* Verify Code */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 16px',
+        padding: '10px 16px', borderBottom: '1px solid var(--line)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>BOOKING CODE</span>
+          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Verify Code:</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', fontFamily: MONO }}>{code}</span>
           <button type="button" onClick={() => { navigator.clipboard?.writeText(code); toast('Copied!', 'success'); }}
             style={{ background: 'none', border: 0, color: 'var(--accent)', cursor: 'pointer', padding: 2 }}>
             <Copy size={13} />
           </button>
         </div>
-        <button type="button" onClick={() => navigate('/codehub')}
-          style={{ background: 'none', border: 0, color: 'var(--accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          Load Code
-        </button>
-      </div>
-
-      {/* Selections Header */}
-      <div style={{ padding: '0 16px 8px', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-        Selections ({legs.length})
       </div>
 
       {/* Match Legs */}
       {legs.map((leg, i) => {
         const r = getLegState(leg, bet);
-        const lc = LEG_COLORS[r] || '#6b7280';
+        const lc = LEG_COLORS[r] || 'var(--text-dim)';
         const score = getLegScore(leg, bet);
         const hasScore = score && score.scoreHome != null;
         const selection = humanizePick(getSelectionLabel(leg), leg.home, leg.away);
         const marketName = leg.marketName || expandMarketName(leg.market);
         const legOdds = Number(leg.odds || leg.initialOdds || 0);
-        const gameId = leg.gameId || leg.matchId || leg.id?.toString().slice(-6) || '—';
 
         return (
-          <div key={i} style={{
-            margin: '0 12px 8px', borderRadius: 10,
-            background: 'var(--surface)', border: '1px solid var(--line)',
-            overflow: 'hidden',
-          }}>
-            {/* Game ID row */}
-            <div style={{
-              padding: '8px 14px', fontSize: 10, color: 'var(--text-dim)', fontFamily: MONO,
-              borderBottom: '1px solid var(--line)',
-            }}>
-              Game ID: {gameId}
-            </div>
-
+          <div key={i} style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
             {/* Teams */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '10px 14px',
-              background: 'var(--surface-2)',
+              padding: '8px 12px', borderRadius: 8,
+              background: 'var(--surface)', marginBottom: 8,
             }}>
               <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{leg.home}</span>
               <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>vs</span>
@@ -333,37 +290,33 @@ export default function BetDetailPage() {
 
             {/* Score */}
             {hasScore && (
-              <div style={{
-                padding: '6px 14px', fontSize: 12, color: 'var(--text-dim)',
-                borderBottom: '1px solid var(--line)',
-              }}>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
                 FT Score: <span style={{ fontWeight: 700, color: 'var(--text)', fontFamily: MONO }}>
                   {score.scoreHome} : {score.scoreAway}
                 </span>
               </div>
             )}
 
-            {/* Pick / Market / Outcome */}
-            <div style={{ padding: '10px 14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: `${lc}20`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: lc, flexShrink: 0,
-                }}>
-                  {r === 'won' ? '✓' : r === 'lost' ? '✗' : '•'}
-                </span>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text)' }}>
-                    Pick: <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{selection} @{legOdds.toFixed(2)}</span>
-                    {' '}<span style={{ color: lc, fontWeight: 700 }}>{r === 'won' ? '✓' : r === 'lost' ? '✗' : ''}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Market: {marketName}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                    Outcome: <span style={{ fontWeight: 600, color: lc }}>
-                      {r === 'won' ? 'Won' : r === 'lost' ? 'Lost' : r === 'live' ? 'Live' : 'Pending'}
-                    </span>
-                  </div>
+            {/* Pick + Market + Outcome */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{
+                width: 18, height: 18, borderRadius: '50%', marginTop: 1,
+                background: `${r === 'won' ? '#16a34a' : r === 'lost' ? '#dc2626' : '#eab308'}20`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 800, color: lc, flexShrink: 0,
+              }}>
+                {r === 'won' ? '✓' : r === 'lost' ? '✗' : '•'}
+              </span>
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text)' }}>
+                  Pick: <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{selection} @{legOdds.toFixed(2)}</span>
+                  {' '}<span style={{ color: lc, fontWeight: 700 }}>{r === 'won' ? '✓' : r === 'lost' ? '✗' : ''}</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Market: {marketName}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                  Outcome: <span style={{ fontWeight: 600, color: lc }}>
+                    {r === 'won' ? 'Won' : r === 'lost' ? 'Lost' : r === 'live' ? 'Live' : 'Pending'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -373,17 +326,17 @@ export default function BetDetailPage() {
 
       {/* Number of Bets */}
       <div style={{
-        padding: '12px 16px',
-        fontSize: 13, fontWeight: 600, color: 'var(--text)',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '12px 16px', borderBottom: '1px solid var(--line)',
       }}>
-        Number of Bets: {legs.length}
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Number of Bets: {legs.length}</span>
       </div>
 
       {/* Check Transaction History */}
       <button type="button" onClick={() => navigate('/my-bets')} style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         width: '100%', padding: '14px 16px',
-        background: 'var(--surface)', border: 'none', borderTop: '1px solid var(--line)',
+        background: 'transparent', border: 'none',
         borderBottom: '1px solid var(--line)',
         cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)',
       }}>
@@ -391,15 +344,7 @@ export default function BetDetailPage() {
         <ChevronRight size={16} color="var(--text-dim)" />
       </button>
 
-      {/* Delete / Close */}
-      <div style={{ padding: '20px 16px 100px', textAlign: 'center' }}>
-        <button type="button" onClick={() => navigate(-1)} style={{
-          background: 'none', border: 'none',
-          color: '#dc2626', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-        }}>
-          Close Ticket
-        </button>
-      </div>
+      <div style={{ height: 80 }} />
     </Shell>
   );
 }
@@ -409,7 +354,6 @@ function Shell({ onBack, children }) {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 414, minHeight: '100vh', background: 'var(--bg)' }}>
-        {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '13px 14px', background: 'var(--bg-soft)',
@@ -431,15 +375,6 @@ function Shell({ onBack, children }) {
         </div>
         {children}
       </div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, color }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
-      <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: color || 'var(--text)', fontFamily: MONO }}>{value}</span>
     </div>
   );
 }
