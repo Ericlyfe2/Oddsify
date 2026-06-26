@@ -96,7 +96,7 @@ export default function Home() {
         onBalanceClick={() => openDeposit()}
       />
       <OddPromoBanner onAction={() => navigate('/promos')} />
-      <QuickBetStrip matches={matches} loading={loading} picks={picks} onPick={togglePick} />
+      <QuickBetStrip matches={matches} loading={loading} picks={picks} onPick={togglePick} onMore={setSheetMatch} />
       <OddCategoryGrid liveCount={liveCount} onPick={(c) => navigate(c.to || '/')} />
 
       <div style={{ padding: '4px 16px 12px', overflow: 'hidden', minHeight: 49 }}>

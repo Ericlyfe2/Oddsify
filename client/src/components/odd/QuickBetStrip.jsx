@@ -42,24 +42,6 @@ function get1X2(match) {
   return { 1: Number(o['1']), X: Number(o['X'] ?? 0), 2: Number(o['2']) };
 }
 
-/**
- * Pull a secondary market's selections from the full nested markets map
- * (kept on the normalised match as `match.markets`). Returns an array of
- * { key, label, odds } or null when the market is absent.
- */
-function getMarket(match, mkt) {
-  const sels = match.markets?.[mkt]?.selections;
-  if (!sels || !sels.length) return null;
-  return sels.map((s) => ({ key: s.key, label: s.label || s.key, odds: Number(s.odds) }));
-}
-
-// Extra markets to surface beneath 1X2, with compact button labels.
-const EXTRA_MARKETS = [
-  { key: 'OU25', title: 'Total Goals 2.5', short: { Over: 'Over', Under: 'Under' } },
-  { key: 'BTTS', title: 'Both Teams To Score', short: { Yes: 'GG', No: 'NG' } },
-  { key: 'DC', title: 'Double Chance', short: { '1X': '1X', X2: 'X2', '12': '12' } },
-];
-
 function OddsBtn({ label, value, active, onClick }) {
   const T = useTokens();
   return (
@@ -100,43 +82,23 @@ function OddsBtn({ label, value, active, onClick }) {
   );
 }
 
-function MarketLabel({ children }) {
-  const T = useTokens();
-  return (
-    <div
-      style={{
-        fontSize: 9,
-        fontWeight: 700,
-        color: T.inkSoft,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        margin: '8px 0 4px',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function MatchCard({ match, picks, onPick }) {
+function MatchCard({ match, picks, onPick, onMore }) {
   const T = useTokens();
   const odds = get1X2(match);
   if (!odds) return null;
 
   // picks is keyed by match.id; only one selection per match can be active.
   const picked = picks?.[match.id];
-  const isActive = (mkt, out) => picked?.key === out && (picked?.market || '1X2') === mkt;
-  const click = (mkt, out, val, label) => onPick?.(match, out, val, mkt, label);
-
-  const extras = EXTRA_MARKETS
-    .map((cfg) => ({ ...cfg, sels: getMarket(match, cfg.key) }))
-    .filter((m) => m.sels);
+  const isActive = (out) => picked?.key === out && (picked?.market || '1X2') === '1X2';
+  const pick = (out) => onPick?.(match, out, odds[out], '1X2');
+  const marketCount = match.marketCount || 0;
 
   return (
     <article
       style={{
         flex: '0 0 280px',
         width: 280,
+        height: 144,
         scrollSnapAlign: 'start',
         background: T.surface,
         border: `1px solid ${T.line}`,
@@ -144,10 +106,27 @@ function MatchCard({ match, picks, onPick }) {
         padding: 12,
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
       }}
       aria-label={`${match.home} vs ${match.away}`}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      {/* Tappable header → opens full markets sheet */}
+      <button
+        type="button"
+        onClick={() => onMore?.(match)}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          minWidth: 0,
+          background: 'none',
+          border: 0,
+          padding: 0,
+          textAlign: 'left',
+          cursor: onMore ? 'pointer' : 'default',
+        }}
+        aria-label={`More markets for ${match.home} vs ${match.away}`}
+      >
         <div
           style={{
             fontSize: 13,
@@ -167,34 +146,19 @@ function MatchCard({ match, picks, onPick }) {
           <TeamLogo name={match.away} size={16} />
           {match.away}
         </div>
-        <div style={{ fontSize: 11, color: T.inkSoft }}>{relativeKickoff(match.time, match.day)}</div>
-      </div>
-
-      {/* Match Result (1X2) */}
-      <MarketLabel>Match Result</MarketLabel>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <OddsBtn label={match.home || 'Home'} value={odds['1']} active={isActive('1X2', '1')} onClick={() => click('1X2', '1', odds['1'])} />
-        <OddsBtn label="Draw" value={odds['X']} active={isActive('1X2', 'X')} onClick={() => click('1X2', 'X', odds['X'])} />
-        <OddsBtn label={match.away || 'Away'} value={odds['2']} active={isActive('1X2', '2')} onClick={() => click('1X2', '2', odds['2'])} />
-      </div>
-
-      {/* Extra markets */}
-      {extras.map((m) => (
-        <div key={m.key}>
-          <MarketLabel>{m.title}</MarketLabel>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {m.sels.map((s) => (
-              <OddsBtn
-                key={s.key}
-                label={m.short[s.key] || s.label}
-                value={s.odds}
-                active={isActive(m.key, s.key)}
-                onClick={() => click(m.key, s.key, s.odds, s.label)}
-              />
-            ))}
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: T.inkSoft }}>{relativeKickoff(match.time, match.day)}</span>
+          {marketCount > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: T.greenBright }}>+{marketCount} markets</span>
+          )}
         </div>
-      ))}
+      </button>
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        <OddsBtn label={match.home || 'Home'} value={odds['1']} active={isActive('1')} onClick={() => pick('1')} />
+        <OddsBtn label="Draw" value={odds['X']} active={isActive('X')} onClick={() => pick('X')} />
+        <OddsBtn label={match.away || 'Away'} value={odds['2']} active={isActive('2')} onClick={() => pick('2')} />
+      </div>
     </article>
   );
 }
@@ -209,7 +173,7 @@ function Skeletons() {
           style={{
             flex: '0 0 280px',
             width: 280,
-            height: 300,
+            height: 144,
             borderRadius: 12,
             background: T.surface,
             border: `1px solid ${T.line}`,
@@ -221,7 +185,7 @@ function Skeletons() {
   );
 }
 
-export default function QuickBetStrip({ matches, loading, picks, onPick }) {
+export default function QuickBetStrip({ matches, loading, picks, onPick, onMore }) {
   if (loading) return <Skeletons />;
   const quick = (matches || []).filter((m) => !m.isLive).slice(0, 6);
   const valid = quick.filter((m) => get1X2(m));
@@ -240,7 +204,7 @@ export default function QuickBetStrip({ matches, loading, picks, onPick }) {
       }}
     >
       {valid.map((m) => (
-        <MatchCard key={m.id} match={m} picks={picks} onPick={onPick} />
+        <MatchCard key={m.id} match={m} picks={picks} onPick={onPick} onMore={onMore} />
       ))}
     </div>
   );
