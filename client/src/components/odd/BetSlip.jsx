@@ -1022,7 +1022,7 @@ export function OddBetSlip() {
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      GHS {fmtCedi(potentialWin)}
+                      GHS {fmtCedi(betMode === 'single' ? totalSingleStake : potentialWin)}
                     </span>
                   </button>
                 </div>
