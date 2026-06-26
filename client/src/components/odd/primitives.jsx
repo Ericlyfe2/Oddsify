@@ -807,13 +807,49 @@ export function OddLeagueRow({ leagues = DEFAULT_LEAGUES, onPick }) {
 }
 
 /* ─── Match card with 1/X/2 odds tiles ─────────────────────── */
+// Extra markets surfaced inline beneath 1X2, with compact tile labels.
+const INLINE_EXTRA_MARKETS = [
+  { key: 'OU25', title: 'Total Goals 2.5', short: { Over: 'Over', Under: 'Under' } },
+  { key: 'BTTS', title: 'Both Teams To Score', short: { Yes: 'GG', No: 'NG' } },
+  { key: 'DC', title: 'Double Chance', short: { '1X': '1X', X2: 'X2', '12': '12' } },
+];
+
+function getMarketSels(match, mkt) {
+  const sels = match.markets?.[mkt]?.selections;
+  if (!sels || !sels.length) return null;
+  return sels.map((s) => ({ key: s.key, label: s.label || s.key, odds: Number(s.odds) }));
+}
+
+function InlineMarketLabel({ children }) {
+  const T = useTokens();
+  return (
+    <div
+      style={{
+        fontSize: 9,
+        fontWeight: 700,
+        color: T.inkSoft,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        margin: '10px 0 4px',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function OddMatchCard({ match, picks, onPick, onMore }) {
   const T = useTokens();
   const live = match.isLive;
-  const pickedKey = picks?.[match.id]?.key;
+  const picked = picks?.[match.id];
+  const isSel = (mkt, key) => picked?.key === key && (picked?.market || '1X2') === mkt;
   const odds = match.odds || {};
   const oddsEntries = Object.entries(odds);
   const leagueCode = match.league || match.leagueCode || match.leagueName?.split(' · ')[0] || '—';
+
+  const extras = INLINE_EXTRA_MARKETS
+    .map((cfg) => ({ ...cfg, sels: getMarketSels(match, cfg.key) }))
+    .filter((m) => m.sels);
 
   return (
     <div
@@ -904,6 +940,7 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
         })}
       </div>
 
+      {oddsEntries.length > 0 && <InlineMarketLabel>Match Result</InlineMarketLabel>}
       <div style={{ display: 'flex', gap: 6 }}>
         {oddsEntries.length > 0 ? (
           oddsEntries.map(([key, value]) => (
@@ -911,8 +948,8 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
               key={key}
               label={key === 'X' ? 'Draw' : key === '1' ? (match.home || 'Home') : (match.away || 'Away')}
               value={Number(value).toFixed(2)}
-              selected={pickedKey === key}
-              onClick={() => onPick?.(match, key, Number(value))}
+              selected={isSel('1X2', key)}
+              onClick={() => onPick?.(match, key, Number(value), '1X2')}
             />
           ))
         ) : (
@@ -931,6 +968,23 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
           </div>
         )}
       </div>
+
+      {extras.map((m) => (
+        <div key={m.key}>
+          <InlineMarketLabel>{m.title}</InlineMarketLabel>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {m.sels.map((s) => (
+              <OddsTile
+                key={s.key}
+                label={m.short[s.key] || s.label}
+                value={s.odds.toFixed(2)}
+                selected={isSel(m.key, s.key)}
+                onClick={() => onPick?.(match, s.key, s.odds, m.key, s.label)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       <button
         type="button"
