@@ -107,7 +107,8 @@ export function OddBetSlip() {
   const { account } = useAccount();
   const balance = account?.balance ?? 0;
   const entries = Object.values(picks);
-  const [stake, setStake] = useState(1000);
+  const MIN_STAKE = 400;
+  const [stake, setStake] = useState(MIN_STAKE);
   const [acceptChanges, setAcceptChanges] = useState(true);
   const [codeInput, setCodeInput] = useState('');
   const [betMode, setBetMode] = useState('single');
@@ -746,7 +747,7 @@ export function OddBetSlip() {
                         <input
                           value={singleStakes[e.match.id] ?? ''}
                           onChange={(ev) => setSingleStake(e.match.id, Number(ev.target.value.replace(/[^\d]/g, '')) || 0)}
-                          placeholder="Enter stake (GHS)"
+                          placeholder={`Min. GHS ${MIN_STAKE}`}
                           inputMode="numeric"
                           aria-label={`Stake for ${e.match.home} vs ${e.match.away}`}
                           style={{
@@ -873,7 +874,7 @@ export function OddBetSlip() {
                       >
                         <button
                           type="button"
-                          onClick={() => setStake((s) => Math.max(10, s - 100))}
+                          onClick={() => setStake((s) => Math.max(MIN_STAKE, s - 100))}
                           style={{
                             width: 28,
                             height: 28,
