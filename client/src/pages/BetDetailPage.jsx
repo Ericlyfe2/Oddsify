@@ -284,12 +284,14 @@ export default function BetDetailPage() {
 
           return (
             <div key={i} style={{
-              background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 13px',
+              background: '#19222b', border: '1px solid #222e38', borderRadius: 10, padding: '12px 14px',
             }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 8 }}>
-                {dtFormatted}{dtFormatted && marketName ? ' · ' : ''}{leg.league || leg.competition || ''}
+              {/* Meta line */}
+              <div style={{ fontSize: 10.5, color: '#56636d', marginBottom: 10 }}>
+                {leg.gameId ? `Game ID: ${leg.gameId} · ` : ''}{dtFormatted}{(dtFormatted && (leg.league || leg.competition)) ? ' · ' : ''}{leg.league || leg.competition || (betType === 'Single' ? 'QuickGame' : '')}
               </div>
-              <div style={{ display: 'flex', gap: 11 }}>
+              {/* Mark + team names */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -298,26 +300,29 @@ export default function BetDetailPage() {
                 }}>
                   {r === 'won' ? '✓' : r === 'lost' ? '✗' : '•'}
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{leg.home} vs {leg.away}</span>
-                  {hasScore && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>FT</span>
-                      <span style={{ color: 'var(--text)', fontSize: 12, fontWeight: 800, fontFamily: MONO }}>
-                        {score.scoreHome} : {score.scoreAway}
-                      </span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, borderTop: '1px solid var(--line)', paddingTop: 7 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>Market</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-soft)' }}>{marketName}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>Outcome</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 800, color: lc }}>{selection}</span>
-                    </div>
-                  </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{leg.home} vs {leg.away}</span>
+              </div>
+              {/* Match Tracker + FT score */}
+              {hasScore && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingLeft: 32 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--win, #22c66e)', background: 'rgba(34,198,110,.12)', padding: '3px 8px', borderRadius: 999 }}>
+                    ⟲ Match Tracker
+                  </span>
+                  <span style={{ color: '#56636d', fontSize: 11 }}>FT</span>
+                  <span style={{ color: 'var(--text)', fontSize: 13, fontWeight: 800, fontFamily: MONO }}>
+                    {score.scoreHome} : {score.scoreAway}
+                  </span>
+                </div>
+              )}
+              {/* Market / Outcome rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 32, marginTop: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11.5, color: '#56636d' }}>Market</span>
+                  <span style={{ fontSize: 11.5, color: 'var(--text-soft)' }}>{marketName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11.5, color: '#56636d' }}>Outcome</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: lc }}>{selection}</span>
                 </div>
               </div>
             </div>
