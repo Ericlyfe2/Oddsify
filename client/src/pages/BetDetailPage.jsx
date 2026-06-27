@@ -161,6 +161,9 @@ export default function BetDetailPage() {
         ? 'rgba(120, 120, 130, 0.14)'
         : 'var(--bg)';
 
+  // Big-win celebration: single selection that returned far more than staked
+  const showCheer = isWon && legs.length === 1 && stake > 0 && totalReturn / stake >= 10;
+
   const handleRebook = () => {
     if (!legs.length) return toast('No selections to rebook.', 'warn');
     const c = bet.bookingCode || bet.code || bet.id;
@@ -182,178 +185,182 @@ export default function BetDetailPage() {
 
   return (
     <Shell onBack={() => navigate(-1)} tone={tone}>
-      {/* Ticket ID + Date */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-        borderBottom: '1px solid var(--line)',
-      }}>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          Ticket ID: <span style={{ fontWeight: 700, color: 'var(--accent)', fontFamily: MONO }}>{code}</span>
-        </span>
-        <span style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: MONO }}>
-          {fmtDate(bet.placedAt || bet.createdAt)}
-        </span>
+      {/* Summary card */}
+      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--line)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              Ticket No. <span style={{ fontWeight: 700, color: 'var(--accent)', fontFamily: MONO }}>{code}</span>
+            </span>
+            <span style={{ fontSize: 10.5, color: 'var(--text-dim)', fontFamily: MONO }}>
+              {fmtDate(bet.placedAt || bet.createdAt)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
+            <StatusPill status={status} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)' }}>Total Return</span>
+          <span style={{
+            fontSize: 26, fontWeight: 800, fontFamily: MONO, letterSpacing: '-0.5px',
+            color: isWon || isCashedOut ? 'var(--win)' : 'var(--text-dim)',
+          }}>
+            {fmtMoney(totalReturn)}
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Total Stake</span>
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: 'var(--text)' }}>{fmtMoney(stake)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>Total Odds</span>
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: 'var(--text)' }}>{odds.toFixed(2)}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Bet Type + Status */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
-      </div>
-
-      {/* Total Return */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Return</span>
-        <span style={{
-          fontSize: 18, fontWeight: 800, fontFamily: MONO,
-          color: isWon || isCashedOut ? 'var(--win)' : 'var(--text)',
+      {/* Celebration banner */}
+      {showCheer && (
+        <div style={{
+          margin: '12px 16px 0', borderRadius: 10, padding: '11px 14px',
+          background: 'linear-gradient(90deg, var(--accent), var(--accent-strong, var(--accent)))',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          {fmtMoney(totalReturn)}
-        </span>
-      </div>
-
-      {/* Total Stake */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Stake</span>
-        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: 'var(--text)' }}>
-          {fmtMoney(stake)}
-        </span>
-      </div>
-
-      {/* Total Odds */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Total Odds</span>
-        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: 'var(--text)' }}>
-          {odds.toFixed(2)}
-        </span>
-      </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--gold-ink)' }}>Congratulations!</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gold-ink)', opacity: 0.85 }}>You are Amazing! 🎉</span>
+          </div>
+          <button type="button" onClick={handleShare} style={{
+            background: 'var(--bg)', color: 'var(--accent)', fontSize: 12, fontWeight: 800,
+            padding: '8px 16px', borderRadius: 7, border: 0, cursor: 'pointer',
+          }}>
+            Show Off
+          </button>
+        </div>
+      )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ display: 'flex', gap: 10, padding: '14px 16px 8px' }}>
         <button type="button" onClick={handleShare} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '11px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-          background: 'var(--surface)', color: 'var(--text)',
-          border: '1px solid var(--line)',
+          padding: '12px 0', borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: 'pointer',
+          background: 'var(--accent)', color: 'var(--gold-ink)', border: 'none',
         }}>
           <Share2 size={15} /> Show Off
         </button>
         <button type="button" onClick={handleRebook} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '11px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-          background: 'var(--accent)', color: 'var(--gold-ink)', border: 'none',
+          padding: '12px 0', borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: 'pointer',
+          background: 'var(--win, #16a05a)', color: '#fff', border: 'none',
         }}>
           <RotateCcw size={15} /> Remix Bet
         </button>
       </div>
 
       {/* Verify Code */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Verify Code:</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)', fontFamily: MONO }}>{code}</span>
-          <button type="button" onClick={() => { navigator.clipboard?.writeText(code); toast('Copied!', 'success'); }}
-            style={{ background: 'none', border: 0, color: 'var(--accent)', cursor: 'pointer', padding: 2 }}>
-            <Copy size={13} />
-          </button>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 16px 10px' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Verify Code:</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', fontFamily: MONO, letterSpacing: 0.5 }}>{code}</span>
+        <button type="button" onClick={() => { navigator.clipboard?.writeText(code); toast('Copied!', 'success'); }}
+          style={{ background: 'none', border: 0, color: 'var(--accent)', cursor: 'pointer', padding: 2 }}>
+          <Copy size={12} />
+        </button>
       </div>
 
       {/* Match Legs */}
-      {legs.map((leg, i) => {
-        const r = getLegState(leg, bet);
-        const lc = LEG_COLORS[r] || 'var(--text-dim)';
-        const score = getLegScore(leg, bet);
-        const hasScore = score && score.scoreHome != null;
-        const selection = humanizePick(getSelectionLabel(leg), leg.home, leg.away);
-        const marketName = leg.marketName || expandMarketName(leg.market);
-        const legOdds = Number(leg.odds || leg.initialOdds || 0);
+      <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {legs.map((leg, i) => {
+          const r = getLegState(leg, bet);
+          const lc = LEG_COLORS[r] || 'var(--text-dim)';
+          const score = getLegScore(leg, bet);
+          const hasScore = score && score.scoreHome != null;
+          const selection = humanizePick(getSelectionLabel(leg), leg.home, leg.away);
+          const marketName = leg.marketName || expandMarketName(leg.market);
+          const dt = leg.matchDate || leg.kickoff;
+          const dtFormatted = dt ? fmtDate(dt) : '';
 
-        return (
-          <div key={i} style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
-            {/* Teams */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '8px 12px', borderRadius: 8,
-              background: 'var(--surface)', marginBottom: 8,
+          return (
+            <div key={i} style={{
+              background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 13px',
             }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{leg.home}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>vs</span>
-              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{leg.away}</span>
-            </div>
-
-            {/* Score */}
-            {hasScore && (
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
-                FT Score: <span style={{ fontWeight: 700, color: 'var(--text)', fontFamily: MONO }}>
-                  {score.scoreHome} : {score.scoreAway}
-                </span>
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 8 }}>
+                {dtFormatted}{dtFormatted && marketName ? ' · ' : ''}{leg.league || leg.competition || ''}
               </div>
-            )}
-
-            {/* Pick + Market + Outcome */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{
-                width: 18, height: 18, borderRadius: '50%', marginTop: 1,
-                background: `${r === 'won' ? '#16a34a' : r === 'lost' ? '#dc2626' : '#eab308'}20`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 800, color: lc, flexShrink: 0,
-              }}>
-                {r === 'won' ? '✓' : r === 'lost' ? '✗' : '•'}
-              </span>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--text)' }}>
-                  Pick: <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{selection} @{legOdds.toFixed(2)}</span>
-                  {' '}<span style={{ color: lc, fontWeight: 700 }}>{r === 'won' ? '✓' : r === 'lost' ? '✗' : ''}</span>
+              <div style={{ display: 'flex', gap: 11 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: r === 'won' ? 'rgba(34,198,110,.16)' : r === 'lost' ? 'rgba(138,152,163,.16)' : 'rgba(234,179,8,.16)',
+                  color: lc, fontSize: 13, fontWeight: 800,
+                }}>
+                  {r === 'won' ? '✓' : r === 'lost' ? '✗' : '•'}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Market: {marketName}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                  Outcome: <span style={{ fontWeight: 600, color: lc }}>
-                    {r === 'won' ? 'Won' : r === 'lost' ? 'Lost' : r === 'live' ? 'Live' : 'Pending'}
-                  </span>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{leg.home} vs {leg.away}</span>
+                  {hasScore && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>FT</span>
+                      <span style={{ color: 'var(--text)', fontSize: 12, fontWeight: 800, fontFamily: MONO }}>
+                        {score.scoreHome} : {score.scoreAway}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, borderTop: '1px solid var(--line)', paddingTop: 7 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>Market</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-soft)' }}>{marketName}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>Outcome</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 800, color: lc }}>{selection}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-
-      {/* Number of Bets */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '12px 16px', borderBottom: '1px solid var(--line)',
-      }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Number of Bets: {legs.length}</span>
+          );
+        })}
       </div>
 
-      {/* Check Transaction History */}
+      {/* Footer: number of bets + transaction history link */}
       <button type="button" onClick={() => navigate('/my-bets')} style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        width: '100%', padding: '14px 16px',
-        background: 'transparent', border: 'none',
-        borderBottom: '1px solid var(--line)',
-        cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)',
+        width: '100%', padding: '16px 16px 20px',
+        background: 'transparent', border: 'none', cursor: 'pointer',
       }}>
-        <span>Check Transaction History</span>
-        <ChevronRight size={16} color="var(--text-dim)" />
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          Number of Bets: <span style={{ color: 'var(--text)', fontWeight: 700 }}>{legs.length}</span>
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 2 }}>
+          Transaction History <ChevronRight size={14} />
+        </span>
       </button>
 
-      <div style={{ height: 80 }} />
+      <div style={{ height: 24 }} />
     </Shell>
+  );
+}
+
+function StatusPill({ status }) {
+  const cfg = {
+    won: { bg: 'rgba(34,198,110,.16)', fg: 'var(--win, #22c66e)', icon: '🏆', label: 'Won' },
+    cashed_out: { bg: 'rgba(106,208,255,.16)', fg: 'var(--accent-cool, #6ad0ff)', icon: '↩', label: 'Cashed Out' },
+    lost: { bg: 'rgba(138,152,163,.14)', fg: 'var(--text-dim)', icon: '✕', label: 'Lost' },
+    pending: { bg: 'rgba(234,179,8,.16)', fg: 'var(--warn, #eab308)', icon: '⏱', label: 'Pending' },
+    open: { bg: 'rgba(234,179,8,.16)', fg: 'var(--warn, #eab308)', icon: '⏱', label: 'Open' },
+    void: { bg: 'var(--surface-2)', fg: 'var(--text-dim)', icon: '–', label: 'Void' },
+  }[status] || { bg: 'var(--surface-2)', fg: 'var(--text-dim)', icon: '', label: status || '—' };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 5, padding: '4px 11px', borderRadius: 6, background: cfg.bg,
+    }}>
+      <span style={{ fontSize: 12 }}>{cfg.icon}</span>
+      <span style={{ color: cfg.fg, fontSize: 12, fontWeight: 800 }}>{cfg.label}</span>
+    </div>
   );
 }
 
