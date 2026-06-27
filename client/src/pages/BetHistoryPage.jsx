@@ -45,6 +45,11 @@ const FILTERS = [
   { key: 'cashout', label: 'Cashout Available' },
   { key: 'live', label: 'Live Games' },
 ];
+const HISTORY_FILTERS = [
+  { key: 'settled', label: 'Settled' },
+  { key: 'unsettled', label: 'Unsettled' },
+  { key: 'all', label: 'All' },
+];
 
 function fmt(n) {
   return Number(n || 0).toFixed(2);
@@ -90,6 +95,14 @@ function isBetOpen(bet) {
   return bet.status === 'open' || bet.status === 'pending';
 }
 
+function filterHistoryBets(bets, filter) {
+  if (filter === 'all') return bets;
+  return bets.filter((b) => {
+    const settled = b.status !== 'open' && b.status !== 'pending';
+    return filter === 'settled' ? settled : !settled;
+  });
+}
+
 function handleRebook(e, bet, navigate, toast) {
   e.stopPropagation();
   const legs = bet.legs || bet.selections || [];
@@ -115,6 +128,7 @@ export default function BetHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [historyFilter, setHistoryFilter] = useState('settled');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
@@ -184,6 +198,23 @@ export default function BetHistoryPage() {
     return f;
   }, [openBets, filter, search]);
 
+  const filteredSettled = useMemo(() => {
+    let f = filterHistoryBets(settledBets, historyFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      f = f.filter((b) => {
+        const code = (b.bookingCode || b.code || '').toLowerCase();
+        const legs = b.legs || b.selections || [];
+        const matchText = legs
+          .map((l) => `${l.home || ''} ${l.away || ''}`)
+          .join(' ')
+          .toLowerCase();
+        return code.includes(q) || matchText.includes(q);
+      });
+    }
+    return f;
+  }, [settledBets, historyFilter, search]);
+
   const openCashoutConfirm = (bet) => {
     const offer = cashoutOffers[bet.id];
     const value = offer?.cashOut || bet.cashoutOffer || bet.cashOutValue || 0;
@@ -224,13 +255,21 @@ export default function BetHistoryPage() {
 
   const balance = Number(account.balance || 0);
   const isOpen = tab === 'open';
-  const displayBets = isOpen ? filteredOpen : settledBets;
+  const displayBets = isOpen ? filteredOpen : filteredSettled;
 
   return (
     <div className="min-h-screen flex items-start justify-center" style={{ background: 'var(--bg)' }}>
       <div className="w-full flex flex-col" style={{ maxWidth: 414, minHeight: '100vh', background: 'var(--bg)' }}>
         <TabBar openCount={openBets.length} activeTab={tab} onTabChange={setTab} balance={balance} />
-        <FilterBar filter={filter} onFilterChange={setFilter} search={search} onSearchChange={setSearch} />
+        <FilterBar
+          tab={tab}
+          filter={filter}
+          onFilterChange={setFilter}
+          historyFilter={historyFilter}
+          onHistoryFilterChange={setHistoryFilter}
+          search={search}
+          onSearchChange={setSearch}
+        />
 
         <div style={{ padding: '12px 12px 16px' }}>
           {loading ? (
@@ -245,7 +284,11 @@ export default function BetHistoryPage() {
                     : filter !== 'all'
                       ? 'No bets match this filter'
                       : 'No open bets'
-                  : 'No bet history yet'
+                  : search
+                    ? 'No bets match your search'
+                    : historyFilter !== 'all'
+                      ? `No ${historyFilter} bets`
+                      : 'No bet history yet'
               }
               hint={
                 isOpen
@@ -398,20 +441,24 @@ function TabBar({ openCount, activeTab, onTabChange, balance }) {
 }
 
 // ─── Filter Bar ──────────────────────────────────────────────────
-function FilterBar({ filter, onFilterChange, search, onSearchChange }) {
+function FilterBar({ tab, filter, onFilterChange, historyFilter, onHistoryFilterChange, search, onSearchChange }) {
   const T = useTokens();
+  const isOpen = tab === 'open';
+  const chips = isOpen ? FILTERS : HISTORY_FILTERS;
+  const activeKey = isOpen ? filter : historyFilter;
+  const onChipChange = isOpen ? onFilterChange : onHistoryFilterChange;
 
   return (
     <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
       <div className="flex items-center justify-between" style={{ padding: '10px 16px' }}>
         <div className="flex items-center" style={{ gap: 6 }}>
-          {FILTERS.map(({ key, label }) => {
-            const active = filter === key;
+          {chips.map(({ key, label }) => {
+            const active = activeKey === key;
             return (
               <button
                 key={key}
                 type="button"
-                onClick={() => onFilterChange(key)}
+                onClick={() => onChipChange(key)}
                 className="select-none"
                 style={{
                   background: active ? 'var(--accent)' : 'var(--surface-2)',
@@ -925,6 +972,89 @@ function HistoryRow({ bet, onOpen, onRebook }) {
 
         {/* Body */}
         <div style={{ padding: '10px 12px' }}>
+          {/* Return section — leads the card body, mirroring the design's hierarchy */}
+          {isCashedOut ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Cashout Amount
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
+                  GHS {fmt(cashOut || returnAmount)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Profit/Loss
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: profit >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                  {profit >= 0 ? '+' : ''}GHS {fmt(Math.abs(profit))}
+                </div>
+              </div>
+            </div>
+          ) : isWon ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Total Return
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
+                  GHS {fmt(returnAmount)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Profit
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
+                  +GHS {fmt(profit)}
+                </div>
+              </div>
+            </div>
+          ) : isLost ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Total Return
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--text-dim)' }}>
+                  GHS 0.00
+                </div>
+              </div>
+              <HistoryStatusPill status={status} />
+            </div>
+          ) : settled ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Total Return
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--text-dim)' }}>
+                  GHS {fmt(returnAmount)}
+                </div>
+              </div>
+              <HistoryStatusPill status={status} />
+            </div>
+          ) : null}
+
+          {/* Stake row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Total Stake</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)', fontFamily: MONO }}>GHS {fmt(stake)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Total Odds</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)', fontFamily: MONO }}>{odds.toFixed(2)}</span>
+          </div>
+
+          {/* Sub-label + ticket number footer */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
+              {betType === 'Single' ? 'QuickGame' : `${legs.length} selection${legs.length === 1 ? '' : 's'}`}
+            </span>
+            <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>No. {bet.id?.slice(-8) || '—'}</span>
+          </div>
+
           {/* Match list */}
           <div style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.55, marginBottom: 8 }}>
             {visible.map((m, i) => (
@@ -941,163 +1071,6 @@ function HistoryRow({ bet, onOpen, onRebook }) {
               Settled: {settlementTime}
             </div>
           )}
-
-          {/* Stake + Odds row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 500 }}>Stake: GHS {fmt(stake)}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 500 }}>
-              Odds: <span style={{ fontWeight: 700, color: 'var(--text)', fontFamily: MONO }}>{odds.toFixed(2)}</span>
-            </span>
-          </div>
-
-          {/* Return section */}
-          {isCashedOut ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: 8,
-                borderTop: '1px solid var(--line)',
-                marginTop: 8,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Cashout Amount
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: MONO,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--accent)',
-                  }}
-                >
-                  GHS {fmt(cashOut || returnAmount)}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Profit/Loss
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: MONO,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: profit >= 0 ? 'var(--accent)' : 'var(--danger)',
-                  }}
-                >
-                  {profit >= 0 ? '+' : ''}GHS {fmt(Math.abs(profit))}
-                </div>
-              </div>
-            </div>
-          ) : isWon ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: 8,
-                borderTop: '1px solid var(--line)',
-                marginTop: 8,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Total Return
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: MONO,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--accent)',
-                  }}
-                >
-                  GHS {fmt(returnAmount)}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Profit
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: MONO,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--accent)',
-                  }}
-                >
-                  +GHS {fmt(profit)}
-                </div>
-              </div>
-            </div>
-          ) : isLost ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: 8,
-                borderTop: '1px solid var(--line)',
-                marginTop: 8,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Total Return
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: MONO,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--text-dim)',
-                  }}
-                >
-                  GHS 0.00
-                </div>
-              </div>
-              <HistoryStatusPill status={status} />
-            </div>
-          ) : settled ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: 8,
-                borderTop: '1px solid var(--line)',
-                marginTop: 8,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Total Return
-                </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    fontFamily: MONO,
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--text-dim)',
-                  }}
-                >
-                  GHS {fmt(returnAmount)}
-                </div>
-              </div>
-              <HistoryStatusPill status={status} />
-            </div>
-          ) : null}
 
           {/* Rebook button */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 8 }}>
