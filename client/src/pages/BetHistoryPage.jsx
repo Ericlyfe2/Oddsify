@@ -779,40 +779,6 @@ function SelectionRow({ leg, last }) {
 // ─── HistoryRow — date rail + status pill + matches + Rebook ────
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function HistoryStatusPill({ status }) {
-  const cfg = {
-    won: { bg: 'rgba(var(--accent-rgb), 0.2)', color: 'var(--accent)', Icon: Trophy, label: 'Won' },
-    cashed_out: {
-      bg: 'rgba(var(--accent-cool-rgb), 0.2)',
-      color: 'var(--accent-cool)',
-      Icon: Copy,
-      label: 'Cashed Out',
-    },
-    lost: { bg: 'rgba(var(--danger-rgb), 0.18)', color: 'var(--danger)', Icon: XCircle, label: 'Lost' },
-    pending: { bg: 'rgba(var(--warn-rgb), 0.2)', color: 'var(--warn)', Icon: Clock, label: 'Pending' },
-    void: { bg: 'var(--surface-2)', color: 'var(--text-dim)', Icon: Ban, label: 'Void' },
-    cancelled: { bg: 'var(--surface-2)', color: 'var(--text-dim)', Icon: Ban, label: 'Cancelled' },
-  }[status] || { bg: 'var(--surface-2)', color: 'var(--text-dim)', Icon: Clock, label: status || '—' };
-  const { Icon } = cfg;
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '3px 10px',
-        borderRadius: 999,
-        background: cfg.bg,
-        color: cfg.color,
-        fontSize: 11,
-        fontWeight: 700,
-      }}
-    >
-      <Icon size={12} /> {cfg.label}
-    </span>
-  );
-}
-
 function getBetReturn(bet) {
   const status = bet.status || 'pending';
   const stake = Number(bet.stake || 0);
@@ -856,246 +822,61 @@ function HistoryRow({ bet, onOpen, onRebook }) {
   const isWon = status === 'won';
   const isCashedOut = status === 'cashed_out';
   const isLost = status === 'lost';
-  const settled = status !== 'open' && status !== 'pending';
-  const { returnAmount, profit } = getBetReturn(bet);
-  const cashOut = Number(bet.cashOut || 0);
+  const { returnAmount } = getBetReturn(bet);
 
   const placed = new Date(bet.placedAt || bet.createdAt || Date.now());
   const day = placed.getDate();
   const month = MONTH_NAMES[placed.getMonth()];
-  const settlementTime = bet.settledAt ? fmtFull(bet.settledAt) : null;
 
-  const visible = legs.slice(0, 2);
-  const extra = Math.max(0, legs.length - visible.length);
+  const barBg = (isWon || isCashedOut) ? '#1aa64f' : isLost ? '#9aa6af' : 'var(--surface-2)';
+  const barFg = (isWon || isCashedOut || isLost) ? '#fff' : 'var(--text)';
+  const returnColor = (isWon || isCashedOut) ? 'var(--win, #22c66e)' : 'var(--text-dim)';
+  const sub = betType === 'Single' ? 'QuickGame' : `${legs.length} selection${legs.length === 1 ? '' : 's'}`;
 
-  // Outcome-based card tone: won/cashed out → green, lost → ash/grey
-  const tone = (() => {
-    if (isWon || isCashedOut) {
-      return {
-        card: 'rgba(34, 197, 94, 0.12)',
-        strip: 'rgba(34, 197, 94, 0.20)',
-        border: 'rgba(34, 197, 94, 0.45)',
-      };
-    }
-    if (isLost) {
-      return {
-        card: 'rgba(120, 120, 130, 0.14)',
-        strip: 'rgba(120, 120, 130, 0.22)',
-        border: 'rgba(120, 120, 130, 0.40)',
-      };
-    }
-    return { card: 'var(--surface)', strip: 'var(--surface-2)', border: 'var(--line)' };
-  })();
+  const statusCfg = {
+    won: { icon: '🏆', label: 'Won' },
+    cashed_out: { icon: '↩', label: 'Cashed Out' },
+    lost: { icon: '✕', label: 'Lost' },
+    pending: { icon: '⏱', label: 'Pending' },
+    void: { icon: '–', label: 'Void' },
+    cancelled: { icon: '–', label: 'Cancelled' },
+  }[status] || { icon: '', label: status || '—' };
 
   return (
     <div style={{ display: 'flex', gap: 12 }}>
       {/* Date rail */}
       <div style={{ width: 34, flexShrink: 0, textAlign: 'center', paddingTop: 10 }}>
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 800,
-            color: 'var(--text)',
-            lineHeight: 1,
-            fontFamily: MONO,
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {day}
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            color: 'var(--text-dim)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            marginTop: 2,
-          }}
-        >
-          {month}
-        </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', lineHeight: 1, fontFamily: MONO }}>{day}</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{month}</div>
       </div>
 
       {/* Card */}
-      <button
-        type="button"
-        onClick={onOpen}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          textAlign: 'left',
-          background: tone.card,
-          borderRadius: 'var(--r-md, 10px)',
-          border: `1px solid ${tone.border}`,
-          boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.12))',
-          overflow: 'hidden',
-          cursor: 'pointer',
-          padding: 0,
-          color: 'inherit',
-        }}
-      >
-        {/* Strip */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 12px',
-            background: tone.strip,
-            borderBottom: `1px solid ${tone.border}`,
-          }}
-        >
-          <div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{betType}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                ID: {bet.id?.slice(-8) || '—'}
-              </span>
-              {bet.bookingCode && (
-                <>
-                  <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>·</span>
-                  <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, fontFamily: MONO }}>
-                    {bet.bookingCode}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <HistoryStatusPill status={status} />
-            <span style={{ color: 'var(--text-dim)', display: 'inline-flex' }}>
-              <ChevronRight size={16} />
-            </span>
+      <button type="button" onClick={onOpen} style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--line)', overflow: 'hidden', cursor: 'pointer', padding: 0, color: 'inherit' }}>
+        {/* Solid colored header bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: barBg, borderRadius: '10px 10px 0 0' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: barFg }}>{betType}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12, color: barFg }}>{statusCfg.icon}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: barFg }}>{statusCfg.label}</span>
+            <ChevronRight size={14} color={barFg} />
           </div>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '10px 12px' }}>
-          {/* Return section — leads the card body, mirroring the design's hierarchy */}
-          {isCashedOut ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Cashout Amount
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
-                  GHS {fmt(cashOut || returnAmount)}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Profit/Loss
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: profit >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
-                  {profit >= 0 ? '+' : ''}GHS {fmt(Math.abs(profit))}
-                </div>
-              </div>
-            </div>
-          ) : isWon ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Total Return
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
-                  GHS {fmt(returnAmount)}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Profit
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--accent)' }}>
-                  +GHS {fmt(profit)}
-                </div>
-              </div>
-            </div>
-          ) : isLost ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Total Return
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--text-dim)' }}>
-                  GHS 0.00
-                </div>
-              </div>
-              <HistoryStatusPill status={status} />
-            </div>
-          ) : settled ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Total Return
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', color: 'var(--text-dim)' }}>
-                  GHS {fmt(returnAmount)}
-                </div>
-              </div>
-              <HistoryStatusPill status={status} />
-            </div>
-          ) : null}
-
-          {/* Stake row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--line)' }}>
+        <div style={{ padding: '10px 12px 12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Total Return</span>
+            <span style={{ fontSize: 14, fontWeight: 800, fontFamily: MONO, color: returnColor }}>
+              {isLost ? '₵0.00' : `₵${fmt(returnAmount)}`}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Total Stake</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)', fontFamily: MONO }}>GHS {fmt(stake)}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: 'var(--text-soft)' }}>₵{fmt(stake)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Total Odds</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)', fontFamily: MONO }}>{odds.toFixed(2)}</span>
-          </div>
-
-          {/* Sub-label + ticket number footer */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
-              {betType === 'Single' ? 'QuickGame' : `${legs.length} selection${legs.length === 1 ? '' : 's'}`}
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{sub}</span>
             <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>No. {bet.id?.slice(-8) || '—'}</span>
-          </div>
-
-          {/* Match list */}
-          <div style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.55, marginBottom: 8 }}>
-            {visible.map((m, i) => (
-              <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {m.home || ''} v {m.away || ''}
-              </div>
-            ))}
-            {extra > 0 && <div style={{ color: 'var(--text-dim)' }}>…(and {extra} other matches)</div>}
-          </div>
-
-          {/* Settlement time for settled bets */}
-          {settled && settlementTime && (
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6, fontFamily: MONO }}>
-              Settled: {settlementTime}
-            </div>
-          )}
-
-          {/* Rebook button */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 8 }}>
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onRebook?.(e);
-              }}
-              role="button"
-              tabIndex={0}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                background: 'var(--accent)',
-                color: 'var(--gold-ink)',
-                fontWeight: 700,
-                fontSize: 13,
-                padding: '6px 12px',
-                borderRadius: 'var(--r-sm, 6px)',
-                cursor: 'pointer',
-              }}
-            >
-              <RotateCcw size={13} /> Rebook
-            </span>
           </div>
         </div>
       </button>

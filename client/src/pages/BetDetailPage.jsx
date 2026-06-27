@@ -335,7 +335,7 @@ export default function BetDetailPage() {
           Number of Bets: <span style={{ color: 'var(--text)', fontWeight: 700 }}>{legs.length}</span>
         </span>
         <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 2 }}>
-          Transaction History <ChevronRight size={14} />
+          Bet Details <ChevronRight size={14} />
         </span>
       </button>
 
