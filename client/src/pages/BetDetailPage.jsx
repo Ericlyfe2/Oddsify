@@ -205,7 +205,7 @@ export default function BetDetailPage() {
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)' }}>Total Return</span>
           <span style={{
             fontSize: 26, fontWeight: 800, fontFamily: MONO, letterSpacing: '-0.5px',
-            color: isWon || isCashedOut ? 'var(--win)' : 'var(--text-dim)',
+            color: isWon || isCashedOut ? '#004d24' : 'var(--text-dim)',
           }}>
             {fmtMoney(totalReturn)}
           </span>
@@ -247,14 +247,14 @@ export default function BetDetailPage() {
         <button type="button" onClick={handleShare} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           padding: '12px 0', borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: 'pointer',
-          background: 'var(--accent)', color: 'var(--gold-ink)', border: 'none',
+          background: '#004d24', color: '#ffffff', border: 'none',
         }}>
           <Share2 size={15} /> Show Off
         </button>
         <button type="button" onClick={handleRebook} style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           padding: '12px 0', borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: 'pointer',
-          background: 'var(--win, #16a05a)', color: '#fff', border: 'none',
+          background: '#004d24', color: '#ffffff', border: 'none',
         }}>
           <RotateCcw size={15} /> Remix Bet
         </button>
@@ -284,7 +284,7 @@ export default function BetDetailPage() {
 
           return (
             <div key={i} style={{
-              background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px',
+              background: '#004d24', border: '1px solid #006630', borderRadius: 10, padding: '12px 14px',
               display: 'flex', gap: 12,
             }}>
               {/* Left checkmark */}
@@ -299,40 +299,40 @@ export default function BetDetailPage() {
               {/* Right content */}
               <div style={{ flex: 1 }}>
                 {/* Meta line */}
-                <div style={{ fontSize: 10.5, color: '#6b7280', marginBottom: 6 }}>
+                <div style={{ fontSize: 10.5, color: '#a3d9b8', marginBottom: 6 }}>
                   {leg.gameId ? `Game ID: ${leg.gameId} | ` : ''}{dtFormatted}
                 </div>
                 {/* Team names */}
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', marginBottom: 6 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#ffffff', marginBottom: 6 }}>
                   {leg.home} v {leg.away}
                 </div>
                 {/* Match Tracker link */}
                 {hasScore && (
-                  <div style={{ fontSize: 11, color: '#22c66e', fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 11, color: '#6ee7a0', fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span>⟲</span> Match Tracker
                   </div>
                 )}
                 {/* FT Score */}
                 {hasScore && (
-                  <div style={{ fontSize: 12, color: '#374151', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: '#d1fae5', marginBottom: 8 }}>
                     FT Score: <span style={{ fontWeight: 800, fontFamily: MONO }}>{score.scoreHome}:{score.scoreAway}</span>
                   </div>
                 )}
                 {/* Pick / Market / Outcome rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11.5, color: '#6b7280' }}>Pick</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>
-                      {selection} @{Number(leg.odds || 1).toFixed(2)} {r === 'won' && <span style={{ color: '#22c66e' }}>✓</span>}
+                    <span style={{ fontSize: 11.5, color: '#a3d9b8' }}>Pick</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#ffffff' }}>
+                      {selection} @{Number(leg.odds || 1).toFixed(2)} {r === 'won' && <span style={{ color: '#6ee7a0' }}>✓</span>}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11.5, color: '#6b7280' }}>Market</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#374151' }}>{marketName}</span>
+                    <span style={{ fontSize: 11.5, color: '#a3d9b8' }}>Market</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d1fae5' }}>{marketName}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11.5, color: '#6b7280' }}>Outcome</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: lc }}>{selection}</span>
+                    <span style={{ fontSize: 11.5, color: '#a3d9b8' }}>Outcome</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#6ee7a0' }}>{selection}</span>
                   </div>
                 </div>
               </div>
@@ -363,7 +363,7 @@ export default function BetDetailPage() {
 function StatusPill({ status }) {
   const cfg = {
     won: { bg: 'rgba(34,198,110,.16)', fg: 'var(--win, #22c66e)', icon: '🏆', label: 'Won' },
-    cashed_out: { bg: 'rgba(106,208,255,.16)', fg: 'var(--accent-cool, #6ad0ff)', icon: '↩', label: 'Cashed Out' },
+    cashed_out: { bg: 'rgba(0,77,36,.16)', fg: '#004d24', icon: '↩', label: 'Cashed Out' },
     lost: { bg: 'rgba(138,152,163,.14)', fg: 'var(--text-dim)', icon: '✕', label: 'Lost' },
     pending: { bg: 'rgba(234,179,8,.16)', fg: 'var(--warn, #eab308)', icon: '⏱', label: 'Pending' },
     open: { bg: 'rgba(234,179,8,.16)', fg: 'var(--warn, #eab308)', icon: '⏱', label: 'Open' },
