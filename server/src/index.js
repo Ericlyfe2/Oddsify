@@ -33,6 +33,7 @@ import adminProvidersRouter from './routes/admin/providers.js';
 import adminNotificationsRouter from './routes/admin/notifications.js';
 import adminDepositsRouter from './routes/admin/deposits.js';
 import adminSettingsRouter from './routes/admin/settings.js';
+import adminPaymentGatewaysRouter from './routes/admin/paymentGateways.js';
 import adminSupportRouter from './routes/admin/support.js';
 import adminCatalogRouter from './routes/admin/catalog.js';
 import adminMgmtSportsRouter from './routes/admin/management-sports.js';
@@ -46,6 +47,7 @@ import { seedTemplates } from './db/marketTemplates.js';
 import { backfillVerification } from './db/backfillVerification.js';
 import { initStores } from './db/store.js';
 import { getSettings } from './db/settings.js';
+import { getEnabledGateways } from './db/paymentGateways.js';
 import { startSettlementLoop } from './services/settlement.js';
 import { attachRealtime } from './services/realtime.js';
 import { startAggregator, startLiveTrack } from './services/oddsAggregator.js';
@@ -133,6 +135,11 @@ app.get('/api/settings/public', (_req, res) => {
   });
 });
 
+app.get('/api/payment-gateways', (_req, res) => {
+  res.json({ gateways: getEnabledGateways() });
+});
+
+
 app.use('/api/auth', authRouter);
 app.use('/api/otp', otpRouter);
 app.use('/api/bet', betRouter);
@@ -154,6 +161,7 @@ app.use('/api/admin/notifications', adminNotificationsRouter);
 app.use('/api/admin/deposits', adminDepositsRouter);
 app.use('/api/admin/referrals', adminReferralsRouter);
 app.use('/api/admin/settings', adminSettingsRouter);
+app.use('/api/admin/payment-gateways', adminPaymentGatewaysRouter);
 app.use('/api/admin/support', adminSupportRouter);
 app.use('/api/admin/catalog', adminCatalogRouter);
 app.use('/api/admin/management/sports', adminMgmtSportsRouter);

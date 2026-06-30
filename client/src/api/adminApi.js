@@ -252,6 +252,10 @@ export const adminReverseReferral = (id, reason) => post(`/referrals/${encodeURI
 export const adminGetSettings = () => get('/settings');
 export const adminUpdateSettings = (body) => put_('/settings', body);
 
+/* payment gateways */
+export const adminGetPaymentGateways = () => get('/payment-gateways');
+export const adminUpdatePaymentGateway = (key, body) => put_(`/payment-gateways/${encodeURIComponent(key)}`, body);
+
 /* ── catalog (market templates) ─────────────────────────── */
 export const adminCatalog = (params) => get(`/catalog${qs(params)}`);
 export const adminGetTemplate = (id) => get(`/catalog/${encodeURIComponent(id)}`);

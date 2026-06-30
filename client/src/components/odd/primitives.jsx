@@ -961,6 +961,138 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
   );
 }
 
+/* ─── Correct Score grid (SportyBet-style 3-column table) ── */
+
+function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, onPick, T }) {
+  const selMap = {};
+  selections.forEach((s) => { selMap[s.key] = s; });
+
+  const homeWins = [];
+  const draws = [];
+  const awayWins = [];
+  const others = [];
+
+  selections.forEach((s) => {
+    const k = s.key;
+    if (k.startsWith('OTHER')) { others.push(s); return; }
+    const parts = k.split('-');
+    if (parts.length !== 2) return;
+    const [h, a] = parts.map(Number);
+    if (isNaN(h) || isNaN(a)) return;
+    if (h > a) homeWins.push(s);
+    else if (h === a) draws.push(s);
+    else awayWins.push(s);
+  });
+
+  const maxRows = Math.max(homeWins.length, draws.length, awayWins.length);
+  const cols = [homeWins, draws, awayWins];
+
+  const headerBg = T.greenBright;
+  const headerColor = T.goldDark;
+  const rowBg = T.surfaceAlt;
+  const rowBgAlt = T.surface;
+  const borderColor = T.line;
+  const selectedBg = T.greenBright;
+  const selectedColor = T.goldDark;
+  const cellText = T.ink;
+  const oddsColor = T.ink;
+
+  const cellStyle = (isSelected, rowIdx) => ({
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '8px 6px', cursor: 'pointer',
+    background: isSelected ? selectedBg : (rowIdx % 2 === 0 ? rowBg : rowBgAlt),
+    borderBottom: `1px solid ${borderColor}`,
+    transition: 'background 120ms ease',
+    minHeight: 36,
+  });
+
+  const renderCell = (sel, rowIdx) => {
+    if (!sel) return <div style={{ ...cellStyle(false, rowIdx), cursor: 'default' }} />;
+    const selected = pickedSel?.key === sel.key && pickedSel?.market === marketKey;
+    const locked = suspended || sel.suspended;
+    const label = sel.label || sel.key.replace('-', ':');
+    return (
+      <button
+        type="button" disabled={locked}
+        onClick={() => onPick?.(match, sel.key, sel.odds, marketKey, sel.label || sel.key)}
+        className={selected ? 'odd-odd-pop' : undefined}
+        style={{
+          ...cellStyle(selected, rowIdx),
+          border: 'none', width: '100%', textAlign: 'left',
+          cursor: locked ? 'not-allowed' : 'pointer',
+          color: selected ? selectedColor : cellText,
+        }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{label.replace('-', ':')}</span>
+        {locked ? (
+          <OddIcon name="lock" size={12} color="#999" />
+        ) : (
+          <span style={{ fontSize: 13, fontWeight: 700, color: selected ? selectedColor : oddsColor, fontVariantNumeric: 'tabular-nums' }}>
+            {Number(sel.odds).toFixed(2)}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${borderColor}` }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+        {['Home', 'Draw', 'Away'].map((h) => (
+          <div key={h} style={{
+            background: headerBg, color: headerColor,
+            fontSize: 12, fontWeight: 700, textAlign: 'center',
+            padding: '8px 4px', borderRight: h !== 'Away' ? `1px solid rgba(255,255,255,0.2)` : 'none',
+          }}>
+            {h}
+          </div>
+        ))}
+      </div>
+      {Array.from({ length: maxRows }).map((_, rowIdx) => (
+        <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+          {cols.map((col, colIdx) => (
+            <div key={colIdx} style={{ borderRight: colIdx < 2 ? `1px solid ${borderColor}` : 'none' }}>
+              {renderCell(col[rowIdx], rowIdx)}
+            </div>
+          ))}
+        </div>
+      ))}
+      {others.length > 0 && others.map((sel, idx) => {
+        const selected = pickedSel?.key === sel.key && pickedSel?.market === marketKey;
+        const locked = suspended || sel.suspended;
+        const otherLabel = sel.key === 'OTHER_HOME' ? 'Other (Home)' : sel.key === 'OTHER_AWAY' ? 'Other (Away)' : sel.key === 'OTHER_DRAW' ? 'Other (Draw)' : 'Other';
+        return (
+          <button
+            key={sel.key} type="button" disabled={locked}
+            onClick={() => onPick?.(match, sel.key, sel.odds, marketKey, sel.label || sel.key)}
+            className={selected ? 'odd-odd-pop' : undefined}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              width: '100%', padding: '8px 6px',
+              background: selected ? selectedBg : ((maxRows + idx) % 2 === 0 ? rowBg : rowBgAlt),
+              borderTop: idx === 0 ? `1px solid ${borderColor}` : 'none',
+              borderBottom: idx < others.length - 1 ? `1px solid ${borderColor}` : 'none',
+              border: 'none', borderTop: `1px solid ${borderColor}`,
+              cursor: locked ? 'not-allowed' : 'pointer',
+              color: selected ? selectedColor : cellText,
+              transition: 'background 120ms ease',
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{otherLabel}</span>
+            {locked ? (
+              <OddIcon name="lock" size={12} color="#999" />
+            ) : (
+              <span style={{ fontSize: 13, fontWeight: 700, color: selected ? selectedColor : oddsColor, fontVariantNumeric: 'tabular-nums' }}>
+                {Number(sel.odds).toFixed(2)}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── Markets bottom sheet ────────────────────────────────── */
 
 const MARKET_LABELS = {
@@ -1041,6 +1173,13 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
                 }}>
                   {marketLabel(key, mkt)}
                 </div>
+                {key === 'CS' ? (
+                  <CorrectScoreGrid
+                    selections={sels} suspended={suspended}
+                    pickedSel={pickedSel} marketKey={key}
+                    match={match} onPick={onPick} T={T}
+                  />
+                ) : (
                 <div style={{
                   display: 'flex', flexWrap: 'wrap', gap: 6,
                 }}>
@@ -1085,6 +1224,7 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
                     );
                   })}
                 </div>
+                )}
               </div>
             );
           })}
