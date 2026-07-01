@@ -13,6 +13,7 @@ import OddIcon from './Icon.jsx';
 import { TeamLogo, LeagueLogo } from './teamBranding.jsx';
 import { useTheme } from '../../providers/ThemeProvider.jsx';
 import { humanizePick } from '../../lib/marketNames.js';
+import { ensure1X2Order, sortOddsEntries } from '../../lib/marketUtils.js';
 
 /* ─── Oddsify wordmark ─────────────────────────────────────── */
 export function OddsifyWordmark({ size = 22, color = '#ffffff', accent = T.greenBright }) {
@@ -812,7 +813,7 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
   const live = match.isLive;
   const pickedKey = picks?.[match.id]?.key;
   const odds = match.odds || {};
-  const oddsEntries = Object.entries(odds);
+  const oddsEntries = sortOddsEntries(odds);
   const leagueCode = match.league || match.leagueCode || match.leagueName?.split(' · ')[0] || '—';
 
   return (
@@ -1072,7 +1073,6 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
               background: selected ? selectedBg : ((maxRows + idx) % 2 === 0 ? rowBg : rowBgAlt),
               borderTop: idx === 0 ? `1px solid ${borderColor}` : 'none',
               borderBottom: idx < others.length - 1 ? `1px solid ${borderColor}` : 'none',
-              border: 'none', borderTop: `1px solid ${borderColor}`,
               cursor: locked ? 'not-allowed' : 'pointer',
               color: selected ? selectedColor : cellText,
               transition: 'background 120ms ease',
@@ -1163,7 +1163,7 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
         {/* scrollable market list */}
         <div style={{ overflowY: 'auto', padding: '8px 16px 24px', flex: 1 }}>
           {entries.map(([key, mkt]) => {
-            const sels = mkt.selections || [];
+            const sels = ensure1X2Order(mkt.selections || []);
             const suspended = mkt.suspended;
             return (
               <div key={key} style={{ marginBottom: 14 }}>

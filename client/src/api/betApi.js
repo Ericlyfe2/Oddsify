@@ -142,7 +142,8 @@ export const logout = () => post('/auth/logout', { refreshToken: getRefresh() })
 export const changePassword = (body) => post('/auth/change-password', body);
 export const fetchMe = () => get('/auth/me');
 export const fetchActivity = () => get('/auth/activity');
-export const googleSignIn = (credential, country, extra = {}) => post('/auth/google', { credential, country, ...extra });
+export const googleSignIn = (credential, country, extra = {}) =>
+  post('/auth/google', { credential, country, ...extra });
 export const forgotPassword = (email) => post('/auth/forgot-password', { email });
 export const resetPassword = (email, code, password) => post('/auth/reset-password', { email, code, password });
 
@@ -150,6 +151,9 @@ export const resetPassword = (email, code, password) => post('/auth/reset-passwo
 export const fetchReferralInfo = () => get('/referrals/me');
 export const recordReferralClick = (code) => post('/referrals/click', { code });
 export const validateReferralCode = (code) => get(`/referrals/validate/${encodeURIComponent(code)}`);
+
+/* payment gateways (public) */
+export const fetchPaymentGateways = () => get('/payment-gateways');
 
 /* wallet */
 export const fetchTransactions = () => get('/wallet/transactions');

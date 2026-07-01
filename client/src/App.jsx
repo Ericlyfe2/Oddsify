@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import WalletPage from './pages/WalletPage.jsx';
+import DepositPage from './pages/DepositPage.jsx';
 import BetHistoryPage from './pages/BetHistoryPage.jsx';
 import BetDetailPage from './pages/BetDetailPage.jsx';
 import OpenBetsScreen from './components/OpenBetsScreen.jsx';
@@ -54,6 +55,7 @@ const AdminHealth = lazy(() => import('./pages/admin/Health.jsx'));
 const AdminDeposits = lazy(() => import('./pages/admin/Deposits.jsx'));
 const AdminReferrals = lazy(() => import('./pages/admin/Referrals.jsx'));
 const AdminCatalog = lazy(() => import('./pages/admin/Catalog.jsx'));
+const AdminPaymentGateways = lazy(() => import('./pages/admin/PaymentGateways.jsx'));
 const AdminSportsMgmt = lazy(() => import('./pages/admin/SportsMgmt.jsx'));
 const AdminTeams = lazy(() => import('./pages/admin/Teams.jsx'));
 const AdminLeagues = lazy(() => import('./pages/admin/Leagues.jsx'));
@@ -96,6 +98,7 @@ function AdminApp() {
             <Route path="providers" element={<AdminProviders />} />
             <Route path="health" element={<AdminHealth />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="payment-gateways" element={<AdminPaymentGateways />} />
             <Route path="catalog" element={<AdminCatalog />} />
             <Route path="management/sports" element={<AdminSportsMgmt />} />
             <Route path="management/teams" element={<AdminTeams />} />
@@ -211,6 +214,7 @@ export default function App() {
                     }
                   />
                   <Route path="/wallet" element={<WalletPage />} />
+                  <Route path="/deposit" element={<DepositPage />} />
                   <Route
                     path="/withdraw"
                     element={

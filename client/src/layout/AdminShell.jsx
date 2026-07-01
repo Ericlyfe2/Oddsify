@@ -79,6 +79,7 @@ const NAV_SECTIONS = [
     items: [
       { to: '/admin/health', label: 'Health', icon: <IconActivity /> },
       { to: '/admin/settings', label: 'Settings', icon: <IconCog /> },
+      { to: '/admin/payment-gateways', label: 'Payment Gateways', icon: <IconCash /> },
     ],
   },
 ];

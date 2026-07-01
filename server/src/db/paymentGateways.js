@@ -24,9 +24,7 @@ export function getPaymentGateways() {
 
 export function getEnabledGateways() {
   const gateways = getPaymentGateways();
-  return Object.fromEntries(
-    Object.entries(gateways).filter(([, cfg]) => cfg.enabled),
-  );
+  return Object.fromEntries(Object.entries(gateways).filter(([, cfg]) => cfg.enabled));
 }
 
 export function updatePaymentGateway(key, patch) {

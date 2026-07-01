@@ -396,10 +396,7 @@ export default function AppProviders({ children }) {
       navigate('/login');
       return;
     }
-    setErr('');
-    setDepositAmt(String(MIN_DEPOSIT));
-    setDepositMethod('paystack');
-    depositDlg.current?.showModal();
+    navigate('/deposit');
   }, [account, toast, navigate]);
 
   const openWithdraw = useCallback(() => {

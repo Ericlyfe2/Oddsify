@@ -140,6 +140,20 @@ export default function WalletPage() {
     <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: 120 }}>
       <OddPageHeader title="Transactions" subtitle="Your account activity" />
 
+      <div style={{ padding: '0 16px 12px' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/deposit')}
+          style={{
+            width: '100%', padding: '14px 0', borderRadius: 12,
+            background: T.greenBright, color: T.goldDark,
+            fontWeight: 800, fontSize: 14, border: 0, cursor: 'pointer',
+          }}
+        >
+          Deposit Funds
+        </button>
+      </div>
+
       <div style={{ padding: '16px 16px 4px' }}>
         <div style={{ fontSize: 12, color: T.inkSoft }}>Total transactions</div>
         <div

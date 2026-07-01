@@ -139,7 +139,6 @@ app.get('/api/payment-gateways', (_req, res) => {
   res.json({ gateways: getEnabledGateways() });
 });
 
-
 app.use('/api/auth', authRouter);
 app.use('/api/otp', otpRouter);
 app.use('/api/bet', betRouter);

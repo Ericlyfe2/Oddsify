@@ -11,12 +11,36 @@
  * pull straight from the live `/api/bet/matches` response. It also unifies
  * the score field names (server: scoreHome/scoreAway, design: scoreH/scoreA).
  */
+const ORDER_1X2 = ['1', 'X', '2'];
+
+function ensureOddsOrder(odds) {
+  const has1X2 = Object.keys(odds).some((k) => ['1', 'X', '2'].includes(k));
+  if (!has1X2) return odds;
+  const ordered = {};
+  for (const k of ORDER_1X2) {
+    if (odds[k] !== undefined) ordered[k] = odds[k];
+  }
+  for (const [k, v] of Object.entries(odds)) {
+    if (!ORDER_1X2.includes(k)) ordered[k] = v;
+  }
+  return ordered;
+}
+
 export function normalizeMatch(m, leagueName = '') {
   if (!m) return null;
   const market = m.markets?.['1X2'];
   const flatOdds = {};
   if (market?.selections) {
-    for (const sel of market.selections) flatOdds[sel.key] = sel.odds;
+    const ordered = [];
+    const keyMap = {};
+    for (const sel of market.selections) keyMap[sel.key] = sel;
+    for (const k of ORDER_1X2) {
+      if (keyMap[k]) ordered.push(keyMap[k]);
+    }
+    for (const sel of market.selections) {
+      if (!ORDER_1X2.includes(sel.key)) ordered.push(sel);
+    }
+    for (const sel of ordered) flatOdds[sel.key] = sel.odds;
   }
   const allMarkets = m.markets || {};
   const marketCount = Object.keys(allMarkets).length;
