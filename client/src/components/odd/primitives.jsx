@@ -985,8 +985,14 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
     else awayWins.push(s);
   });
 
+  const otherHome = others.find((s) => s.key === 'OTHER_HOME');
+  const otherDraw = others.find((s) => s.key === 'OTHER_DRAW');
+  const otherAway = others.find((s) => s.key === 'OTHER_AWAY');
+  const otherRest = others.filter((s) => !['OTHER_HOME', 'OTHER_DRAW', 'OTHER_AWAY'].includes(s.key));
+
   const maxRows = Math.max(homeWins.length, draws.length, awayWins.length);
   const cols = [homeWins, draws, awayWins];
+  const hasOtherRow = otherHome || otherDraw || otherAway;
 
   const headerBg = T.greenBright;
   const headerColor = T.goldDark;
@@ -1007,11 +1013,11 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
     minHeight: 36,
   });
 
-  const renderCell = (sel, rowIdx) => {
+  const renderCell = (sel, rowIdx, labelOverride) => {
     if (!sel) return <div style={{ ...cellStyle(false, rowIdx), cursor: 'default' }} />;
     const selected = pickedSel?.key === sel.key && pickedSel?.market === marketKey;
     const locked = suspended || sel.suspended;
-    const label = sel.label || sel.key.replace('-', ':');
+    const label = labelOverride || sel.label || sel.key.replace('-', ':');
     return (
       <button
         type="button" disabled={locked}
@@ -1024,7 +1030,7 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
           color: selected ? selectedColor : cellText,
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{label.replace('-', ':')}</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{labelOverride || label.replace('-', ':')}</span>
         {locked ? (
           <OddIcon name="lock" size={12} color="#999" />
         ) : (
@@ -1036,14 +1042,19 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
     );
   };
 
+  const headerLabels = [match?.home || 'Home', 'Draw', match?.away || 'Away'];
+  const otherRow = [otherHome, otherDraw, otherAway];
+  const totalRows = maxRows + (hasOtherRow ? 1 : 0);
+
   return (
     <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${borderColor}` }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-        {['Home', 'Draw', 'Away'].map((h) => (
-          <div key={h} style={{
+        {headerLabels.map((h, i) => (
+          <div key={i} style={{
             background: headerBg, color: headerColor,
             fontSize: 12, fontWeight: 700, textAlign: 'center',
-            padding: '8px 4px', borderRight: h !== 'Away' ? `1px solid rgba(255,255,255,0.2)` : 'none',
+            padding: '8px 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            borderRight: i < 2 ? `1px solid rgba(255,255,255,0.2)` : 'none',
           }}>
             {h}
           </div>
@@ -1058,10 +1069,18 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
           ))}
         </div>
       ))}
-      {others.length > 0 && others.map((sel, idx) => {
+      {hasOtherRow && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+          {otherRow.map((sel, colIdx) => (
+            <div key={colIdx} style={{ borderRight: colIdx < 2 ? `1px solid ${borderColor}` : 'none' }}>
+              {renderCell(sel, maxRows, 'Other')}
+            </div>
+          ))}
+        </div>
+      )}
+      {otherRest.length > 0 && otherRest.map((sel, idx) => {
         const selected = pickedSel?.key === sel.key && pickedSel?.market === marketKey;
         const locked = suspended || sel.suspended;
-        const otherLabel = sel.key === 'OTHER_HOME' ? 'Other (Home)' : sel.key === 'OTHER_AWAY' ? 'Other (Away)' : sel.key === 'OTHER_DRAW' ? 'Other (Draw)' : 'Other';
         return (
           <button
             key={sel.key} type="button" disabled={locked}
@@ -1070,15 +1089,14 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
             style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               width: '100%', padding: '8px 6px',
-              background: selected ? selectedBg : ((maxRows + idx) % 2 === 0 ? rowBg : rowBgAlt),
-              borderTop: idx === 0 ? `1px solid ${borderColor}` : 'none',
-              borderBottom: idx < others.length - 1 ? `1px solid ${borderColor}` : 'none',
+              background: selected ? selectedBg : ((totalRows + idx) % 2 === 0 ? rowBg : rowBgAlt),
+              borderTop: `1px solid ${borderColor}`,
               cursor: locked ? 'not-allowed' : 'pointer',
               color: selected ? selectedColor : cellText,
               transition: 'background 120ms ease',
             }}
           >
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{otherLabel}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{sel.label || sel.key}</span>
             {locked ? (
               <OddIcon name="lock" size={12} color="#999" />
             ) : (
