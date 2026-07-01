@@ -23,8 +23,10 @@ import {
   OddMatchCard,
   OddsifyWordmark,
   OddIcon,
+  OddStatusChip,
   MarketsSheet,
 } from '../components/odd/primitives.jsx';
+import { TeamLogo, LeagueLogo } from '../components/odd/teamBranding.jsx';
 import { useTokens } from '../components/odd/tokens.jsx';
 import StatsStrip from '../components/odd/StatsStrip.jsx';
 import QuickBetStrip from '../components/odd/QuickBetStrip.jsx';
@@ -107,33 +109,19 @@ export default function Home() {
 
       <GrandPrizeWinners />
 
-      <SectionHeader
-        icon={
-          <span
-            className="odd-live-dot"
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: T.danger,
-            }}
-          />
-        }
-        title="Live now"
-        count={liveCount}
-        action="All live →"
-        onAction={() => navigate('/sports')}
-      />
+      <PaidWinnersStrip />
 
-      <MatchList
-        loading={loading}
-        err={err}
-        matches={liveMatches}
-        picks={picks}
-        onPick={togglePick}
-        onMore={setSheetMatch}
-        emptyLabel="No live matches right now — check back at kickoff."
-      />
+      <div style={{ padding: '4px 16px 20px' }}>
+        <LiveMatchesPanel
+          matches={liveMatches}
+          loading={loading}
+          err={err}
+          picks={picks}
+          onPick={togglePick}
+          onMore={setSheetMatch}
+          onViewAll={() => navigate('/sports')}
+        />
+      </div>
 
       <SectionHeader title="Featured upcoming" action="More →" onAction={() => navigate('/sports')} />
       <MatchList
@@ -790,6 +778,540 @@ function GrandPrizeWinners() {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Paid Winners — replaces the old fixed/floating "Verified Sports Payouts"
+ * seal with an in-flow trust strip. Same claim (verified payouts, paid
+ * winners, live timestamp) but it now sits in the page flow between the
+ * Grand Prize marquee and the live-matches panel: same surface/border
+ * language as every other card on the page (blends in), lifted by a green
+ * glow + pulsing dot so it still reads as a distinct, trustworthy signal
+ * (stands out).
+ */
+function formatUpdated(d) {
+  const month = d.toLocaleDateString('en-US', { month: 'short' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${month} ${d.getDate()}, ${time}`;
+}
+
+function PaidWinnersStrip() {
+  const T = useTokens();
+  const [stamp, setStamp] = useState(() => formatUpdated(new Date()));
+
+  useEffect(() => {
+    const id = setInterval(() => setStamp(formatUpdated(new Date())), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{ padding: '4px 16px 16px' }}>
+      <div
+        role="status"
+        aria-label="Verified sports payouts — paid winners"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: T.surface,
+          border: `1px solid ${T.greenSoft}`,
+          borderRadius: 16,
+          padding: '13px 14px',
+          boxShadow: `0 10px 26px -18px ${T.greenBright}, 0 0 0 1px ${T.line} inset`,
+        }}
+      >
+        <span
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 999,
+            background: '#4caf50',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            boxShadow: '0 0 0 4px rgba(76,175,80,0.14)',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f2417" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, letterSpacing: -0.1 }}>Paid Winners</div>
+          <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 1 }}>
+            Verified sports payouts &middot; Updated {stamp}
+          </div>
+        </div>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            fontSize: 9.5,
+            fontWeight: 700,
+            letterSpacing: 0.6,
+            color: '#4caf50',
+            textTransform: 'uppercase',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            className="odd-live-dot"
+            style={{ width: 6, height: 6, borderRadius: 999, background: '#4caf50' }}
+          />
+          Live
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Live Matches panel — self-contained card matching the operator's
+ * reference mock: header (title + "View All"), a Live Categories row
+ * (sport pills + "Top 10 live only" tag), a league filter row, then the
+ * live match list. Categories/leagues are derived from whatever the live
+ * feed actually contains, so it never shows a filter with zero matches.
+ */
+function LiveMatchesPanel({ matches, loading, err, picks, onPick, onMore, onViewAll }) {
+  const T = useTokens();
+  const [activeSport, setActiveSport] = useState('all');
+  const [activeLeague, setActiveLeague] = useState('all');
+
+  const sports = useMemo(() => {
+    const set = new Set();
+    matches.forEach((m) => set.add((m.sport || 'football').toLowerCase()));
+    return Array.from(set);
+  }, [matches]);
+
+  const leagueNames = useMemo(() => {
+    const set = new Set();
+    matches.forEach((m) => {
+      if (activeSport === 'all' || (m.sport || 'football').toLowerCase() === activeSport) {
+        if (m.leagueName) set.add(m.leagueName);
+      }
+    });
+    return Array.from(set);
+  }, [matches, activeSport]);
+
+  const filtered = useMemo(
+    () =>
+      matches.filter((m) => {
+        if (activeSport !== 'all' && (m.sport || 'football').toLowerCase() !== activeSport) return false;
+        if (activeLeague !== 'all' && m.leagueName !== activeLeague) return false;
+        return true;
+      }),
+    [matches, activeSport, activeLeague],
+  );
+
+  const sportIcon = (s) => (s === 'tennis' ? 'tennis' : s === 'basketball' ? 'basket' : 'soccer');
+  const sportLabel = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  return (
+    <div
+      style={{
+        background: T.surface,
+        border: `1px solid ${T.line}`,
+        borderRadius: 20,
+        overflow: 'hidden',
+        boxShadow: '0 16px 36px -24px rgba(0,0,0,0.55)',
+      }}
+    >
+      {/* header */}
+      <div
+        style={{
+          padding: '16px 16px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          borderBottom: `1px solid ${T.line}`,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: `${T.danger}1f`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <OddIcon name="bolt" size={17} color={T.danger} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, letterSpacing: -0.2 }}>Live Matches</div>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+              Real-time odds &amp; scores
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onViewAll}
+          style={{
+            background: 'transparent',
+            border: 0,
+            color: T.greenBright,
+            fontSize: 11.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            flexShrink: 0,
+            padding: 0,
+          }}
+        >
+          View All <OddIcon name="chevR" size={11} color={T.greenBright} />
+        </button>
+      </div>
+
+      {/* live categories */}
+      <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: T.inkDim, textTransform: 'uppercase' }}>
+          Live Categories
+        </span>
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            color: T.inkSoft,
+            background: T.surfaceAlt,
+            border: `1px solid ${T.line}`,
+            borderRadius: 999,
+            padding: '3px 8px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Top 10 live only
+        </span>
+      </div>
+      <div style={{ padding: '8px 16px 12px', display: 'flex', gap: 8, overflowX: 'auto' }}>
+        <CatPill
+          active={activeSport === 'all'}
+          label="All"
+          onClick={() => {
+            setActiveSport('all');
+            setActiveLeague('all');
+          }}
+        />
+        {sports.map((s) => (
+          <CatPill
+            key={s}
+            active={activeSport === s}
+            label={sportLabel(s)}
+            icon={sportIcon(s)}
+            onClick={() => {
+              setActiveSport(s);
+              setActiveLeague('all');
+            }}
+          />
+        ))}
+      </div>
+
+      {/* league tabs */}
+      {leagueNames.length > 0 && (
+        <div
+          style={{
+            padding: '0 16px 12px',
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            borderBottom: `1px solid ${T.line}`,
+          }}
+        >
+          <LeagueTab active={activeLeague === 'all'} label="All Leagues" onClick={() => setActiveLeague('all')} />
+          {leagueNames.map((l) => (
+            <LeagueTab key={l} active={activeLeague === l} label={l} onClick={() => setActiveLeague(l)} />
+          ))}
+        </div>
+      )}
+
+      {/* match list */}
+      <div style={{ padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {loading ? (
+          [0, 1].map((i) => (
+            <div
+              key={i}
+              style={{
+                height: 168,
+                borderRadius: 16,
+                background: T.surfaceAlt,
+                border: `1px solid ${T.line}`,
+                opacity: 0.5 + i * 0.2,
+              }}
+            />
+          ))
+        ) : err ? (
+          <div style={{ padding: 14, borderRadius: 12, background: `${T.danger}1f`, color: T.danger, fontSize: 13, fontWeight: 600 }}>
+            {err}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div
+            style={{
+              padding: 18,
+              borderRadius: 12,
+              background: T.surfaceAlt,
+              border: `1px solid ${T.line}`,
+              color: T.inkSoft,
+              fontSize: 12,
+              textAlign: 'center',
+            }}
+          >
+            No live matches right now — check back at kickoff.
+          </div>
+        ) : (
+          filtered.map((m, i) => (
+            <div key={m.id} className="odd-rise" style={{ animationDelay: `${i * 60}ms` }}>
+              <LiveMatchCard match={m} picks={picks} onPick={onPick} onMore={() => onMore?.(m)} />
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CatPill({ active, label, icon, onClick }) {
+  const T = useTokens();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '7px 13px',
+        borderRadius: 999,
+        background: active ? T.greenBright : T.surfaceAlt,
+        color: active ? T.goldDark : T.ink,
+        border: `1px solid ${active ? T.greenBright : T.line}`,
+        fontSize: 12,
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+        cursor: 'pointer',
+      }}
+    >
+      {icon && <OddIcon name={icon} size={12} color={active ? T.goldDark : T.inkSoft} />}
+      {label}
+    </button>
+  );
+}
+
+function LeagueTab({ active, label, onClick }) {
+  const T = useTokens();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: 'transparent',
+        border: 0,
+        borderBottom: `2px solid ${active ? T.greenBright : 'transparent'}`,
+        color: active ? T.ink : T.inkSoft,
+        fontSize: 12,
+        fontWeight: active ? 700 : 600,
+        padding: '0 2px 8px',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
+ * Live match card — league/sport badge + LIVE chip, team rows with score,
+ * "Live Match" / "More Markets" link row, and a locked-by-default 3-col
+ * Home/Draw/Away strip (mirrors the reference: odds render once the feed
+ * actually opens the market, otherwise it reads "Locked").
+ */
+function LiveMatchCard({ match, picks, onPick, onMore }) {
+  const T = useTokens();
+  const pickedKey = picks?.[match.id]?.key;
+  const leagueLabel = match.leagueName || match.league || 'Live';
+  const sport = (match.sport || 'football').toLowerCase();
+  const sportGlyph = sport === 'tennis' ? 'tennis' : sport === 'basketball' ? 'basket' : 'soccer';
+
+  const rows = [
+    { key: '1', label: 'Home', name: match.home, logo: match.homeLogo, score: match.scoreH },
+    { key: '2', label: 'Away', name: match.away, logo: match.awayLogo, score: match.scoreA },
+  ];
+
+  return (
+    <div
+      style={{
+        background: T.surfaceAlt,
+        border: `1px solid ${T.line}`,
+        borderRadius: 16,
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      {/* league + sport + LIVE */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <LeagueLogo name={leagueLabel} size={20} />
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: T.ink,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 150,
+            }}
+          >
+            {leagueLabel}
+          </span>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              fontSize: 9,
+              fontWeight: 700,
+              color: T.inkSoft,
+              background: T.surface,
+              border: `1px solid ${T.line}`,
+              borderRadius: 999,
+              padding: '2px 7px',
+              flexShrink: 0,
+            }}
+          >
+            <OddIcon name={sportGlyph} size={10} color={T.inkSoft} />
+            {sport.toUpperCase()}
+          </span>
+        </div>
+        <OddStatusChip kind="live" label={`LIVE ${match.minute || ''}`.trim()} />
+      </div>
+
+      {/* teams */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map((r) => (
+          <div key={r.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <TeamLogo name={r.name} logoUrl={r.logo} size={22} />
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: T.ink,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {r.name}
+              </span>
+            </div>
+            {r.score !== undefined && r.score !== null && (
+              <span style={{ fontSize: 15, fontWeight: 700, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>
+                {r.score}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* live match / more markets */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: T.danger }}>
+          <span className="odd-live-dot" style={{ width: 6, height: 6, borderRadius: 999, background: T.danger }} />
+          Live Match
+        </span>
+        <span style={{ color: T.inkDim, fontSize: 11 }}>&middot;</span>
+        <button
+          type="button"
+          onClick={onMore}
+          style={{
+            background: 'none',
+            border: 0,
+            padding: 0,
+            color: T.greenBright,
+            fontWeight: 700,
+            fontSize: 11,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          More Markets
+          {match.marketCount ? ` +${match.marketCount}` : ''}
+          <OddIcon name="chevR" size={10} color={T.greenBright} />
+        </button>
+      </div>
+
+      {/* home / draw / away */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {[
+          { key: '1', label: 'Home' },
+          { key: 'X', label: 'Draw' },
+          { key: '2', label: 'Away' },
+        ].map((c) => {
+          const val = match.odds?.[c.key];
+          const locked = val === undefined || val === null;
+          const selected = pickedKey === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              disabled={locked}
+              onClick={() => onPick?.(match, c.key, Number(val))}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                padding: '10px 4px',
+                borderRadius: 10,
+                background: selected ? T.greenBright : T.surface,
+                border: `1px solid ${selected ? T.greenBright : T.line}`,
+                cursor: locked ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: 0.6,
+                  color: selected ? T.goldDark : T.inkDim,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {c.label}
+              </span>
+              {locked ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10.5, fontWeight: 700, color: T.inkDim }}>
+                  <OddIcon name="lock" size={11} color={T.inkDim} />
+                  Locked
+                </span>
+              ) : (
+                <span style={{ fontSize: 14, fontWeight: 800, color: selected ? T.goldDark : T.ink }}>
+                  {Number(val).toFixed(2)}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

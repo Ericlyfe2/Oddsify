@@ -6,8 +6,6 @@
  *  - OddSupportBubble    → floating help bubble, gentle bounce (supportSlowBounce).
  *  - OddWithdrawNotices  → periodic center-top social-proof notices that drop
  *                          in, hold, then drop out (withdrawalDropTiny).
- *  - OddVerifiedBadge    → trust seal pinned to the right edge, confirming
- *                          payouts are verified; timestamp ticks live.
  */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -79,38 +77,6 @@ export function OddWithdrawNotices() {
       <span className="odd-wn-dot" />
       <span>
         <b>{note.name}</b> withdrew <b>GHS {note.amount}</b>
-      </span>
-    </div>
-  );
-}
-
-/* Trust seal — "✅ Verified Sports Payouts / Paid winners / Updated ...".
-   Timestamp re-stamps itself every 30s so it always reads as fresh/live. */
-function formatUpdated(d) {
-  const month = d.toLocaleDateString('en-US', { month: 'short' });
-  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  return `${month} ${d.getDate()}, ${time}`;
-}
-
-export function OddVerifiedBadge() {
-  const [stamp, setStamp] = useState(() => formatUpdated(new Date()));
-
-  useEffect(() => {
-    const id = setInterval(() => setStamp(formatUpdated(new Date())), 30_000);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div className="odd-verified-badge" role="status" aria-label="Verified sports payouts — paid winners">
-      <span className="odd-verified-check" aria-hidden="true">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0f2417" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-      </span>
-      <span className="odd-verified-copy">
-        <b>Verified Sports Payouts</b>
-        <span className="odd-verified-sub">Paid winners</span>
-        <span className="odd-verified-time">Updated {stamp}</span>
       </span>
     </div>
   );
