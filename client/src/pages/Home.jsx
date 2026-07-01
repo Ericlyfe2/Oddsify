@@ -418,19 +418,15 @@ const WT_LAST = [
   'Acheampong',
   'Nkrumah',
 ];
-const WT_MIN = 200_000; // GHS 200,000
-const WT_MAX = 800_000_000_000; // GHS 800,000,000,000
+const WT_MIN = 500; // GHS 500
+const WT_MAX = 10_000; // GHS 10,000
 
 function generateWithdrawals(count = 12) {
   const used = new Set();
   const out = [];
   let safety = 0;
   while (out.length < count && safety++ < 200) {
-    // Skew toward the lower end on a log scale so smaller (still huge)
-    // amounts appear more often than the top-of-range billions — gives
-    // a more varied marquee instead of every entry being 700B+.
-    const u = Math.random();
-    const amount = Math.floor(Math.exp(Math.log(WT_MIN) + u * (Math.log(WT_MAX) - Math.log(WT_MIN))));
+    const amount = WT_MIN + Math.floor(Math.random() * (WT_MAX - WT_MIN + 1));
     if (used.has(amount)) continue;
     used.add(amount);
     const first = WT_FIRST[Math.floor(Math.random() * WT_FIRST.length)];
@@ -507,7 +503,7 @@ const WinningsTicker = memo(function WinningsTicker() {
  * Grand Prize Winners — marketing leaderboard with synthetic top wins.
  *
  * Per operator spec:
- *   - 5 rows with unique amounts in the GHS 1M–10M range
+ *   - 5 rows with unique amounts in the GHS 500–10,000 range
  *   - odds between 1.90x and 2.10x
  *   - settled timestamps between 1 min and 2 min 30 sec ago
  *   - regenerates every 60s so the "X min ago" stays fresh and the
@@ -519,8 +515,8 @@ const WinningsTicker = memo(function WinningsTicker() {
  * or bets are created in the database.
  */
 const GP_PREFIXES = ['024', '054', '055', '057', '027', '026', '020', '050'];
-const GP_MIN_AMOUNT = 1_000_000;
-const GP_MAX_AMOUNT = 9_999_999;
+const GP_MIN_AMOUNT = 500;
+const GP_MAX_AMOUNT = 10_000;
 const GP_MIN_AGO_MS = 60 * 1000; // 1 min
 const GP_MAX_AGO_MS = 2 * 60 * 1000 + 30 * 1000; // 2 min 30 sec
 
