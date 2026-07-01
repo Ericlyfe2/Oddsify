@@ -962,9 +962,15 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
   );
 }
 
-/* ─── Correct Score grid (SportyBet-style 3-column table) ── */
+/* ─── Correct Score grid (SportyBet-style 3-column table) ──
+ * Full grid can run to 30+ scorelines (0-5 vs 0-5), so it opens compact
+ * (3 rows per column, like the classic "popular scores" view) with a
+ * Show more / Show less toggle beneath the Any-Other-Score row to reveal
+ * the rest — mirrors the reference book's expanded correct-score panel. */
+const CS_COMPACT_ROWS = 3;
 
 function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, onPick, T }) {
+  const [expanded, setExpanded] = useState(false);
   const selMap = {};
   selections.forEach((s) => { selMap[s.key] = s; });
 
@@ -990,7 +996,9 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
   const otherAway = others.find((s) => s.key === 'OTHER_AWAY');
   const otherRest = others.filter((s) => !['OTHER_HOME', 'OTHER_DRAW', 'OTHER_AWAY'].includes(s.key));
 
-  const maxRows = Math.max(homeWins.length, draws.length, awayWins.length);
+  const fullRows = Math.max(homeWins.length, draws.length, awayWins.length);
+  const canCollapse = fullRows > CS_COMPACT_ROWS;
+  const maxRows = expanded || !canCollapse ? fullRows : CS_COMPACT_ROWS;
   const cols = [homeWins, draws, awayWins];
   const hasOtherRow = otherHome || otherDraw || otherAway;
 
@@ -1107,6 +1115,21 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
           </button>
         );
       })}
+      {canCollapse && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            width: '100%', padding: '9px 6px',
+            background: rowBgAlt, border: 0, borderTop: `1px solid ${borderColor}`,
+            color: T.greenBright, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          {expanded ? `Show less` : `Show more scores (+${fullRows - CS_COMPACT_ROWS})`}
+          <OddIcon name={expanded ? 'chevU' : 'chevD'} size={12} color={T.greenBright} />
+        </button>
+      )}
     </div>
   );
 }

@@ -111,21 +111,31 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
     '2/2': pA * 0.62,
   };
 
-  // Correct Score (popular 8). Scaled around match expectation.
-  const homeStrong = pH > pA;
-  const goalRich = pO > 0.55;
-  const csBase = {
-    '1-0': homeStrong ? 0.13 : 0.08,
-    '2-0': homeStrong ? 0.1 : 0.05,
-    '2-1': homeStrong ? 0.12 : 0.09,
-    '1-1': 0.13,
-    '0-0': goalRich ? 0.06 : 0.1,
-    '0-1': homeStrong ? 0.05 : 0.1,
-    '0-2': homeStrong ? 0.03 : 0.07,
-    '1-2': homeStrong ? 0.05 : 0.1,
-    '2-2': goalRich ? 0.07 : 0.04,
-    OTHER: 0.26,
+  // Correct Score — full 0-5 vs 0-5 grid (36 scores) via independent Poisson
+  // home/away goal expectancies derived from the match's 1X2 + Over/Under
+  // signal, plus a single "Any Other Score" catch-all for 6+ goals a side.
+  // Poisson tail mass beyond the grid is naturally tiny for realistic
+  // scorelines, so "Any Other Score" prices up big — like a real book.
+  const CS_MAX = 5;
+  const CS_FACT = [1, 1, 2, 6, 24, 120];
+  const poissonPmf = (k, lambda) => {
+    if (lambda <= 0) return k === 0 ? 1 : 0;
+    return Math.exp(-lambda + k * Math.log(lambda) - Math.log(CS_FACT[k]));
   };
+  const csGoalTotal = Math.max(1.4, Math.min(3.6, 2.0 + (pO - 0.5) * 2.4));
+  const csSkew = (pH - pA) * 1.8;
+  const csLambdaHome = Math.max(0.35, csGoalTotal / 2 + csSkew / 2);
+  const csLambdaAway = Math.max(0.35, csGoalTotal / 2 - csSkew / 2);
+  const csGrid = {};
+  let csGridSum = 0;
+  for (let h = 0; h <= CS_MAX; h++) {
+    for (let a = 0; a <= CS_MAX; a++) {
+      const p = poissonPmf(h, csLambdaHome) * poissonPmf(a, csLambdaAway);
+      csGrid[`${h}-${a}`] = p;
+      csGridSum += p;
+    }
+  }
+  const csOther = Math.max(0.005, 1 - csGridSum);
 
   return {
     '1X2': {
@@ -234,16 +244,15 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
     CS: {
       name: 'Correct Score',
       selections: [
-        { key: '1-0', label: '1 - 0', odds: priceFromProb(csBase['1-0'], 0.1) },
-        { key: '2-0', label: '2 - 0', odds: priceFromProb(csBase['2-0'], 0.1) },
-        { key: '2-1', label: '2 - 1', odds: priceFromProb(csBase['2-1'], 0.1) },
-        { key: '1-1', label: '1 - 1', odds: priceFromProb(csBase['1-1'], 0.1) },
-        { key: '0-0', label: '0 - 0', odds: priceFromProb(csBase['0-0'], 0.1) },
-        { key: '0-1', label: '0 - 1', odds: priceFromProb(csBase['0-1'], 0.1) },
-        { key: '0-2', label: '0 - 2', odds: priceFromProb(csBase['0-2'], 0.1) },
-        { key: '1-2', label: '1 - 2', odds: priceFromProb(csBase['1-2'], 0.1) },
-        { key: '2-2', label: '2 - 2', odds: priceFromProb(csBase['2-2'], 0.1) },
-        { key: 'OTHER', label: 'Any Other Score', odds: priceFromProb(csBase['OTHER'], 0.1) },
+        ...Array.from({ length: CS_MAX + 1 }, (_, h) => h)
+          .flatMap((h) =>
+            Array.from({ length: CS_MAX + 1 }, (_, a) => ({
+              key: `${h}-${a}`,
+              label: `${h} - ${a}`,
+              odds: priceFromProb(csGrid[`${h}-${a}`], 0.1),
+            })),
+          ),
+        { key: 'OTHER', label: 'Any Other Score', odds: priceFromProb(csOther, 0.1) },
       ],
     },
     '1H1X2': {

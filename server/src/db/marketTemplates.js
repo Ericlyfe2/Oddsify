@@ -56,7 +56,7 @@ const BUILTIN_TEMPLATES = [
   { key: 'BTTSOU25', name: 'BTTS & Total Goals (2.5)', sportId: ['football'], autoAttach: true, sortOrder: 18,
     selectionSpec: { type: 'combo', baseMarkets: ['BTTS', 'OU25'] } },
   { key: 'CS', name: 'Correct Score', sportId: ['football'], autoAttach: true, sortOrder: 19,
-    selectionSpec: { type: 'correct_score_grid', maxHome: 6, maxAway: 6, includeOther: true } },
+    selectionSpec: { type: 'correct_score_grid', maxHome: 5, maxAway: 5, includeOther: true } },
 
   // ── Basketball ──────────────────────────────────────────
   { key: 'ML', name: 'Money Line', sportId: ['basketball'], autoAttach: true, sortOrder: 1,
