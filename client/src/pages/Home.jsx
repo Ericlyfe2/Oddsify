@@ -585,12 +585,107 @@ function GrandPrizeWinners() {
 
   return (
     <div style={{ padding: '16px 0 0' }}>
-      <div style={{ textAlign: 'center', padding: '4px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: -0.2, fontFamily: '"Space Grotesk", system-ui, sans-serif', margin: 0 }}>
+      <style>{`
+        @keyframes gp-trophy-rock {
+          0%, 100% { transform: rotate(-6deg) scale(1); }
+          15% { transform: rotate(10deg) scale(1.18); }
+          30% { transform: rotate(-8deg) scale(1.08); }
+          45% { transform: rotate(6deg) scale(1.14); }
+          60% { transform: rotate(-4deg) scale(1.06); }
+          75% { transform: rotate(8deg) scale(1.12); }
+          90% { transform: rotate(-3deg) scale(1.02); }
+        }
+        @keyframes gp-trophy-glow {
+          0%, 100% { filter: drop-shadow(0 0 3px ${T.greenBright}40); }
+          50% { filter: drop-shadow(0 0 10px ${T.greenBright}90) drop-shadow(0 0 20px ${T.greenBright}40); }
+        }
+        @keyframes gp-sparkle {
+          0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+          50% { opacity: 1; transform: scale(1) rotate(180deg); }
+        }
+        @keyframes gp-shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        @keyframes gp-live-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
+        @keyframes gp-card-glow {
+          0%, 100% { box-shadow: 0 4px 16px -10px rgba(0,0,0,0.4); }
+          50% { box-shadow: 0 4px 20px -6px ${T.goldSoft}; }
+        }
+      `}</style>
+
+      <div style={{
+        textAlign: 'center', padding: '4px 16px 10px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      }}>
+        <div style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }}>
+          <svg
+            viewBox="0 0 64 64" fill="none" width={28} height={28}
+            style={{
+              animation: 'gp-trophy-rock 2s ease-in-out infinite, gp-trophy-glow 2s ease-in-out infinite',
+              transformOrigin: 'center bottom',
+            }}
+          >
+            <path d="M16 8h32v4c0 10-7.2 18-16 18S16 22 16 12V8z" fill={T.greenBright} />
+            <path d="M16 8H8c0 8 4 14 10 16h2c-2-2-4-8-4-16z" fill={T.greenBright} opacity={0.5} />
+            <path d="M48 8h8c0 8-4 14-10 16h-2c2-2 4-8 4-16z" fill={T.greenBright} opacity={0.5} />
+            <rect x={28} y={30} width={8} height={10} rx={2} fill={T.greenBright} opacity={0.8} />
+            <rect x={22} y={40} width={20} height={6} rx={3} fill={T.greenBright} />
+            <rect x={20} y={44} width={24} height={4} rx={2} fill={T.greenBright} opacity={0.7} />
+            <path d="M26 16l2-4 2 4 4 .5-3 3 1 4-4-2-4 2 1-4-3-3z" fill="#fff" opacity={0.4} />
+            <path d="M38 14l1.5-3 1.5 3 3 .4-2.2 2.2.7 3-3-1.6-3 1.6.7-3-2.2-2.2z" fill="#fff" opacity={0.3} />
+          </svg>
+          <svg viewBox="0 0 10 10" width={8} height={8} style={{
+            position: 'absolute', top: -2, right: -2,
+            animation: 'gp-sparkle 1.5s ease-in-out infinite',
+          }}>
+            <path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z" fill={T.greenBright} />
+          </svg>
+          <svg viewBox="0 0 10 10" width={6} height={6} style={{
+            position: 'absolute', top: 2, left: -1,
+            animation: 'gp-sparkle 1.5s ease-in-out infinite 0.5s',
+          }}>
+            <path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z" fill={T.greenBright} />
+          </svg>
+          <svg viewBox="0 0 10 10" width={5} height={5} style={{
+            position: 'absolute', bottom: 4, right: -3,
+            animation: 'gp-sparkle 1.5s ease-in-out infinite 1s',
+          }}>
+            <path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z" fill={T.greenBright} />
+          </svg>
+        </div>
+        <h3 style={{
+          fontSize: 15, fontWeight: 700, letterSpacing: -0.2, margin: 0,
+          fontFamily: '"Space Grotesk", system-ui, sans-serif',
+          background: `linear-gradient(90deg, ${T.ink}, ${T.greenBright}, ${T.ink})`,
+          backgroundSize: '200% auto',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          animation: 'gp-shimmer 4s linear infinite',
+        }}>
           Grand Prize Winners
         </h3>
         <span style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>{rows.length}</span>
       </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+        padding: '0 16px 8px',
+      }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: 999,
+          background: '#4caf50',
+          animation: 'gp-live-pulse 1.5s ease-in-out infinite',
+          display: 'inline-block',
+        }} />
+        <span style={{ fontSize: 10, fontWeight: 700, color: '#4caf50', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+          Live now
+        </span>
+      </div>
+
       <div
         style={{
           overflow: 'hidden',
@@ -623,7 +718,10 @@ function GrandPrizeWinners() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 4,
-                boxShadow: '0 4px 16px -10px rgba(0,0,0,0.4)',
+                animation: 'gp-card-glow 3s ease-in-out infinite',
+                animationDelay: `${(i % 8) * 0.35}s`,
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
               <div
@@ -648,15 +746,42 @@ function GrandPrizeWinners() {
               </div>
               <div
                 style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <div style={{ position: 'relative', width: 22, height: 22, flexShrink: 0 }}>
+                  <svg viewBox="0 0 64 64" fill="none" width={22} height={22}
+                    style={{
+                      animation: 'gp-trophy-rock 2.5s ease-in-out infinite, gp-trophy-glow 2.5s ease-in-out infinite',
+                      animationDelay: `${(i % 8) * 0.3}s`,
+                      transformOrigin: 'center bottom',
+                    }}
+                  >
+                    <path d="M16 8h32v4c0 10-7.2 18-16 18S16 22 16 12V8z" fill={T.greenBright} />
+                    <path d="M16 8H8c0 8 4 14 10 16h2c-2-2-4-8-4-16z" fill={T.greenBright} opacity={0.5} />
+                    <path d="M48 8h8c0 8-4 14-10 16h-2c2-2 4-8 4-16z" fill={T.greenBright} opacity={0.5} />
+                    <rect x={28} y={30} width={8} height={10} rx={2} fill={T.greenBright} opacity={0.8} />
+                    <rect x={22} y={40} width={20} height={6} rx={3} fill={T.greenBright} />
+                    <rect x={20} y={44} width={24} height={4} rx={2} fill={T.greenBright} opacity={0.7} />
+                  </svg>
+                  <svg viewBox="0 0 10 10" width={5} height={5} style={{
+                    position: 'absolute', top: -2, right: -2,
+                    animation: 'gp-sparkle 1.8s ease-in-out infinite',
+                    animationDelay: `${(i % 8) * 0.2}s`,
+                  }}>
+                    <path d="M5 0L6 4L10 5L6 6L5 10L4 6L0 5L4 4Z" fill={T.greenBright} />
+                  </svg>
+                </div>
+                <span style={{
                   fontSize: 18,
                   fontWeight: 800,
                   color: T.greenBright,
                   fontVariantNumeric: 'tabular-nums',
                   letterSpacing: -0.4,
                   fontFamily: '"Space Grotesk", system-ui, sans-serif',
-                }}
-              >
-                GHS{fmtCedi(w.amountGhs, true)}
+                }}>
+                  GHS{fmtCedi(w.amountGhs, true)}
+                </span>
               </div>
               <div style={{ fontSize: 11, color: T.inkSoft }}>
                 in Sports · {w.betType === 'multi' ? `${w.legs}-leg` : 'Single'} ·{' '}
