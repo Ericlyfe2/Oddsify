@@ -7,10 +7,16 @@ export const CURRENCY = 'GHS';
 const formDots = (s) => s.split('').map((c) => (c === 'w' ? 'w' : c === 'd' ? 'd' : 'l'));
 
 // Decimal odds from probability, with a small house margin baked in.
-function priceFromProb(p, margin = 0.06) {
-  const q = Math.max(0.015, Math.min(0.985, p));
+// `floor` caps the max price (0.015 → ~60); correct score passes a lower
+// floor so rare scorelines price up into the hundreds like a real book.
+function priceFromProb(p, margin = 0.06, floor = 0.015) {
+  const q = Math.max(floor, Math.min(0.985, p));
   return Number(((1 / q) * (1 - margin)).toFixed(2));
 }
+
+// Correct-score pricing: no 60.00 ceiling — longshots run up to 250.
+const CS_PRICE_FLOOR = 0.0036; // 1/0.0036 × 0.9 ≈ 250
+const csPrice = (p) => priceFromProb(p, 0.1, CS_PRICE_FLOOR);
 
 export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc }) {
   const [over, under] = ou;
@@ -111,12 +117,12 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
     '2/2': pA * 0.62,
   };
 
-  // Correct Score — full 0-5 vs 0-5 grid (36 scores) via independent Poisson
+  // Correct Score — 0-4 vs 0-4 grid (25 scores) via independent Poisson
   // home/away goal expectancies derived from the match's 1X2 + Over/Under
-  // signal, plus a single "Any Other Score" catch-all for 6+ goals a side.
+  // signal, plus a single "Any Other Score" catch-all for 5+ goals a side.
   // Poisson tail mass beyond the grid is naturally tiny for realistic
   // scorelines, so "Any Other Score" prices up big — like a real book.
-  const CS_MAX = 5;
+  const CS_MAX = 4;
   const CS_FACT = [1, 1, 2, 6, 24, 120];
   const poissonPmf = (k, lambda) => {
     if (lambda <= 0) return k === 0 ? 1 : 0;
@@ -249,10 +255,10 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
             Array.from({ length: CS_MAX + 1 }, (_, a) => ({
               key: `${h}-${a}`,
               label: `${h} - ${a}`,
-              odds: priceFromProb(csGrid[`${h}-${a}`], 0.1),
+              odds: csPrice(csGrid[`${h}-${a}`]),
             })),
           ),
-        { key: 'OTHER', label: 'Any Other Score', odds: priceFromProb(csOther, 0.1) },
+        { key: 'OTHER', label: 'Any Other Score', odds: csPrice(csOther) },
       ],
     },
     '1H1X2': {

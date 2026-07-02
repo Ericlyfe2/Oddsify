@@ -172,7 +172,7 @@ export function legWon(leg, scoreHome, scoreAway, htHome = null, htAway = null) 
   if (m === 'CS') {
     const actual = `${scoreHome}-${scoreAway}`;
     if (/^\d+-\d+$/.test(o)) return o === actual;
-    const inGrid = scoreHome <= 6 && scoreAway <= 6;
+    const inGrid = scoreHome <= 4 && scoreAway <= 4;
     if (o === 'OTHER_HOME') return !inGrid && homeWin;
     if (o === 'OTHER_AWAY') return !inGrid && awayWin;
     if (o === 'OTHER_DRAW') return !inGrid && draw;

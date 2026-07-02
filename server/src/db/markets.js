@@ -139,8 +139,8 @@ export function markSelectionWinner(id, isWinner) {
  * Generate the correct-score selection grid for a market.
  */
 function generateCorrectScoreGrid(template) {
-  const maxHome = template.selectionSpec?.maxHome ?? 6;
-  const maxAway = template.selectionSpec?.maxAway ?? 6;
+  const maxHome = template.selectionSpec?.maxHome ?? 4;
+  const maxAway = template.selectionSpec?.maxAway ?? 4;
   const includeOther = template.selectionSpec?.includeOther !== false;
   const selections = [];
   let sortOrder = 0;
