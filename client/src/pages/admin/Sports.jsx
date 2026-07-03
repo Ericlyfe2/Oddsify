@@ -108,27 +108,34 @@ const MARKET_PRESETS = {
     { key: '2/2', label: 'Away/Away', odds: '4.50' },
   ]},
   CS: { name: 'Correct Score', selections: [
-    { key: '0-0', label: '0-0', odds: '6.00' },
-    { key: '1-0', label: '1-0', odds: '7.00' },
-    { key: '2-0', label: '2-0', odds: '9.00' },
-    { key: '3-0', label: '3-0', odds: '14.00' },
-    { key: '4-0', label: '4-0', odds: '25.00' },
-    { key: '5-0', label: '5-0', odds: '40.00' },
-    { key: '6-0', label: '6-0', odds: '60.00' },
-    { key: '0-1', label: '0-1', odds: '7.50' },
-    { key: '0-2', label: '0-2', odds: '10.00' },
-    { key: '0-3', label: '0-3', odds: '18.00' },
-    { key: '0-4', label: '0-4', odds: '30.00' },
-    { key: '0-5', label: '0-5', odds: '50.00' },
-    { key: '0-6', label: '0-6', odds: '70.00' },
-    { key: '1-1', label: '1-1', odds: '6.50' },
-    { key: '2-2', label: '2-2', odds: '12.00' },
-    { key: '3-3', label: '3-3', odds: '30.00' },
-    { key: '4-4', label: '4-4', odds: '60.00' },
-    { key: '5-5', label: '5-5', odds: '100.00' },
-    { key: 'OTHER_HOME', label: 'Any Other Home Win', odds: '10.00' },
-    { key: 'OTHER_AWAY', label: 'Any Other Away Win', odds: '10.00' },
-    { key: 'OTHER_DRAW', label: 'Any Other Draw', odds: '15.00' },
+    { key: '1-0', label: '1-0', odds: '7.80' },
+    { key: '2-0', label: '2-0', odds: '11.50' },
+    { key: '3-0', label: '3-0', odds: '25.00' },
+    { key: '4-0', label: '4-0', odds: '75.00' },
+    { key: '2-1', label: '2-1', odds: '10.50' },
+    { key: '3-1', label: '3-1', odds: '23.00' },
+    { key: '4-1', label: '4-1', odds: '68.00' },
+    { key: '3-2', label: '3-2', odds: '42.00' },
+    { key: '4-2', label: '4-2', odds: '125.00' },
+    { key: '4-3', label: '4-3', odds: '250.00' },
+    { key: '0-0', label: '0-0', odds: '10.50' },
+    { key: '1-1', label: '1-1', odds: '7.00' },
+    { key: '2-2', label: '2-2', odds: '19.00' },
+    { key: '3-3', label: '3-3', odds: '115.00' },
+    { key: '4-4', label: '4-4', odds: '250.00' },
+    { key: '0-1', label: '0-1', odds: '9.50' },
+    { key: '0-2', label: '0-2', odds: '17.00' },
+    { key: '0-3', label: '0-3', odds: '47.00' },
+    { key: '0-4', label: '0-4', odds: '170.00' },
+    { key: '1-2', label: '1-2', odds: '12.80' },
+    { key: '1-3', label: '1-3', odds: '35.00' },
+    { key: '1-4', label: '1-4', odds: '125.00' },
+    { key: '2-3', label: '2-3', odds: '51.00' },
+    { key: '2-4', label: '2-4', odds: '185.00' },
+    { key: '3-4', label: '3-4', odds: '250.00' },
+    { key: 'OTHER_HOME', label: 'Any Other Home Win', odds: '40.00' },
+    { key: 'OTHER_AWAY', label: 'Any Other Away Win', odds: '50.00' },
+    { key: 'OTHER_DRAW', label: 'Any Other Draw', odds: '150.00' },
   ]},
   CORNERS: { name: 'Corners', selections: [
     { key: 'Over', label: 'Over 9.5', odds: '1.90' },
@@ -962,6 +969,12 @@ const INITIAL_FORM = {
   '1hAway': '3.00',
 };
 
+// Full 0-4 correct-score grid (matches the user-facing book and settlement
+// bounds — 5+ a side is covered by the Any-Other selections).
+const CS_HOME_SCORES = ['1-0', '2-0', '3-0', '4-0', '2-1', '3-1', '4-1', '3-2', '4-2', '4-3'];
+const CS_DRAW_SCORES = ['0-0', '1-1', '2-2', '3-3', '4-4'];
+const CS_AWAY_SCORES = ['0-1', '0-2', '0-3', '0-4', '1-2', '1-3', '1-4', '2-3', '2-4', '3-4'];
+
 function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
   const [form, setForm] = useState(INITIAL_FORM);
   const [errors, setErrors] = useState({});
@@ -995,9 +1008,7 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
         ...f,
         csEnabled: true,
         csScores: [
-          '0-0', '1-0', '2-0', '3-0', '4-0', '5-0', '6-0',
-          '0-1', '0-2', '0-3', '0-4', '0-5', '0-6',
-          '1-1', '2-2', '3-3', '4-4', '5-5',
+          ...CS_HOME_SCORES, ...CS_DRAW_SCORES, ...CS_AWAY_SCORES,
           'OTHER_HOME', 'OTHER_AWAY', 'OTHER_DRAW',
         ],
       }));
@@ -1288,7 +1299,7 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
                 <div className="adm-cs-grid">
                   <div className="adm-cs-group">
                     <div className="adm-cs-group-label">Home Wins</div>
-                    {['1-0','2-0','3-0','4-0','5-0','6-0'].map((s) => (
+                    {CS_HOME_SCORES.map((s) => (
                       <label key={s} className={`adm-cs-chip ${form.csScores.includes(s) ? 'active' : ''}`}>
                         <input type="checkbox" checked={form.csScores.includes(s)} onChange={() => toggleCSCore(s)} />
                         {s}
@@ -1301,7 +1312,7 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
                   </div>
                   <div className="adm-cs-group">
                     <div className="adm-cs-group-label">Draw</div>
-                    {['0-0','1-1','2-2','3-3','4-4','5-5'].map((s) => (
+                    {CS_DRAW_SCORES.map((s) => (
                       <label key={s} className={`adm-cs-chip ${form.csScores.includes(s) ? 'active' : ''}`}>
                         <input type="checkbox" checked={form.csScores.includes(s)} onChange={() => toggleCSCore(s)} />
                         {s}
@@ -1314,7 +1325,7 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
                   </div>
                   <div className="adm-cs-group">
                     <div className="adm-cs-group-label">Away Wins</div>
-                    {['0-1','0-2','0-3','0-4','0-5','0-6'].map((s) => (
+                    {CS_AWAY_SCORES.map((s) => (
                       <label key={s} className={`adm-cs-chip ${form.csScores.includes(s) ? 'active' : ''}`}>
                         <input type="checkbox" checked={form.csScores.includes(s)} onChange={() => toggleCSCore(s)} />
                         {s}

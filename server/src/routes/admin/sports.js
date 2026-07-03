@@ -233,6 +233,61 @@ router.post('/fixtures', requireAdmin, requireRole('odds_manager'), validate(cre
   res.status(201).json({ fixture: fx });
 });
 
+// Correct Score covers 0-4 a side; settlement's Any-Other bucket starts at 5+.
+const CS_GRID_MAX = 4;
+
+function csPoissonPmf(k, lambda) {
+  if (lambda <= 0) return k === 0 ? 1 : 0;
+  let logFact = 0;
+  for (let i = 2; i <= k; i++) logFact += Math.log(i);
+  return Math.exp(-lambda + k * Math.log(lambda) - logFact);
+}
+
+// Book-style correct-score pricing: independent Poisson goal expectancies
+// derived from the fixture's 1X2 odds (skew) and O/U 2.5 odds (goal total),
+// 10% margin, with a low probability floor so longshots run up to ~250.
+function buildCsPricer(odds1x2, ouMarket) {
+  const rH = 1 / odds1x2.home;
+  const rD = 1 / (odds1x2.draw ?? 3.2);
+  const rA = 1 / odds1x2.away;
+  const rSum = rH + rD + rA;
+  const pHome = rH / rSum;
+  const pAway = rA / rSum;
+
+  let pOver = 0.5;
+  if (ouMarket?.over && ouMarket?.under) {
+    const rO = 1 / ouMarket.over;
+    const rU = 1 / ouMarket.under;
+    pOver = rO / (rO + rU);
+  }
+
+  const goalTotal = Math.max(1.4, Math.min(3.6, 2.0 + (pOver - 0.5) * 2.4));
+  const skew = (pHome - pAway) * 1.8;
+  const lambdaHome = Math.max(0.35, goalTotal / 2 + skew / 2);
+  const lambdaAway = Math.max(0.35, goalTotal / 2 - skew / 2);
+
+  const scoreProb = (h, a) => csPoissonPmf(h, lambdaHome) * csPoissonPmf(a, lambdaAway);
+
+  // Off-grid mass (5+ a side) per result bucket for the Any-Other selections.
+  const other = { home: 0, draw: 0, away: 0 };
+  for (let h = 0; h <= 9; h++) {
+    for (let a = 0; a <= 9; a++) {
+      if (h <= CS_GRID_MAX && a <= CS_GRID_MAX) continue;
+      const p = scoreProb(h, a);
+      if (h > a) other.home += p;
+      else if (h === a) other.draw += p;
+      else other.away += p;
+    }
+  }
+
+  const price = (p) => {
+    const q = Math.max(0.0036, Math.min(0.985, p)); // 1/0.0036 × 0.9 ≈ 250 top price
+    return Math.max(ODD_MIN, Number(((1 / q) * 0.9).toFixed(2)));
+  };
+
+  return { scoreProb, other, price };
+}
+
 function buildFixtureMarkets(b, home, away) {
   const extra = b.extraMarkets || [];
   const fromExtra = {};
@@ -281,14 +336,30 @@ function buildFixtureMarkets(b, home, away) {
         ],
       };
     } else if (em.type === 'cs') {
-      const csSelections = (b.correctScores || []).map((s) => {
-        const [h, a] = s.split('-').map(Number);
-        return {
-          key: s,
-          label: `${h} - ${a}`,
-          odds: 7.0,
-        };
-      });
+      const ou = extra.find((x) => x.type === 'overunder' && x.market === 'OU25');
+      const pricer = buildCsPricer(b.odds, ou);
+      const csSelections = [];
+      for (const s of b.correctScores || []) {
+        if (s === 'OTHER_HOME') {
+          csSelections.push({ key: s, label: 'Any Other Home Win', odds: pricer.price(pricer.other.home) });
+          continue;
+        }
+        if (s === 'OTHER_AWAY') {
+          csSelections.push({ key: s, label: 'Any Other Away Win', odds: pricer.price(pricer.other.away) });
+          continue;
+        }
+        if (s === 'OTHER_DRAW') {
+          csSelections.push({ key: s, label: 'Any Other Draw', odds: pricer.price(pricer.other.draw) });
+          continue;
+        }
+        const m = /^(\d+)-(\d+)$/.exec(s);
+        if (!m) continue;
+        const h = Number(m[1]);
+        const a = Number(m[2]);
+        // Scores past the grid would double-settle with the Any-Other buckets.
+        if (h > CS_GRID_MAX || a > CS_GRID_MAX) continue;
+        csSelections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, odds: pricer.price(pricer.scoreProb(h, a)) });
+      }
       if (csSelections.length >= 2) {
         fromExtra[em.market] = {
           name: 'Correct Score',
