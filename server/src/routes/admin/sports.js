@@ -235,6 +235,10 @@ router.post('/fixtures', requireAdmin, requireRole('odds_manager'), validate(cre
 
 // Correct Score covers 0-4 a side; settlement's Any-Other bucket starts at 5+.
 const CS_GRID_MAX = 4;
+// Scores whose true probability floors out at the price cap (~250.00) are folded
+// into the Any-Other bucket instead of listed as their own row — several 0-4 grid
+// cells price identically at the cap, so showing them individually is just noise.
+const CS_CAP_P = 0.0036;
 
 function csPoissonPmf(k, lambda) {
   if (lambda <= 0) return k === 0 ? 1 : 0;
@@ -268,12 +272,14 @@ function buildCsPricer(odds1x2, ouMarket) {
 
   const scoreProb = (h, a) => csPoissonPmf(h, lambdaHome) * csPoissonPmf(a, lambdaAway);
 
-  // Off-grid mass (5+ a side) per result bucket for the Any-Other selections.
+  // Off-grid mass (5+ a side), plus any on-grid cell that would price at the cap
+  // anyway, per result bucket for the Any-Other selections.
   const other = { home: 0, draw: 0, away: 0 };
   for (let h = 0; h <= 9; h++) {
     for (let a = 0; a <= 9; a++) {
-      if (h <= CS_GRID_MAX && a <= CS_GRID_MAX) continue;
       const p = scoreProb(h, a);
+      const onGrid = h <= CS_GRID_MAX && a <= CS_GRID_MAX;
+      if (onGrid && p > CS_CAP_P) continue;
       if (h > a) other.home += p;
       else if (h === a) other.draw += p;
       else other.away += p;
@@ -358,6 +364,8 @@ function buildFixtureMarkets(b, home, away) {
         const a = Number(m[2]);
         // Scores past the grid would double-settle with the Any-Other buckets.
         if (h > CS_GRID_MAX || a > CS_GRID_MAX) continue;
+        // Cap-priced cells are folded into the Any-Other bucket above, not listed here.
+        if (pricer.scoreProb(h, a) <= CS_CAP_P) continue;
         csSelections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, odds: pricer.price(pricer.scoreProb(h, a)) });
       }
       if (csSelections.length >= 2) {

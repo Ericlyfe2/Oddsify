@@ -132,16 +132,21 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
   const csSkew = (pH - pA) * 1.8;
   const csLambdaHome = Math.max(0.35, csGoalTotal / 2 + csSkew / 2);
   const csLambdaAway = Math.max(0.35, csGoalTotal / 2 - csSkew / 2);
+  // Cells whose probability floors out at the price cap (~250.00) are folded
+  // into "Any Other Score" instead of listed on their own — several 0-4 grid
+  // cells price identically at the cap, so showing them individually is noise.
   const csGrid = {};
   let csGridSum = 0;
+  let csFoldedMass = 0;
   for (let h = 0; h <= CS_MAX; h++) {
     for (let a = 0; a <= CS_MAX; a++) {
       const p = poissonPmf(h, csLambdaHome) * poissonPmf(a, csLambdaAway);
-      csGrid[`${h}-${a}`] = p;
       csGridSum += p;
+      if (p <= CS_PRICE_FLOOR) csFoldedMass += p;
+      else csGrid[`${h}-${a}`] = p;
     }
   }
-  const csOther = Math.max(0.005, 1 - csGridSum);
+  const csOther = Math.max(0.005, 1 - csGridSum) + csFoldedMass;
 
   return {
     '1X2': {
@@ -250,14 +255,11 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
     CS: {
       name: 'Correct Score',
       selections: [
-        ...Array.from({ length: CS_MAX + 1 }, (_, h) => h)
-          .flatMap((h) =>
-            Array.from({ length: CS_MAX + 1 }, (_, a) => ({
-              key: `${h}-${a}`,
-              label: `${h} - ${a}`,
-              odds: csPrice(csGrid[`${h}-${a}`]),
-            })),
-          ),
+        ...Object.entries(csGrid).map(([key, p]) => ({
+          key,
+          label: key.replace('-', ' - '),
+          odds: csPrice(p),
+        })),
         { key: 'OTHER', label: 'Any Other Score', odds: csPrice(csOther) },
       ],
     },
