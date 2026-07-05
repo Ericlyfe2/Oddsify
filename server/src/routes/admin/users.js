@@ -42,7 +42,7 @@ function expandUser(u) {
   return {
     ...safe,
     kycStatus: u.kycStatus || 'unverified',
-    stage: u.stage ?? 0,
+    stage: u.stage === undefined ? null : u.stage,
     stageUpdatedAt: u.stageUpdatedAt || null,
     stageUpdatedBy: u.stageUpdatedBy || null,
     stagePromotionRequested: !!u.stagePromotionRequested,
