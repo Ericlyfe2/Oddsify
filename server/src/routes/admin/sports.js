@@ -345,17 +345,12 @@ function buildFixtureMarkets(b, home, away) {
       const ou = extra.find((x) => x.type === 'overunder' && x.market === 'OU25');
       const pricer = buildCsPricer(b.odds, ou);
       const csSelections = [];
+      // Any-Other-* selections are combined into a single straight-line "Other"
+      // row (matching the live match feed) instead of one cell per column.
+      let hasOther = false;
       for (const s of b.correctScores || []) {
-        if (s === 'OTHER_HOME') {
-          csSelections.push({ key: s, label: 'Any Other Home Win', odds: pricer.price(pricer.other.home) });
-          continue;
-        }
-        if (s === 'OTHER_AWAY') {
-          csSelections.push({ key: s, label: 'Any Other Away Win', odds: pricer.price(pricer.other.away) });
-          continue;
-        }
-        if (s === 'OTHER_DRAW') {
-          csSelections.push({ key: s, label: 'Any Other Draw', odds: pricer.price(pricer.other.draw) });
+        if (s === 'OTHER_HOME' || s === 'OTHER_AWAY' || s === 'OTHER_DRAW') {
+          hasOther = true;
           continue;
         }
         const m = /^(\d+)-(\d+)$/.exec(s);
@@ -367,6 +362,10 @@ function buildFixtureMarkets(b, home, away) {
         // Cap-priced cells are folded into the Any-Other bucket above, not listed here.
         if (pricer.scoreProb(h, a) <= CS_CAP_P) continue;
         csSelections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, odds: pricer.price(pricer.scoreProb(h, a)) });
+      }
+      if (hasOther) {
+        const otherP = pricer.other.home + pricer.other.draw + pricer.other.away;
+        csSelections.push({ key: 'OTHER', label: 'Any Other Score', odds: pricer.price(otherP) });
       }
       if (csSelections.length >= 2) {
         fromExtra[em.market] = {
