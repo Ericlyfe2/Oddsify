@@ -73,3 +73,14 @@ export async function fetchLiveScoresAll(sport = 'football') {
   );
   return results.flat();
 }
+
+/**
+ * Fetch scheduled fixtures (upcoming, not just live) across all enabled
+ * providers. Same isolation contract.
+ */
+export async function fetchFixturesAll(sport = 'football') {
+  const results = await Promise.all(
+    enabledProviders().map((p) => Promise.resolve(p.fetchFixtures(sport)).catch(() => [])),
+  );
+  return results.flat();
+}

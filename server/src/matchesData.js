@@ -1,5 +1,6 @@
-/** Oddsify fixture book — static fallback + live merge from The Odds API */
+/** Oddsify fixture book — static fallback + live merge from provider registry / The Odds API */
 import { fetchSportSnapshot } from './services/oddsApi.js';
+import { fetchProviderSnapshot } from './services/providerSnapshot.js';
 
 export const BONUS_RATE = 0.08;
 export const CURRENCY = 'GHS';
@@ -454,7 +455,15 @@ export async function ensureFreshLeagues(sportId) {
   const now = Date.now();
   if (now - (lastRefreshAt[sportId] || 0) < REFRESH_TTL_MS) return;
   try {
-    const live = await fetchSportSnapshot(sportId);
+    // Prefer the multi-provider registry (apiFootball, rapidApiFootball,
+    // liveScoreApi, ...) — it's what the live-tick/cash-out loop already
+    // polls, and match ids are set to the same fixtureKey those loops use,
+    // so real-time updates correlate correctly. Fall back to theOddsApi
+    // when no registry provider returns anything (e.g. none configured).
+    let live = await fetchProviderSnapshot(sportId).catch(() => []);
+    if (!live || !live.length) {
+      live = await fetchSportSnapshot(sportId);
+    }
     if (live && live.length) {
       if (sportId === 'football') {
         liveLeagues.football = [...live, GHANA_FOOTBALL_LEAGUE];

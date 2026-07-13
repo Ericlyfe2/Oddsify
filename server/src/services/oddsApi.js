@@ -133,7 +133,7 @@ function consensusPrice(bookmakers, outcomeName) {
   return prices[Math.floor(prices.length / 2)];
 }
 
-function commenceToHumanTime(iso) {
+export function commenceToHumanTime(iso) {
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -149,14 +149,14 @@ function commenceToHumanTime(iso) {
   return { kickoff: `${hh}:${mm}`, day };
 }
 
-function formDots() {
+export function formDots() {
   // We don't get form data from the Odds API; emit a neutral pattern
   const arr = [];
   for (let i = 0; i < 5; i++) arr.push(['w', 'd', 'l'][Math.floor(Math.random() * 3)]);
   return arr;
 }
 
-function buildFootballMarkets(home, draw, away) {
+export function buildFootballMarkets(home, draw, away) {
   // Synthetic OU/BTTS based on goals expectation implied by 1X2 (rough heuristic).
   const total = 1 / home + 1 / draw + 1 / away;
   const homeProb = 1 / home / total;
