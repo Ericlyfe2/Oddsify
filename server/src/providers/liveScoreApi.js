@@ -100,6 +100,32 @@ export class LiveScoreApiProvider extends Provider {
     if (!data) return null;
     return normaliseStandings(data);
   }
+
+  /**
+   * Match event timeline (goals, cards, subs). `matchId` is the score-feed id
+   * (our `sourceId` on live/finished matches). Returns [] for matches that
+   * haven't produced events (e.g. upcoming fixtures). Not a shared-contract
+   * method — called directly by the /match-detail route.
+   */
+  async fetchEvents(matchId) {
+    if (!this.enabled || !matchId) return [];
+    const url = `${this.base}/matches/events.json?match_id=${encodeURIComponent(matchId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    return (json?.data?.event || []).map(normaliseEvent);
+  }
+
+  /**
+   * Match lineups: { home:{team,starters[],subs[]}, away:{...} } or null when
+   * lineups aren't published. Players carry shirt number + photo.
+   */
+  async fetchLineups(matchId) {
+    if (!this.enabled || !matchId) return null;
+    const url = `${this.base}/matches/lineups.json?match_id=${encodeURIComponent(matchId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const lu = json?.data?.lineup;
+    if (!lu || (!lu.home && !lu.away)) return null;
+    return { home: normaliseLineupSide(lu.home), away: normaliseLineupSide(lu.away) };
+  }
 }
 
 function hasOdds(o) {
@@ -244,5 +270,36 @@ function normaliseStandings(data) {
     competition: { id: data.competition?.id ?? null, name: data.competition?.name || '' },
     season: { name: data.season?.name || '' },
     groups,
+  };
+}
+
+/** matches/events.json event → tidy timeline entry. */
+function normaliseEvent(e) {
+  return {
+    id: e.id != null ? String(e.id) : null,
+    type: e.event || '', // GOAL, YELLOW_CARD, RED_CARD, SUBSTITUTION, ...
+    label: e.label || '',
+    minute: e.time != null ? String(e.time) : null,
+    side: e.is_home ? 'home' : e.is_away ? 'away' : null,
+    player: e.player?.name || null,
+    // For SUBSTITUTION this is the player coming off; for GOAL, the assist.
+    player2: e.info?.name || null,
+  };
+}
+
+/** One side of matches/lineups.json → { team, starters[], subs[] }. */
+function normaliseLineupSide(side) {
+  if (!side) return null;
+  const players = (side.players || []).map((p) => ({
+    id: p.id != null ? String(p.id) : null,
+    name: p.name || '',
+    number: p.shirt_number != null ? String(p.shirt_number) : '',
+    photo: p.photo || null,
+    isSub: String(p.substitution) === '1',
+  }));
+  return {
+    team: side.team?.name || '',
+    starters: players.filter((p) => !p.isSub),
+    subs: players.filter((p) => p.isSub),
   };
 }

@@ -114,6 +114,11 @@ export async function fetchProviderSnapshot(sportId) {
     const match = {
       id: key,
       sport: 'football',
+      // live-score-api match id (score-feed id on live/finished rows) — lets
+      // the client fetch this match's events + lineups. On upcoming fixtures
+      // this is the fixture id, which has no events/lineups yet (handled
+      // gracefully client-side).
+      sourceMatchId: fx.sourceId || null,
       home: fx.home,
       away: fx.away,
       // Real team crests + country flag when the provider supplies them —

@@ -112,6 +112,8 @@ export const fetchLeagues = (sport = 'football') => get(`/bet/leagues?sport=${en
 export const fetchLeagueMatches = (id) => get(`/bet/leagues/${encodeURIComponent(id)}/matches`);
 export const fetchStandings = (competitionId) =>
   get(`/bet/standings?competition=${encodeURIComponent(competitionId)}`);
+export const fetchMatchDetail = (matchId) =>
+  get(`/bet/match-detail?matchId=${encodeURIComponent(matchId)}`);
 
 /* bets */
 export const placeBet = (payload) => post('/bet/place', payload);

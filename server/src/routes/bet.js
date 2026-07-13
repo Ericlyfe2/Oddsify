@@ -289,6 +289,37 @@ router.get(
   }),
 );
 
+/**
+ * Match events + lineups for a live-score-api match id (the sourceMatchId
+ * carried on provider-sourced matches). GET /api/bet/match-detail?matchId=N
+ * Returns { events:[], lineups:{home,away}|null }. Cached 30s (events tick
+ * during live play). Public — no auth. Empty payloads for matches with no
+ * published events/lineups (e.g. upcoming fixtures) rather than an error.
+ */
+router.get(
+  '/match-detail',
+  asyncHandler(async (req, res) => {
+    const matchId = String(req.query.matchId || '').trim();
+    if (!/^\d+$/.test(matchId)) throw badRequest('A numeric ?matchId is required');
+
+    const cacheKey = `matchdetail:${matchId}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = getProvider('liveScoreApi');
+    if (!provider || !provider.enabled || typeof provider.fetchEvents !== 'function') {
+      throw notFound('Match detail is not available (provider disabled)');
+    }
+    const [events, lineups] = await Promise.all([
+      provider.fetchEvents(matchId).catch(() => []),
+      provider.fetchLineups(matchId).catch(() => null),
+    ]);
+    const payload = { events: events || [], lineups: lineups || null };
+    await cacheSet(cacheKey, payload, { ex: 30 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...payload });
+  }),
+);
+
 /* ------------ authenticated bet operations ------------ */
 
 // Booked slips expire 30 days after creation. After that the lookup

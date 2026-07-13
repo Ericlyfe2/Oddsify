@@ -7,12 +7,13 @@
  * screens-home.jsx + screens-other.jsx) with original visual rules intact.
  * Inline styles match the source so token churn touches one file.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { T, fmtCedi, useTokens } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
 import { TeamLogo, LeagueLogo } from './teamBranding.jsx';
 import { useTheme } from '../../providers/ThemeProvider.jsx';
 import { humanizePick } from '../../lib/marketNames.js';
+import { fetchMatchDetail } from '../../api/betApi.js';
 import { ensure1X2Order, sortOddsEntries } from '../../lib/marketUtils.js';
 
 /* ─── Oddsify wordmark ─────────────────────────────────────── */
@@ -1146,16 +1147,59 @@ function marketLabel(key, market) {
 
 export function MarketsSheet({ match, picks, onPick, onClose }) {
   const T = useTokens();
-  if (!match) return null;
-  const markets = match.markets || {};
+  const markets = match?.markets || {};
   const entries = Object.entries(markets);
-  const pickedSel = picks?.[match.id];
+  const pickedSel = match ? picks?.[match.id] : null;
+
+  const [tab, setTab] = useState('markets');
+  const [detail, setDetail] = useState(null);
+  const [detailState, setDetailState] = useState('idle'); // idle | loading | done | error
+  const srcId = match?.sourceMatchId;
+  // Tracks which match id we've already kicked off a detail fetch for. A ref
+  // (not state) so flipping it doesn't re-run the fetch effect and cancel the
+  // in-flight request via its own cleanup.
+  const fetchedFor = useRef(null);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Reset detail state when the sheet switches to a different match.
+  useEffect(() => {
+    fetchedFor.current = null;
+    setDetail(null);
+    setDetailState('idle');
+    setTab('markets');
+  }, [srcId]);
+
+  // Lazy-load events + lineups the first time a non-markets tab is opened.
+  useEffect(() => {
+    if (tab === 'markets' || !srcId || fetchedFor.current === srcId) return;
+    fetchedFor.current = srcId;
+    setDetailState('loading');
+    let alive = true;
+    fetchMatchDetail(srcId)
+      .then((d) => {
+        if (alive) {
+          setDetail(d);
+          setDetailState('done');
+        }
+      })
+      .catch(() => alive && setDetailState('error'));
+    return () => {
+      alive = false;
+    };
+  }, [tab, srcId]);
+
+  if (!match) return null;
+
+  const tabs = [
+    { key: 'markets', label: `Markets` },
+    { key: 'lineups', label: 'Lineups' },
+    { key: 'events', label: 'Events' },
+  ];
 
   return (
     <div
@@ -1197,7 +1241,35 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
           </button>
         </div>
 
-        {/* scrollable market list */}
+        {/* tab bar */}
+        <div style={{ display: 'flex', gap: 6, padding: '10px 16px 8px', borderBottom: `1px solid ${T.line}` }}>
+          {tabs.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                style={{
+                  flex: 1, padding: '8px 4px', borderRadius: 10, cursor: 'pointer',
+                  background: active ? T.greenBright : T.surfaceAlt,
+                  color: active ? T.goldDark : T.inkSoft,
+                  border: `1px solid ${active ? T.greenBright : T.line}`,
+                  fontSize: 12, fontWeight: 700,
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* content */}
+        {tab === 'lineups' ? (
+          <MatchLineups detail={detail} state={srcId ? detailState : 'unavailable'} match={match} T={T} />
+        ) : tab === 'events' ? (
+          <MatchEvents detail={detail} state={srcId ? detailState : 'unavailable'} match={match} T={T} />
+        ) : (
         <div style={{ overflowY: 'auto', padding: '8px 16px 24px', flex: 1 }}>
           {entries.map(([key, mkt]) => {
             const sels = ensure1X2Order(mkt.selections || []);
@@ -1271,7 +1343,128 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
             </div>
           )}
         </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/* ─── Match events timeline (goals, cards, subs) ──────────── */
+const EVENT_GLYPH = {
+  GOAL: '⚽', GOAL_PENALTY: '⚽', OWN_GOAL: '⚽', PENALTY_SHOOTOUT_GOAL: '⚽',
+  YELLOW_CARD: '🟨', YELLOW_RED_CARD: '🟨🟥', RED_CARD: '🟥',
+  SUBSTITUTION: '🔁', MISSED_PENALTY: '❌', PENALTY_AWARDED: '🎯',
+  VAR_GOAL_REVIEW: '📺', VAR_PENALTY_REVIEW: '📺', VAR_RED_CARD_REVIEW: '📺',
+};
+
+function MatchDetailState({ state, T, emptyText }) {
+  if (state === 'unavailable')
+    return <DetailNote T={T} text="Not available for this match." />;
+  if (state === 'loading')
+    return <DetailNote T={T} text="Loading…" />;
+  if (state === 'error')
+    return <DetailNote T={T} text="Couldn't load right now." />;
+  return <DetailNote T={T} text={emptyText} />;
+}
+
+function DetailNote({ T, text }) {
+  return (
+    <div style={{ padding: 28, textAlign: 'center', color: T.inkSoft, fontSize: 13 }}>{text}</div>
+  );
+}
+
+function MatchEvents({ detail, state, match, T }) {
+  if (state !== 'done') return <MatchDetailState state={state} T={T} emptyText="" />;
+  const events = detail?.events || [];
+  if (!events.length)
+    return <MatchDetailState state="done" T={T} emptyText="No events recorded yet." />;
+  return (
+    <div style={{ overflowY: 'auto', padding: '10px 12px 24px', flex: 1 }}>
+      {events.map((e) => {
+        const homeSide = e.side === 'home';
+        const glyph = EVENT_GLYPH[e.type] || '•';
+        const who = homeSide ? match.home : e.side === 'away' ? match.away : '';
+        return (
+          <div
+            key={e.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '9px 6px',
+              borderBottom: `1px solid ${T.line}`,
+              flexDirection: homeSide ? 'row' : 'row-reverse',
+              textAlign: homeSide ? 'left' : 'right',
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 800, color: T.inkSoft, minWidth: 30, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+              {e.minute ? `${e.minute}'` : ''}
+            </span>
+            <span style={{ fontSize: 16, minWidth: 22, textAlign: 'center' }}>{glyph}</span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: T.ink }}>
+                {e.player || e.label}
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: T.inkSoft }}>
+                {e.type === 'SUBSTITUTION' && e.player2 ? `↳ off: ${e.player2}` : e.label}
+                {who ? ` · ${who}` : ''}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Match lineups (starting XI + subs per side) ─────────── */
+function MatchLineups({ detail, state, match, T }) {
+  if (state !== 'done') return <MatchDetailState state={state} T={T} emptyText="" />;
+  const lu = detail?.lineups;
+  const playerCount =
+    (lu?.home?.starters?.length || 0) + (lu?.home?.subs?.length || 0) + (lu?.away?.starters?.length || 0) + (lu?.away?.subs?.length || 0);
+  if (!lu || playerCount === 0)
+    return <MatchDetailState state="done" T={T} emptyText="Lineups not published yet." />;
+  return (
+    <div style={{ overflowY: 'auto', padding: '10px 14px 24px', flex: 1 }}>
+      <LineupSide side={lu.home} fallbackName={match.home} T={T} />
+      <LineupSide side={lu.away} fallbackName={match.away} T={T} />
+    </div>
+  );
+}
+
+function LineupSide({ side, fallbackName, T }) {
+  if (!side) return null;
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, padding: '2px 2px 8px' }}>
+        {side.team || fallbackName}
+      </div>
+      {side.starters?.map((p) => <PlayerRow key={p.id || p.name} player={p} T={T} />)}
+      {side.subs?.length ? (
+        <>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: T.inkDim, textTransform: 'uppercase', padding: '10px 2px 4px' }}>
+            Substitutes
+          </div>
+          {side.subs.map((p) => <PlayerRow key={p.id || p.name} player={p} T={T} dim />)}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function PlayerRow({ player, T, dim }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 2px' }}>
+      <span style={{ width: 24, textAlign: 'center', fontSize: 12, fontWeight: 700, color: T.inkSoft, fontVariantNumeric: 'tabular-nums' }}>
+        {player.number || '–'}
+      </span>
+      {player.photo ? (
+        <img src={player.photo} alt="" width={24} height={24} loading="lazy" style={{ borderRadius: 999, objectFit: 'cover', background: T.surfaceAlt }} />
+      ) : (
+        <span style={{ width: 24, height: 24, borderRadius: 999, background: T.surfaceAlt, display: 'inline-block' }} />
+      )}
+      <span style={{ fontSize: 13, fontWeight: 600, color: dim ? T.inkSoft : T.ink }}>{player.name}</span>
     </div>
   );
 }

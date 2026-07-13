@@ -47,6 +47,7 @@ export function normalizeMatch(m, leagueName = '') {
 
   return {
     id: m.id,
+    sourceMatchId: m.sourceMatchId || null,
     home: m.home,
     away: m.away,
     homeLogo: m.homeLogo || m.home_logo || null,
