@@ -278,6 +278,7 @@ export function buildPublicSnapshot(sportId = 'football', seedSlipFn) {
       region: lg.region,
       countryMeta: lg.countryMeta,
       crest: lg.crest,
+      competitionId: lg.competitionId || null,
       matches: (lg.matches || []).filter(isBettable).map(publicMatch),
     }))
     .filter((lg) => lg.matches.length > 0);

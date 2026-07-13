@@ -18,6 +18,8 @@ import {
 import { adminLookupSelection, adminLookupFixture, buildPublicSnapshot } from '../db/sportsAdmin.js';
 import { listActivePromotions } from '../db/promotions.js';
 import { oddsApiStatus } from '../services/oddsApi.js';
+import { getProvider } from '../services/providerRegistry.js';
+import { get as cacheGet, set as cacheSet } from '../services/cache.js';
 import { getRecentWins } from '../services/recentWins.js';
 import { createStore } from '../db/store.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
@@ -257,6 +259,33 @@ router.get(
       }
     }
     throw notFound('League not found');
+  }),
+);
+
+/**
+ * League/cup standings table for a live-score-api competition id.
+ * GET /api/bet/standings?competition=2
+ * Cached 10 min (standings move slowly). Public — no auth.
+ */
+router.get(
+  '/standings',
+  asyncHandler(async (req, res) => {
+    const competition = String(req.query.competition || '').trim();
+    if (!/^\d+$/.test(competition)) throw badRequest('A numeric ?competition id is required');
+
+    const cacheKey = `standings:${competition}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = getProvider('liveScoreApi');
+    if (!provider || !provider.enabled || typeof provider.fetchStandings !== 'function') {
+      throw notFound('Standings are not available (provider disabled)');
+    }
+    const standings = await provider.fetchStandings(competition).catch(() => null);
+    if (!standings || !standings.groups?.length) throw notFound('No standings for this competition');
+
+    await cacheSet(cacheKey, standings, { ex: 600 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...standings });
   }),
 );
 

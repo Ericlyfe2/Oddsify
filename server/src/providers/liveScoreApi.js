@@ -82,6 +82,24 @@ export class LiveScoreApiProvider extends Provider {
       .filter((m) => hasOdds(m.odds?.live) || hasOdds(m.odds?.pre))
       .map((m) => normaliseOdds(m, this.id));
   }
+
+  /**
+   * League/cup standings for a competition. Returns a normalised shape:
+   *   { competition:{id,name}, season:{name}, groups:[
+   *       { id, name, rows:[{ rank, team, teamLogo, played, won, drawn, lost,
+   *                            gf, ga, gd, points }] } ] }
+   * Multi-group tournaments (World Cup / UCL group stage) return several
+   * groups; single-table leagues return one group. Not part of the shared
+   * Provider contract — called directly by the /standings route.
+   */
+  async fetchStandings(competitionId) {
+    if (!this.enabled || !competitionId) return null;
+    const url = `${this.base}/competitions/table.json?competition_id=${encodeURIComponent(competitionId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const data = json?.data;
+    if (!data) return null;
+    return normaliseStandings(data);
+  }
 }
 
 function hasOdds(o) {
@@ -182,5 +200,49 @@ function normaliseOdds(m, providerId) {
       '1X2': { name: '1X2', selections: oddsSelections(set) },
     },
     updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Flatten table.json's { stages:[{ stage, groups:[{ id, name, standings }] }] }
+ * into a flat list of groups with tidy rows. Each stage's groups are prefixed
+ * with the stage name when there's more than one stage (e.g. "Group Stage" vs
+ * "Knockout"), so the client can render sensible section headers.
+ */
+function normaliseStandings(data) {
+  const stages = Array.isArray(data.stages) ? data.stages : [];
+  const multiStage = stages.length > 1;
+  const groups = [];
+  for (const stage of stages) {
+    const stageName = stage?.stage?.name || '';
+    for (const g of stage?.groups || []) {
+      const rows = (g?.standings || []).map((r) => ({
+        rank: r.rank ?? null,
+        team: r.team?.name || '',
+        teamId: r.team?.id != null ? String(r.team.id) : null,
+        teamLogo: r.team?.logo || null,
+        played: r.matches ?? null,
+        won: r.won ?? null,
+        drawn: r.drawn ?? null,
+        lost: r.lost ?? null,
+        gf: r.goals_scored ?? null,
+        ga: r.goals_conceded ?? null,
+        gd: r.goal_diff ?? null,
+        points: r.points ?? null,
+      }));
+      if (!rows.length) continue;
+      // Single-group leagues return a group named "A" or "1"; drop the
+      // redundant label unless it's genuinely a multi-group competition.
+      const label =
+        (stage?.groups?.length || 0) > 1 || multiStage
+          ? [multiStage ? stageName : '', g?.name ? `Group ${g.name}` : ''].filter(Boolean).join(' · ')
+          : '';
+      groups.push({ id: String(g?.id || ''), name: label, rows });
+    }
+  }
+  return {
+    competition: { id: data.competition?.id ?? null, name: data.competition?.name || '' },
+    season: { name: data.season?.name || '' },
+    groups,
   };
 }

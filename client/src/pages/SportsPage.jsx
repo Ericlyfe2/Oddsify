@@ -71,21 +71,43 @@ export default function SportsPage() {
         title="Sports"
         subtitle="Markets & live matches"
         right={
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 12px 8px 10px',
-              borderRadius: 999,
-              background: T.greenBright,
-              color: T.goldDark,
-              fontWeight: 700,
-              fontSize: 12,
-            }}
-          >
-            <OddIcon name="bolt" size={14} color={T.goldDark} strokeWidth={2} />
-            {liveCount} LIVE
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => navigate('/standings')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 12px',
+                borderRadius: 999,
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                color: T.ink,
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              <OddIcon name="trophy" size={14} color={T.ink} strokeWidth={2} />
+              Tables
+            </button>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 12px 8px 10px',
+                borderRadius: 999,
+                background: T.greenBright,
+                color: T.goldDark,
+                fontWeight: 700,
+                fontSize: 12,
+              }}
+            >
+              <OddIcon name="bolt" size={14} color={T.goldDark} strokeWidth={2} />
+              {liveCount} LIVE
+            </div>
           </div>
         }
       />

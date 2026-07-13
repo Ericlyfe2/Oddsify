@@ -143,6 +143,10 @@ export async function fetchProviderSnapshot(sportId) {
         region: fx.league?.country ? 'international' : 'global',
         countryMeta: fx.league?.country ? String(fx.league.country).toUpperCase() : '',
         crest: crestFor(leagueName),
+        // Numeric live-score-api competition id — lets the client request the
+        // standings table for this league. Only present on provider-sourced
+        // leagues (static/admin leagues have none, so no standings link).
+        competitionId: fx.league?.id ? String(fx.league.id) : null,
         matches: [],
       };
       leagueMap.set(leagueKey, league);

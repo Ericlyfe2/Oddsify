@@ -60,6 +60,9 @@ export default function Home() {
             code: l.crest?.label || l.name.slice(0, 3).toUpperCase(),
             color: extractColor(l.crest?.style) || '#1a1814',
             live: (l.matches || []).filter((m) => m.isLive).length,
+            competitionId: l.competitionId || null,
+            countryMeta: l.countryMeta,
+            crest: l.crest,
           })),
         );
       })
@@ -125,7 +128,14 @@ export default function Home() {
         <WinningsTicker />
       </div>
 
-      <OddLeagueRow leagues={leagues.length ? leagues : undefined} onPick={() => navigate('/sports')} />
+      <OddLeagueRow
+        leagues={leagues.length ? leagues : undefined}
+        onPick={(l) =>
+          l?.competitionId
+            ? navigate(`/standings?competition=${l.competitionId}&name=${encodeURIComponent(l.name)}`)
+            : navigate('/sports')
+        }
+      />
 
       <GrandPrizeWinners />
 

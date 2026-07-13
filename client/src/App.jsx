@@ -7,6 +7,7 @@ import NotFoundPage from './pages/NotFoundPage.jsx';
 import AppShell from './layout/AppShell.jsx';
 import Home from './pages/Home.jsx';
 import SportsPage from './pages/SportsPage.jsx';
+import StandingsPage from './pages/StandingsPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
@@ -142,6 +143,7 @@ export default function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/sports" element={<SportsPage />} />
                   <Route path="/live" element={<SportsPage />} />
+                  <Route path="/standings" element={<StandingsPage />} />
                   <Route path="/my-bets" element={<BetHistoryPage />} />
                   <Route path="/open-bets" element={<OpenBetsScreen />} />
                   <Route path="/bets/:id" element={<BetDetailPage />} />
