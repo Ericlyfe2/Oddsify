@@ -12,6 +12,7 @@ import { SharpApiProvider } from '../providers/sharpApi.js';
 import { SportsGameOddsProvider } from '../providers/sportsGameOdds.js';
 import { FootballDataOrgProvider } from '../providers/footballDataOrg.js';
 import { RapidApiFootballProvider } from '../providers/rapidApiFootball.js';
+import { LiveScoreApiProvider } from '../providers/liveScoreApi.js';
 
 const env = process.env;
 
@@ -29,6 +30,12 @@ const _providers = [
   new RapidApiFootballProvider(
     env.RAPIDAPI_FOOTBALL_KEY || '',
     env.RAPIDAPI_FOOTBALL_HOST || 'free-api-live-football-data.p.rapidapi.com',
+  ),
+  new LiveScoreApiProvider(
+    env.LIVESCOREAPI_KEY || '',
+    env.LIVESCOREAPI_SECRET || '',
+    undefined,
+    Number(env.LIVESCOREAPI_DAILY_BUDGET) || null,
   ),
 ];
 

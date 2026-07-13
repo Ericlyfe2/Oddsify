@@ -55,3 +55,9 @@ services:
         sync: false
       - key: RAPIDAPI_FOOTBALL_HOST
         value: free-api-live-football-data.p.rapidapi.com
+      - key: LIVESCOREAPI_KEY
+        sync: false
+      - key: LIVESCOREAPI_SECRET
+        sync: false
+      - key: LIVESCOREAPI_DAILY_BUDGET
+        value: "12000"
