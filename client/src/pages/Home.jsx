@@ -75,7 +75,27 @@ export default function Home() {
   }, []);
 
   const liveMatches = useMemo(() => matches.filter((m) => m.isLive), [matches]);
-  const upcoming = useMemo(() => matches.filter((m) => !m.isLive).slice(0, 6), [matches]);
+  // Round-robin one match per league before taking a second from any league,
+  // so a slice of 6-8 actually samples across leagues instead of just
+  // whichever league happens to sort first by kickoff time.
+  const upcoming = useMemo(() => {
+    const byLeague = new Map();
+    for (const m of matches) {
+      if (m.isLive) continue;
+      const key = m.leagueName || 'other';
+      if (!byLeague.has(key)) byLeague.set(key, []);
+      byLeague.get(key).push(m);
+    }
+    const buckets = [...byLeague.values()];
+    const out = [];
+    for (let round = 0; out.length < 8 && buckets.some((b) => b.length > round); round++) {
+      for (const bucket of buckets) {
+        if (out.length >= 8) break;
+        if (bucket[round]) out.push(bucket[round]);
+      }
+    }
+    return out;
+  }, [matches]);
   const liveCount = liveMatches.length;
 
   // Both land on Home after auth (no forced ?next). Open the matching tab.
