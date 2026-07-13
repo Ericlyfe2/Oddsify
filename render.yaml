@@ -60,4 +60,4 @@ services:
       - key: LIVESCOREAPI_SECRET
         sync: false
       - key: LIVESCOREAPI_DAILY_BUDGET
-        value: "10000"
+        value: "40000"

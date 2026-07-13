@@ -1,22 +1,29 @@
 /**
  * live-score-api.com (livescore-api.com api-client).
  *
- * Live scores + fixtures, plus 1X2 odds embedded on both endpoints (pre-match
- * and in-play). Auth is `key` + `secret` query params on every request (no
- * headers).
+ * Uses the OFFICIAL documented endpoints (from the account's Postman docs):
+ *   - live scores : /matches/live.json
+ *   - fixtures    : /fixtures/list.json?date=YYYY-MM-DD   (the `today` keyword
+ *                   returns nothing — an explicit ISO date is required)
+ *   - history     : /matches/history.json                (not wired here yet)
  *
- * Response shape is flat (home_name/away_name/home_id/away_id, not nested
- * home:{name}), confirmed against a live account — the shape shown in the
- * public docs samples doesn't match what this endpoint actually returns.
+ * Both live + fixtures return the same NESTED shape:
+ *   home/away  : { id, name, logo, country_id, stadium }
+ *   competition: { id, name, is_cup, is_league, tier }
+ *   country    : { id, name, flag }        (null on some fixtures)
+ *   odds       : { pre:{1,X,2}, live:{1,X,2} }
+ *   scores     : { score:"1 - 0", ht_score, ... }   (live only)
+ *   status/time: "IN PLAY"|"HALF TIME BREAK"|"FINISHED"|... / "HT"|minute
+ * so a single normaliser handles both. Team logos + country flag are carried
+ * through for the UI (real crests instead of generated initials).
  *
- * Activate with LIVESCOREAPI_KEY + LIVESCOREAPI_SECRET. Starter plan is
- * 14,500 req/day; each fetch* method is exactly one HTTP call (the Provider
- * base class paces calls ~8.6s apart on this budget, so firing two requests
- * inside one method trips its own pacing gate — don't do that). Pre-match
- * odds live on /fixtures/matches.json (roughly 60% of fixtures are priced in
- * practice), so fetchFixtures() attaches them as `preOdds` on each Fixture
- * row instead of fetchOdds() making a second call. Default budget of 10,000
- * leaves headroom. Override via LIVESCOREAPI_DAILY_BUDGET on a higher tier.
+ * Auth is `key` + `secret` query params on every request (no headers).
+ * Activate with LIVESCOREAPI_KEY + LIVESCOREAPI_SECRET. Professional plan is
+ * 50,000 req/day. Each fetch* method is exactly one HTTP call — the Provider
+ * base paces calls, so firing two requests inside one method trips its own
+ * pacing gate; pre-match odds ride along on the fixture row (`preOdds`)
+ * instead of fetchOdds() making a second call. Default budget 10,000; override
+ * via LIVESCOREAPI_DAILY_BUDGET.
  */
 import { Provider, fixtureKey } from './base.js';
 
@@ -29,6 +36,13 @@ export class LiveScoreApiProvider extends Provider {
       enabled: !!key && !!secret,
       sports: ['football'],
       dailyBudget: budget,
+      // No per-call pacing. The base class defaults to spreading the daily
+      // budget evenly across 24h (~2.4s/call here), which is meant for tiny
+      // free-tier quotas — but it makes the snapshot's burst of concurrent
+      // fixtures+scores+odds calls deny each other, causing a cold-start
+      // fallback until they self-heal. The Professional plan's 50k/day quota
+      // has ample headroom, so the daily budget cap alone is the guardrail.
+      minCallIntervalMs: 0,
     });
     this.key = key;
     this.secret = secret;
@@ -42,29 +56,31 @@ export class LiveScoreApiProvider extends Provider {
   /** Live + recently-finished matches (last 3-4h). */
   async fetchScores(sport = 'football') {
     if (!this.enabled || sport !== 'football') return [];
-    const url = `${this.base}/scores/live.json?${this.authQuery()}`;
+    const url = `${this.base}/matches/live.json?${this.authQuery()}`;
     const json = await this.http(url);
     const matches = json?.data?.match || [];
-    return matches.map((m) => normaliseLive(m, this.id));
+    return matches.map((m) => normalise(m, this.id, 'live'));
   }
 
-  /** Today's scheduled fixtures. */
+  /** Scheduled fixtures for today. */
   async fetchFixtures(sport = 'football') {
     if (!this.enabled || sport !== 'football') return [];
     const today = new Date().toISOString().slice(0, 10);
-    const url = `${this.base}/fixtures/matches.json?date=${today}&${this.authQuery()}`;
+    const url = `${this.base}/fixtures/list.json?date=${today}&${this.authQuery()}`;
     const json = await this.http(url);
     const fixtures = json?.data?.fixtures || [];
-    return fixtures.map((m) => normaliseFixture(m, this.id));
+    return fixtures.map((m) => normalise(m, this.id, 'fixture'));
   }
 
   /** 1X2 odds for live/in-play + recently-finished matches. */
   async fetchOdds(sport = 'football') {
     if (!this.enabled || sport !== 'football') return [];
-    const url = `${this.base}/scores/live.json?${this.authQuery()}`;
+    const url = `${this.base}/matches/live.json?${this.authQuery()}`;
     const json = await this.http(url);
     const matches = json?.data?.match || [];
-    return matches.filter((m) => hasOdds(m.odds?.live) || hasOdds(m.odds?.pre)).map((m) => normaliseLiveOdds(m, this.id));
+    return matches
+      .filter((m) => hasOdds(m.odds?.live) || hasOdds(m.odds?.pre))
+      .map((m) => normaliseOdds(m, this.id));
   }
 }
 
@@ -82,48 +98,34 @@ function parseScore(s) {
   return [h ?? null, a ?? null];
 }
 
-function statusFromLive(status) {
+/** Map the provider's status string to our unified status. */
+function unifyStatus(status) {
   const s = String(status || '').toUpperCase();
-  if (s === 'FINISHED') return 'finished';
-  if (s === 'IN PLAY' || s === 'HALF TIME BREAK') return 'live';
+  if (s === 'FINISHED' || s === 'FT' || s === 'AET') return 'finished';
+  if (s === 'IN PLAY' || s === 'HALF TIME BREAK' || s === 'HT' || s === 'LIVE') return 'live';
   return 'upcoming';
 }
 
-function normaliseLive(m, providerId) {
-  const home = m.home_name || '';
-  const away = m.away_name || '';
-  const addedDate = String(m.added || '').slice(0, 10);
-  const kickoff = addedDate && m.scheduled ? `${addedDate}T${m.scheduled}:00` : '';
-  const status = statusFromLive(m.status);
-  const [scoreHome, scoreAway] = parseScore(m.score);
-
-  return {
-    key: fixtureKey('football', home, away, kickoff),
-    provider: providerId,
-    sourceId: String(m.id || ''),
-    sport: 'football',
-    league: {
-      id: String(m.competition_id || ''),
-      name: m.competition_name || null,
-      country: m.country?.name || null,
-    },
-    home,
-    away,
-    kickoff,
-    homeId: m.home_id != null ? String(m.home_id) : null,
-    awayId: m.away_id != null ? String(m.away_id) : null,
-    status,
-    scoreHome,
-    scoreAway,
-    minute: status === 'live' ? String(m.time || '') : null,
-    updatedAt: new Date().toISOString(),
-  };
+/**
+ * Build kickoff ISO from either a fixture (date + "HH:MM:SS") or a live match
+ * (added date + scheduled "HH:MM"). The fixtureKey only keys on the DAY, so
+ * live and fixture rows for the same match dedup to the same key.
+ */
+function kickoffIso(m, kind) {
+  if (kind === 'fixture') {
+    return m.date && m.time ? `${m.date}T${m.time}` : m.date || '';
+  }
+  const day = String(m.added || '').slice(0, 10);
+  return day && m.scheduled ? `${day}T${m.scheduled}:00` : '';
 }
 
-function normaliseFixture(m, providerId) {
-  const home = m.home_name || '';
-  const away = m.away_name || '';
-  const kickoff = m.date && m.time ? `${m.date}T${m.time}` : '';
+/** Nested-shape normaliser shared by matches/live.json + fixtures/list.json. */
+function normalise(m, providerId, kind) {
+  const home = m.home?.name || '';
+  const away = m.away?.name || '';
+  const kickoff = kickoffIso(m, kind);
+  const status = unifyStatus(m.status);
+  const [scoreHome, scoreAway] = kind === 'live' ? parseScore(m.scores?.score) : [null, null];
   const pre = hasOdds(m.odds?.pre) ? m.odds.pre : null;
 
   return {
@@ -132,22 +134,26 @@ function normaliseFixture(m, providerId) {
     sourceId: String(m.id || ''),
     sport: 'football',
     league: {
-      id: String(m.competition?.id || m.competition_id || ''),
+      id: String(m.competition?.id || ''),
       name: m.competition?.name || null,
-      country: null,
+      country: m.country?.name || null,
     },
     home,
     away,
     kickoff,
-    homeId: m.home_id != null ? String(m.home_id) : null,
-    awayId: m.away_id != null ? String(m.away_id) : null,
-    status: 'upcoming',
-    scoreHome: null,
-    scoreAway: null,
-    minute: null,
-    // Not part of the shared Fixture contract — an extra hint so
-    // providerSnapshot.js can price fixtures that fetchOdds() (live-only)
-    // never sees. Ignored by any consumer that doesn't know about it.
+    homeId: m.home?.id != null ? String(m.home.id) : null,
+    awayId: m.away?.id != null ? String(m.away.id) : null,
+    // UI enrichment — real team crests + country flag. Not part of the shared
+    // Fixture contract; consumers that don't know about these ignore them.
+    homeLogo: m.home?.logo || null,
+    awayLogo: m.away?.logo || null,
+    countryFlag: m.country?.flag || null,
+    status,
+    scoreHome,
+    scoreAway,
+    minute: status === 'live' && kind === 'live' ? String(m.time || '') : null,
+    // Pre-match odds attached so providerSnapshot.js can price upcoming
+    // fixtures that fetchOdds() (live-only) never sees.
     preOdds: pre ? { 1: Number(pre['1']), X: Number(pre.X), 2: Number(pre['2']) } : null,
     updatedAt: new Date().toISOString(),
   };
@@ -161,13 +167,12 @@ function oddsSelections(set) {
   return selections;
 }
 
-function normaliseLiveOdds(m, providerId) {
-  const home = m.home_name || '';
-  const away = m.away_name || '';
-  const addedDate = String(m.added || '').slice(0, 10);
-  const kickoff = addedDate && m.scheduled ? `${addedDate}T${m.scheduled}:00` : '';
-  const live = statusFromLive(m.status) === 'live';
-  const set = live ? m.odds?.live : m.odds?.pre;
+function normaliseOdds(m, providerId) {
+  const home = m.home?.name || '';
+  const away = m.away?.name || '';
+  const kickoff = kickoffIso(m, 'live');
+  const live = unifyStatus(m.status) === 'live';
+  const set = live && hasOdds(m.odds?.live) ? m.odds.live : m.odds?.pre;
 
   return {
     key: fixtureKey('football', home, away, kickoff),

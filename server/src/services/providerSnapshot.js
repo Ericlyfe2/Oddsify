@@ -116,6 +116,10 @@ export async function fetchProviderSnapshot(sportId) {
       sport: 'football',
       home: fx.home,
       away: fx.away,
+      // Real team crests + country flag when the provider supplies them —
+      // the client (normalize.js) reads home_logo/away_logo/league.logo.
+      home_logo: fx.homeLogo || undefined,
+      away_logo: fx.awayLogo || undefined,
       kickoff,
       day,
       isLive,
