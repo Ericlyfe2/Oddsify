@@ -101,7 +101,10 @@ export async function fetchProviderSnapshot(sportId) {
   const leagueMap = new Map();
 
   for (const [key, fx] of merged) {
-    const odds = oddsIndex.get(key);
+    // fetchLiveOddsAll only covers live/in-play matches; pre-match odds for
+    // upcoming fixtures ride along on the fixture row itself (some
+    // providers, e.g. liveScoreApi, embed odds on their fixtures endpoint).
+    const odds = oddsIndex.get(key) || (fx.preOdds ? { ...fx.preOdds } : null);
     if (!odds) continue; // no priced 1X2 → not bettable, skip
 
     const { kickoff, day } = commenceToHumanTime(fx.kickoff);

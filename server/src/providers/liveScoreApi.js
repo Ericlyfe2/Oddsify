@@ -10,16 +10,19 @@
  * public docs samples doesn't match what this endpoint actually returns.
  *
  * Activate with LIVESCOREAPI_KEY + LIVESCOREAPI_SECRET. Starter plan is
- * 14,500 req/day; fetchScores and fetchOdds both hit /scores/live.json, so a
- * 20s live-track poll alone burns ~8,600/day. Default budget of 12,000 keeps
- * headroom for the fixtures pull + admin "Test" probes. Override via
- * LIVESCOREAPI_DAILY_BUDGET if you're on a higher tier.
+ * 14,500 req/day; each fetch* method is exactly one HTTP call (the Provider
+ * base class paces calls ~8.6s apart on this budget, so firing two requests
+ * inside one method trips its own pacing gate — don't do that). Pre-match
+ * odds live on /fixtures/matches.json (roughly 60% of fixtures are priced in
+ * practice), so fetchFixtures() attaches them as `preOdds` on each Fixture
+ * row instead of fetchOdds() making a second call. Default budget of 10,000
+ * leaves headroom. Override via LIVESCOREAPI_DAILY_BUDGET on a higher tier.
  */
 import { Provider, fixtureKey } from './base.js';
 
 export class LiveScoreApiProvider extends Provider {
   constructor(key, secret, base = 'https://livescore-api.com/api-client', dailyBudget = null) {
-    const budget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : 12_000;
+    const budget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : 10_000;
     super({
       id: 'liveScoreApi',
       label: 'live-score-api.com',
@@ -55,13 +58,13 @@ export class LiveScoreApiProvider extends Provider {
     return fixtures.map((m) => normaliseFixture(m, this.id));
   }
 
-  /** 1X2 odds embedded on the live-scores response (pre-match + in-play). */
+  /** 1X2 odds for live/in-play + recently-finished matches. */
   async fetchOdds(sport = 'football') {
     if (!this.enabled || sport !== 'football') return [];
     const url = `${this.base}/scores/live.json?${this.authQuery()}`;
     const json = await this.http(url);
     const matches = json?.data?.match || [];
-    return matches.filter((m) => hasOdds(m.odds?.live) || hasOdds(m.odds?.pre)).map((m) => normaliseOdds(m, this.id));
+    return matches.filter((m) => hasOdds(m.odds?.live) || hasOdds(m.odds?.pre)).map((m) => normaliseLiveOdds(m, this.id));
   }
 }
 
@@ -121,6 +124,7 @@ function normaliseFixture(m, providerId) {
   const home = m.home_name || '';
   const away = m.away_name || '';
   const kickoff = m.date && m.time ? `${m.date}T${m.time}` : '';
+  const pre = hasOdds(m.odds?.pre) ? m.odds.pre : null;
 
   return {
     key: fixtureKey('football', home, away, kickoff),
@@ -141,11 +145,23 @@ function normaliseFixture(m, providerId) {
     scoreHome: null,
     scoreAway: null,
     minute: null,
+    // Not part of the shared Fixture contract — an extra hint so
+    // providerSnapshot.js can price fixtures that fetchOdds() (live-only)
+    // never sees. Ignored by any consumer that doesn't know about it.
+    preOdds: pre ? { 1: Number(pre['1']), X: Number(pre.X), 2: Number(pre['2']) } : null,
     updatedAt: new Date().toISOString(),
   };
 }
 
-function normaliseOdds(m, providerId) {
+function oddsSelections(set) {
+  const selections = [];
+  if (set?.['1'] != null) selections.push({ key: '1', label: 'Home', odds: Number(set['1']) });
+  if (set?.X != null) selections.push({ key: 'X', label: 'Draw', odds: Number(set.X) });
+  if (set?.['2'] != null) selections.push({ key: '2', label: 'Away', odds: Number(set['2']) });
+  return selections;
+}
+
+function normaliseLiveOdds(m, providerId) {
   const home = m.home_name || '';
   const away = m.away_name || '';
   const addedDate = String(m.added || '').slice(0, 10);
@@ -153,17 +169,12 @@ function normaliseOdds(m, providerId) {
   const live = statusFromLive(m.status) === 'live';
   const set = live ? m.odds?.live : m.odds?.pre;
 
-  const selections = [];
-  if (set?.['1'] != null) selections.push({ key: '1', label: 'Home', odds: Number(set['1']) });
-  if (set?.X != null) selections.push({ key: 'X', label: 'Draw', odds: Number(set.X) });
-  if (set?.['2'] != null) selections.push({ key: '2', label: 'Away', odds: Number(set['2']) });
-
   return {
     key: fixtureKey('football', home, away, kickoff),
     provider: providerId,
     bookmaker: 'live-score-api.com',
     markets: {
-      '1X2': { name: '1X2', selections },
+      '1X2': { name: '1X2', selections: oddsSelections(set) },
     },
     updatedAt: new Date().toISOString(),
   };
