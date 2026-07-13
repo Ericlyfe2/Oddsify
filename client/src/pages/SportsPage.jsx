@@ -5,7 +5,7 @@
  * sports are wired, switch on the selected pill).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMatches } from '../api/betApi.js';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { useTokens, OddPageHeader, OddSegmented, OddMatchCard, OddIcon, MarketsSheet } from '../components/odd/primitives.jsx';
@@ -18,15 +18,27 @@ const SPORTS = [
   { id: 'baseball', name: 'Baseball', icon: 'star', enabled: false },
 ];
 
+const VALID_FILTERS = new Set(['live', 'soon', 'all']);
+
 export default function SportsPage() {
   const T = useTokens();
   const navigate = useNavigate();
   const { picks, togglePick } = useSlip();
+  const [searchParams] = useSearchParams();
+  const requestedFilter = searchParams.get('filter');
   const [activeSport, setActiveSport] = useState('football');
   const [matches, setMatches] = useState([]);
-  const [filter, setFilter] = useState('live');
+  const [filter, setFilter] = useState(VALID_FILTERS.has(requestedFilter) ? requestedFilter : 'live');
   const [loading, setLoading] = useState(true);
   const [sheetMatch, setSheetMatch] = useState(null);
+
+  // Category tiles on Home link here with ?filter=soon|live — keep the
+  // segmented control in sync if the user navigates here again with a
+  // different query while the page is already mounted (same route, so no
+  // remount happens on its own).
+  useEffect(() => {
+    if (VALID_FILTERS.has(requestedFilter)) setFilter(requestedFilter);
+  }, [requestedFilter]);
 
   useEffect(() => {
     let alive = true;

@@ -670,8 +670,8 @@ export function OddPromoBanner({ items = DEFAULT_BANNERS, onAction }) {
 
 /* ─── Category quick-grid (Upcoming / Live / Casino / Jackpot) ─ */
 const DEFAULT_CATEGORIES = [
-  { id: 'upc', label: 'Upcoming', icon: 'soccer', tint: '#e8b94a', to: '/' },
-  { id: 'live', label: 'Live', icon: 'bolt', tint: '#ff5b78', to: '/sports' },
+  { id: 'upc', label: 'Upcoming', icon: 'soccer', tint: '#e8b94a', to: '/sports?filter=soon' },
+  { id: 'live', label: 'Live', icon: 'bolt', tint: '#ff5b78', to: '/sports?filter=live' },
   { id: 'casino', label: 'Casino', icon: 'cards', tint: '#f7c948', to: '/casino' },
   { id: 'jack', label: 'Jackpot', icon: 'trophy', tint: '#c9a3ff', to: '/jackpot' },
 ];
