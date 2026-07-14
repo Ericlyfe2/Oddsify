@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchMatches, fetchRecentWins } from '../api/betApi.js';
+import { fetchMatches, fetchRecentWins, fetchMajorLeagues } from '../api/betApi.js';
 import { useAccount } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import {
@@ -40,6 +40,7 @@ export default function Home() {
 
   const [matches, setMatches] = useState([]);
   const [leagues, setLeagues] = useState([]);
+  const [majorLeagues, setMajorLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [sheetMatch, setSheetMatch] = useState(null);
@@ -104,6 +105,17 @@ export default function Home() {
   // Both land on Home after auth (no forced ?next). Open the matching tab.
   const onAuth = (mode) => navigate(mode === 'signup' ? '/login?mode=register' : '/login');
 
+  /* ─── curated major leagues (season-independent: tables/scorers/results) ─── */
+  useEffect(() => {
+    let alive = true;
+    fetchMajorLeagues()
+      .then((d) => alive && setMajorLeagues(d.leagues || []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   /* ─── current winnings ticker ─── */
   const [wins, setWins] = useState(null);
   useEffect(() => {
@@ -123,6 +135,12 @@ export default function Home() {
       <OddPromoBanner onAction={() => navigate('/promos')} />
       <QuickBetStrip matches={matches} loading={loading} picks={picks} onPick={togglePick} onMore={setSheetMatch} />
       <OddCategoryGrid liveCount={liveCount} onPick={(c) => navigate(c.to || '/')} />
+
+      <MajorLeaguesStrip
+        leagues={majorLeagues}
+        onPick={(l) => navigate(`/leagues/${l.id}`)}
+        onViewAll={() => navigate('/leagues')}
+      />
 
       <div style={{ padding: '4px 16px 12px', overflow: 'hidden', minHeight: 49 }}>
         <WinningsTicker />
@@ -278,6 +296,107 @@ function OddsifyFooter() {
         Back to Top
       </button>
     </footer>
+  );
+}
+
+/**
+ * Major Leagues strip — the curated top competitions (from /bet/leagues/major),
+ * shown prominently near the top of Home so EPL, LaLiga, Serie A, the World
+ * Cup, etc. are always visible and one tap from their tables/scorers/results —
+ * regardless of whether any of them have a fixture today (they're empty in the
+ * European off-season, so the live match feed alone never surfaces them).
+ */
+const LEAGUE_BRAND = {
+  2: '#3d195b', // Premier League
+  3: '#e2001a', // LaLiga
+  4: '#008fd7', // Serie A
+  1: '#d20515', // Bundesliga
+  5: '#dae025', // Ligue 1
+  196: '#e77b00', // Eredivisie
+  8: '#036c3b', // Primeira Liga
+  77: '#1d2a5b', // Championship
+  244: '#0e1e5b', // UEFA Champions League
+  245: '#ff5000', // UEFA Europa League
+  362: '#c9a227', // FIFA World Cup
+  372: '#1a9ad6', // FIFA Club World Cup
+};
+
+function MajorLeaguesStrip({ leagues, onPick, onViewAll }) {
+  const T = useTokens();
+  if (!leagues?.length) return null;
+  return (
+    <div style={{ padding: '4px 0 6px' }}>
+      <SectionHeader title="Major Leagues" action="View all →" onAction={onViewAll} />
+      <div
+        style={{
+          display: 'flex',
+          gap: 10,
+          overflowX: 'auto',
+          padding: '2px 16px 8px',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {leagues.map((l) => {
+          const brand = LEAGUE_BRAND[l.id] || T.greenDeep;
+          return (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => onPick(l)}
+              style={{
+                flex: '0 0 auto',
+                width: 118,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 10,
+                padding: '12px 12px 13px',
+                borderRadius: 14,
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <span
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: '#fff',
+                  background: `linear-gradient(135deg, ${brand}, ${brand}bb)`,
+                  letterSpacing: 0.2,
+                }}
+              >
+                {l.shortName?.slice(0, 4) || l.name.slice(0, 3).toUpperCase()}
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <span
+                  style={{
+                    display: 'block',
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: T.ink,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 94,
+                  }}
+                >
+                  {l.name}
+                </span>
+                <span style={{ display: 'block', fontSize: 10.5, color: T.inkSoft, marginTop: 1 }}>{l.country}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
