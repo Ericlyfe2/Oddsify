@@ -332,7 +332,9 @@ export default function BetDetailPage() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 11.5, color: '#6b7280' }}>Outcome</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: r === 'won' ? '#004d24' : r === 'lost' ? '#c0392b' : '#eab308' }}>{selection}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: r === 'won' ? '#004d24' : r === 'lost' ? '#c0392b' : '#eab308' }}>
+                      {r === 'won' || r === 'lost' || r === 'void' ? selection : r === 'live' ? 'Live' : 'Pending'}
+                    </span>
                   </div>
                 </div>
               </div>
