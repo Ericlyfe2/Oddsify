@@ -4,14 +4,17 @@
  * promo banner, category grid, top-leagues row, live + featured upcoming
  * sections. Data flows from the live /api/bet/matches endpoint via betApi.
  *
- * Real-time odds updates from the socket are intentionally not subscribed
- * here yet — the existing aggregator polls every 60s and pushes wallet /
- * deposit events globally; live odds movement will land in a follow-up.
+ * The initial match list is a snapshot (the server only re-pulls provider
+ * fixtures every few hours), so live matches' minute/score would otherwise
+ * sit frozen at whatever they were on page load. We subscribe to the
+ * football sport room over the socket and patch matches in place as
+ * score:update events arrive (same feed the cash-out engine ticks off).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchMatches, fetchRecentWins, fetchMajorLeagues } from '../api/betApi.js';
+import { subscribeSports, unsubscribeSports, onLive } from '../api/socketClient.js';
 import { useAccount } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import {
@@ -78,10 +81,41 @@ export default function Home() {
     };
   }, []);
 
+  // Keep live matches' minute/score ticking after the initial snapshot load.
+  useEffect(() => {
+    subscribeSports(['football']);
+    const off = onLive('score:update', ({ fixtureId, scoreHome, scoreAway, minute }) => {
+      if (!fixtureId) return;
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === fixtureId
+            ? {
+                ...m,
+                scoreH: scoreHome ?? m.scoreH,
+                scoreA: scoreAway ?? m.scoreA,
+                minute: minute ?? m.minute,
+              }
+            : m,
+        ),
+      );
+    });
+    return () => {
+      off();
+      unsubscribeSports(['football']);
+    };
+  }, []);
+
   const liveMatches = useMemo(() => matches.filter((m) => m.isLive), [matches]);
-  // Round-robin one match per league before taking a second from any league,
-  // so a slice of 6-8 actually samples across leagues instead of just
-  // whichever league happens to sort first by kickoff time.
+  // The server already orders leagues by curated priority (World Cup,
+  // Champions/Europa League, top domestic leagues first, long tail last —
+  // see providerSnapshot.js), and flattenLeagues preserves that order, so
+  // byLeague's bucket order below IS the priority order. Take depth-first
+  // from that order (capped per league so one competition's big fixture
+  // list can't hog every slot) instead of round-robining one match per
+  // league regardless of priority — the old round-robin pulled a match from
+  // every minor league in its very first pass, burying a 2nd/3rd World Cup
+  // or Champions League fixture under Icelandic/lower-division filler
+  // whenever few top leagues had matches on (e.g. during the off-season).
   const upcoming = useMemo(() => {
     const byLeague = new Map();
     for (const m of matches) {
@@ -90,13 +124,14 @@ export default function Home() {
       if (!byLeague.has(key)) byLeague.set(key, []);
       byLeague.get(key).push(m);
     }
-    const buckets = [...byLeague.values()];
+    const MAX_PER_LEAGUE = 3;
     const out = [];
-    for (let round = 0; out.length < 8 && buckets.some((b) => b.length > round); round++) {
-      for (const bucket of buckets) {
+    for (const bucket of byLeague.values()) {
+      for (const m of bucket.slice(0, MAX_PER_LEAGUE)) {
         if (out.length >= 8) break;
-        if (bucket[round]) out.push(bucket[round]);
+        out.push(m);
       }
+      if (out.length >= 8) break;
     }
     return out;
   }, [matches]);

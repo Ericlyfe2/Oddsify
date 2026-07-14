@@ -461,12 +461,17 @@ router.get(
 );
 
 /**
- * GET /api/bet/history?competition=&team=&from=&to=&round=
+ * GET /api/bet/match-history?competition=&team=&from=&to=&round=
  * Finished-match results. All filters optional, but at least one is required
  * so we never fetch the entire firehose. Dates must be ISO (YYYY-MM-DD).
+ *
+ * IMPORTANT: this must not be named /history — that path is already used
+ * (below, further down this router) for the authenticated user's own bet
+ * history, and since both live on the same router, the first-registered
+ * route wins for every request to that path.
  */
 router.get(
-  '/history',
+  '/match-history',
   asyncHandler(async (req, res) => {
     const competition = String(req.query.competition || '').trim();
     const team = String(req.query.team || '').trim();

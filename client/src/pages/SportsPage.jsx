@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMatches } from '../api/betApi.js';
+import { subscribeSports, unsubscribeSports, onLive } from '../api/socketClient.js';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { useTokens, OddPageHeader, OddSegmented, OddMatchCard, OddIcon, MarketsSheet } from '../components/odd/primitives.jsx';
 import { flattenLeagues } from '../components/odd/normalize.js';
@@ -55,6 +56,33 @@ export default function SportsPage() {
       });
     return () => {
       alive = false;
+    };
+  }, [activeSport]);
+
+  // The list above is a point-in-time snapshot (server refreshes provider
+  // fixtures every few hours), so live matches' minute/score would otherwise
+  // stay frozen at load time. Patch matches in place as score:update events
+  // arrive over the socket (same feed the cash-out engine ticks off).
+  useEffect(() => {
+    subscribeSports([activeSport]);
+    const off = onLive('score:update', ({ fixtureId, scoreHome, scoreAway, minute }) => {
+      if (!fixtureId) return;
+      setMatches((prev) =>
+        prev.map((m) =>
+          m.id === fixtureId
+            ? {
+                ...m,
+                scoreH: scoreHome ?? m.scoreH,
+                scoreA: scoreAway ?? m.scoreA,
+                minute: minute ?? m.minute,
+              }
+            : m,
+        ),
+      );
+    });
+    return () => {
+      off();
+      unsubscribeSports([activeSport]);
     };
   }, [activeSport]);
 

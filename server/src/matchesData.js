@@ -133,21 +133,20 @@ export function buildMarkets({ odds, ou = [1.85, 1.95], btts = [1.72, 2.05], dc 
   const csSkew = (pH - pA) * 1.8;
   const csLambdaHome = Math.max(0.35, csGoalTotal / 2 + csSkew / 2);
   const csLambdaAway = Math.max(0.35, csGoalTotal / 2 - csSkew / 2);
-  // Cells whose probability floors out at the price cap (~250.00) are folded
-  // into "Any Other Score" instead of listed on their own — several 0-4 grid
-  // cells price identically at the cap, so showing them individually is noise.
+  // Every 0-4 vs 0-4 cell is listed individually — even long-shot corners
+  // like 4:3/4:4 price up to the ~250 cap rather than disappearing into
+  // "Any Other Score", which only covers the tail beyond this grid (5+
+  // goals for either side).
   const csGrid = {};
   let csGridSum = 0;
-  let csFoldedMass = 0;
   for (let h = 0; h <= CS_MAX; h++) {
     for (let a = 0; a <= CS_MAX; a++) {
       const p = poissonPmf(h, csLambdaHome) * poissonPmf(a, csLambdaAway);
       csGridSum += p;
-      if (p <= CS_PRICE_FLOOR) csFoldedMass += p;
-      else csGrid[`${h}-${a}`] = p;
+      csGrid[`${h}-${a}`] = p;
     }
   }
-  const csOther = Math.max(0.005, 1 - csGridSum) + csFoldedMass;
+  const csOther = Math.max(0.005, 1 - csGridSum);
 
   return {
     '1X2': {

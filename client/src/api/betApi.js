@@ -136,7 +136,7 @@ export const fetchRosters = (competition) =>
 export const fetchSquad = (competition, team) =>
   get(`/bet/squad?competition=${encodeURIComponent(competition)}&team=${encodeURIComponent(team)}`);
 export const fetchHistory = ({ competition, team, from, to, round } = {}) =>
-  get(`/bet/history${qs({ competition, team, from, to, round })}`);
+  get(`/bet/match-history${qs({ competition, team, from, to, round })}`);
 export const fetchMatchStats = (matchId) =>
   get(`/bet/match-stats?matchId=${encodeURIComponent(matchId)}`);
 export const fetchH2H = (team1, team2) =>
