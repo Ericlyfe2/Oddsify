@@ -13,7 +13,7 @@ import OddIcon from './Icon.jsx';
 import { TeamLogo, LeagueLogo } from './teamBranding.jsx';
 import { useTheme } from '../../providers/ThemeProvider.jsx';
 import { humanizePick } from '../../lib/marketNames.js';
-import { fetchMatchDetail } from '../../api/betApi.js';
+import { fetchMatchDetail, fetchMatchStats, fetchH2H } from '../../api/betApi.js';
 import { ensure1X2Order, sortOddsEntries } from '../../lib/marketUtils.js';
 
 /* ─── Oddsify wordmark ─────────────────────────────────────── */
@@ -1154,11 +1154,20 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
   const [tab, setTab] = useState('markets');
   const [detail, setDetail] = useState(null);
   const [detailState, setDetailState] = useState('idle'); // idle | loading | done | error
+  const [stats, setStats] = useState(null);
+  const [statsState, setStatsState] = useState('idle');
+  const [h2h, setH2h] = useState(null);
+  const [h2hState, setH2hState] = useState('idle');
   const srcId = match?.sourceMatchId;
-  // Tracks which match id we've already kicked off a detail fetch for. A ref
-  // (not state) so flipping it doesn't re-run the fetch effect and cancel the
+  const homeId = match?.homeId;
+  const awayId = match?.awayId;
+  const canH2H = !!(homeId && awayId);
+  // Tracks which match id we've already kicked off each fetch for. Refs (not
+  // state) so flipping them doesn't re-run the fetch effect and cancel the
   // in-flight request via its own cleanup.
   const fetchedFor = useRef(null);
+  const statsFetchedFor = useRef(null);
+  const h2hFetchedFor = useRef(null);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -1166,17 +1175,23 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Reset detail state when the sheet switches to a different match.
+  // Reset all detail state when the sheet switches to a different match.
   useEffect(() => {
     fetchedFor.current = null;
+    statsFetchedFor.current = null;
+    h2hFetchedFor.current = null;
     setDetail(null);
     setDetailState('idle');
+    setStats(null);
+    setStatsState('idle');
+    setH2h(null);
+    setH2hState('idle');
     setTab('markets');
   }, [srcId]);
 
-  // Lazy-load events + lineups the first time a non-markets tab is opened.
+  // Lazy-load events + lineups the first time the lineups/events tab is opened.
   useEffect(() => {
-    if (tab === 'markets' || !srcId || fetchedFor.current === srcId) return;
+    if ((tab !== 'lineups' && tab !== 'events') || !srcId || fetchedFor.current === srcId) return;
     fetchedFor.current = srcId;
     setDetailState('loading');
     let alive = true;
@@ -1193,12 +1208,53 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
     };
   }, [tab, srcId]);
 
+  // Lazy-load match statistics the first time the Stats tab is opened.
+  useEffect(() => {
+    if (tab !== 'stats' || !srcId || statsFetchedFor.current === srcId) return;
+    statsFetchedFor.current = srcId;
+    setStatsState('loading');
+    let alive = true;
+    fetchMatchStats(srcId)
+      .then((d) => {
+        if (alive) {
+          setStats(d?.stats || []);
+          setStatsState('done');
+        }
+      })
+      .catch(() => alive && setStatsState('error'));
+    return () => {
+      alive = false;
+    };
+  }, [tab, srcId]);
+
+  // Lazy-load head-to-head the first time the H2H tab is opened.
+  useEffect(() => {
+    const pairKey = `${homeId}:${awayId}`;
+    if (tab !== 'h2h' || !canH2H || h2hFetchedFor.current === pairKey) return;
+    h2hFetchedFor.current = pairKey;
+    setH2hState('loading');
+    let alive = true;
+    fetchH2H(homeId, awayId)
+      .then((d) => {
+        if (alive) {
+          setH2h(d);
+          setH2hState('done');
+        }
+      })
+      .catch(() => alive && setH2hState('error'));
+    return () => {
+      alive = false;
+    };
+  }, [tab, homeId, awayId, canH2H]);
+
   if (!match) return null;
 
   const tabs = [
     { key: 'markets', label: `Markets` },
+    { key: 'stats', label: 'Stats' },
     { key: 'lineups', label: 'Lineups' },
     { key: 'events', label: 'Events' },
+    ...(canH2H ? [{ key: 'h2h', label: 'H2H' }] : []),
   ];
 
   return (
@@ -1269,6 +1325,10 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
           <MatchLineups detail={detail} state={srcId ? detailState : 'unavailable'} match={match} T={T} />
         ) : tab === 'events' ? (
           <MatchEvents detail={detail} state={srcId ? detailState : 'unavailable'} match={match} T={T} />
+        ) : tab === 'stats' ? (
+          <MatchStats stats={stats} state={srcId ? statsState : 'unavailable'} match={match} T={T} />
+        ) : tab === 'h2h' ? (
+          <MatchH2H data={h2h} state={h2hState} match={match} T={T} />
         ) : (
         <div style={{ overflowY: 'auto', padding: '8px 16px 24px', flex: 1 }}>
           {entries.map(([key, mkt]) => {
@@ -1413,6 +1473,92 @@ function MatchEvents({ detail, state, match, T }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ─── Match statistics (home | stat | away with proportional bars) ─── */
+function MatchStats({ stats, state, match, T }) {
+  if (state !== 'done') return <MatchDetailState state={state} T={T} emptyText="" />;
+  const rows = stats || [];
+  if (!rows.length) return <MatchDetailState state="done" T={T} emptyText="No statistics for this match yet." />;
+  return (
+    <div style={{ overflowY: 'auto', padding: '12px 16px 24px', flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: T.inkSoft, marginBottom: 10 }}>
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '45%' }}>{match.home}</span>
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '45%', textAlign: 'right' }}>{match.away}</span>
+      </div>
+      {rows.map((s) => {
+        const h = Number(s.home) || 0;
+        const a = Number(s.away) || 0;
+        const total = h + a;
+        const homePct = total > 0 ? Math.round((h / total) * 100) : 50;
+        return (
+          <div key={s.type || s.label} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, marginBottom: 4 }}>
+              <span style={{ fontWeight: 800, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>{s.home ?? '–'}</span>
+              <span style={{ color: T.inkSoft, fontWeight: 600 }}>{s.label}</span>
+              <span style={{ fontWeight: 800, color: T.ink, fontVariantNumeric: 'tabular-nums' }}>{s.away ?? '–'}</span>
+            </div>
+            <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: T.surfaceAlt }}>
+              <span style={{ width: `${homePct}%`, background: T.greenBright }} />
+              <span style={{ width: `${100 - homePct}%`, background: T.inkSoft, opacity: 0.5 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Head-to-head (form + recent meetings) ─────────────────── */
+function MatchH2H({ data, state, match, T }) {
+  if (state === 'loading' || state === 'idle') return <MatchDetailState state="loading" T={T} emptyText="" />;
+  if (state === 'error') return <MatchDetailState state="error" T={T} emptyText="" />;
+  if (!data) return <MatchDetailState state="done" T={T} emptyText="No head-to-head data for these teams." />;
+
+  const meetings = data.h2h || [];
+  const FormDots = ({ form }) => (
+    <span style={{ display: 'inline-flex', gap: 3 }}>
+      {(form || []).slice(0, 6).map((r, i) => {
+        const bg = r === 'W' ? T.greenBright : r === 'L' ? '#e5484d' : T.inkSoft;
+        return (
+          <span key={i} style={{ width: 16, height: 16, borderRadius: 4, background: bg, color: r === 'D' ? T.ink : T.goldDark, fontSize: 9, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {r}
+          </span>
+        );
+      })}
+    </span>
+  );
+
+  return (
+    <div style={{ overflowY: 'auto', padding: '12px 16px 24px', flex: 1 }}>
+      {/* recent form */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+        {[[match.home, data.team1], [match.away, data.team2]].map(([name, t], i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 12px', background: T.surface, border: `1px solid ${T.line}`, borderRadius: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+            <FormDots form={t?.overallForm} />
+          </div>
+        ))}
+      </div>
+      {/* meetings */}
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: T.inkSoft, textTransform: 'uppercase', padding: '0 2px 8px' }}>
+        Recent meetings
+      </div>
+      {meetings.length === 0 ? (
+        <MatchDetailState state="done" T={T} emptyText="No previous meetings on record." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {meetings.slice(0, 10).map((m) => (
+            <div key={m.id || `${m.date}-${m.home}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '9px 12px', background: T.surface, border: `1px solid ${T.line}`, borderRadius: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.ink, textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.home}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: T.ink, fontVariantNumeric: 'tabular-nums', padding: '1px 8px', borderRadius: 6, background: T.surfaceAlt, whiteSpace: 'nowrap' }}>{m.score || '–'}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.away}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

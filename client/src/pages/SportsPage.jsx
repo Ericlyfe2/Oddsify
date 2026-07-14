@@ -74,7 +74,7 @@ export default function SportsPage() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <button
               type="button"
-              onClick={() => navigate('/standings')}
+              onClick={() => navigate('/leagues')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -90,7 +90,7 @@ export default function SportsPage() {
               }}
             >
               <OddIcon name="trophy" size={14} color={T.ink} strokeWidth={2} />
-              Tables
+              Leagues
             </button>
             <div
               style={{

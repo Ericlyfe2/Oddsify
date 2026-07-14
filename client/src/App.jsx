@@ -64,6 +64,7 @@ const AdminMatches = lazy(() => import('./pages/admin/Matches.jsx'));
 const AdminMarkets = lazy(() => import('./pages/admin/Markets.jsx'));
 const AdminResults = lazy(() => import('./pages/admin/Results.jsx'));
 const ReferralPage = lazy(() => import('./pages/ReferralPage.jsx'));
+const LeagueHubPage = lazy(() => import('./pages/LeagueHubPage.jsx'));
 
 const PAGE_FALLBACK = <div className="page-loading" />;
 
@@ -144,6 +145,22 @@ export default function App() {
                   <Route path="/sports" element={<SportsPage />} />
                   <Route path="/live" element={<SportsPage />} />
                   <Route path="/standings" element={<StandingsPage />} />
+                  <Route
+                    path="/leagues"
+                    element={
+                      <Suspense fallback={PAGE_FALLBACK}>
+                        <LeagueHubPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/leagues/:id"
+                    element={
+                      <Suspense fallback={PAGE_FALLBACK}>
+                        <LeagueHubPage />
+                      </Suspense>
+                    }
+                  />
                   <Route path="/my-bets" element={<BetHistoryPage />} />
                   <Route path="/open-bets" element={<OpenBetsScreen />} />
                   <Route path="/bets/:id" element={<BetDetailPage />} />

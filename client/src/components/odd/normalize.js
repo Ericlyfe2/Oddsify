@@ -48,6 +48,8 @@ export function normalizeMatch(m, leagueName = '') {
   return {
     id: m.id,
     sourceMatchId: m.sourceMatchId || null,
+    homeId: m.homeId || null,
+    awayId: m.awayId || null,
     home: m.home,
     away: m.away,
     homeLogo: m.homeLogo || m.home_logo || null,

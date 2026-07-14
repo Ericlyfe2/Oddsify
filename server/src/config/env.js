@@ -1,8 +1,16 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load server/.env by absolute path (this file lives in server/src/config, so
+// ../../.env is server/.env) so the server picks up its env no matter which
+// cwd it's launched from — `node src/index.js` from server/, `node
+// server/src/index.js` from the repo root, or a launch.json config all behave
+// the same. Real environment variables (e.g. on Render) still win; dotenv only
+// fills in what isn't already set.
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const env = process.env;
 

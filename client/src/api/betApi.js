@@ -115,6 +115,41 @@ export const fetchStandings = (competitionId) =>
 export const fetchMatchDetail = (matchId) =>
   get(`/bet/match-detail?matchId=${encodeURIComponent(matchId)}`);
 
+/* live-score-api data (competitions, leaderboards, results, insights) */
+const qs = (obj) => {
+  const p = Object.entries(obj)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&');
+  return p ? `?${p}` : '';
+};
+
+export const fetchMajorLeagues = () => get('/bet/leagues/major');
+export const fetchTopScorers = (competition) =>
+  get(`/bet/top-scorers?competition=${encodeURIComponent(competition)}`);
+export const fetchCompetitionGroups = (competition) =>
+  get(`/bet/competition-groups?competition=${encodeURIComponent(competition)}`);
+export const fetchGroupStandings = (group) =>
+  get(`/bet/group-standings?group=${encodeURIComponent(group)}`);
+export const fetchRosters = (competition) =>
+  get(`/bet/rosters?competition=${encodeURIComponent(competition)}`);
+export const fetchSquad = (competition, team) =>
+  get(`/bet/squad?competition=${encodeURIComponent(competition)}&team=${encodeURIComponent(team)}`);
+export const fetchHistory = ({ competition, team, from, to, round } = {}) =>
+  get(`/bet/history${qs({ competition, team, from, to, round })}`);
+export const fetchMatchStats = (matchId) =>
+  get(`/bet/match-stats?matchId=${encodeURIComponent(matchId)}`);
+export const fetchH2H = (team1, team2) =>
+  get(`/bet/h2h?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`);
+export const fetchCompetitionsDirectory = ({ country, federation } = {}) =>
+  get(`/bet/competitions${qs({ country, federation })}`);
+export const fetchCountriesDirectory = ({ federation } = {}) =>
+  get(`/bet/countries${qs({ federation })}`);
+export const fetchFederations = () => get('/bet/federations');
+export const fetchSeasons = () => get('/bet/seasons');
+export const fetchTeamsDirectory = ({ country, federation, page } = {}) =>
+  get(`/bet/teams${qs({ country, federation, page })}`);
+
 /* bets */
 export const placeBet = (payload) => post('/bet/place', payload);
 export const bookBet = (payload) => post('/bet/book', payload);

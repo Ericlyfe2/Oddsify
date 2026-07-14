@@ -121,6 +121,10 @@ export async function fetchProviderSnapshot(sportId) {
       sourceMatchId: fx.sourceId || null,
       home: fx.home,
       away: fx.away,
+      // live-score-api team ids — let the client request head-to-head data
+      // for this fixture. Absent on static/admin matches (no H2H link).
+      homeId: fx.homeId || null,
+      awayId: fx.awayId || null,
       // Real team crests + country flag when the provider supplies them —
       // the client (normalize.js) reads home_logo/away_logo/league.logo.
       home_logo: fx.homeLogo || undefined,
