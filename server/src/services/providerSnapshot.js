@@ -19,7 +19,7 @@
  */
 import { fetchFixturesAll, fetchLiveScoresAll, fetchLiveOddsAll } from './providerRegistry.js';
 import { buildFootballMarkets, commenceToHumanTime, formDots } from './oddsApi.js';
-import { getLeague } from '../providers/liveScoreLeagues.js';
+import { getLeague, getLeagueByName } from '../providers/liveScoreLeagues.js';
 
 const MAX_LEAGUES = 20;
 const MAX_MATCHES_PER_LEAGUE = 15;
@@ -177,9 +177,11 @@ export async function fetchProviderSnapshot(sportId) {
       // Curated major leagues (EPL, LaLiga, Serie A, World Cup, ...) surface
       // before the long tail, regardless of how many fixtures each has —
       // otherwise a lower-tier league with a big fixture list crowds out
-      // competitions users actually recognise.
-      const aPriority = getLeague(a.competitionId)?.priority ?? Infinity;
-      const bPriority = getLeague(b.competitionId)?.priority ?? Infinity;
+      // competitions users actually recognise. Competition ids only match
+      // the catalog for live-score-api fixtures, so fall back to matching
+      // on the league's display name for apiFootball/rapidApiFootball rows.
+      const aPriority = getLeague(a.competitionId)?.priority ?? getLeagueByName(a.name)?.priority ?? Infinity;
+      const bPriority = getLeague(b.competitionId)?.priority ?? getLeagueByName(b.name)?.priority ?? Infinity;
       if (aPriority !== bPriority) return aPriority - bPriority;
       return b.matches.length - a.matches.length;
     })

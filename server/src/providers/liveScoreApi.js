@@ -26,7 +26,18 @@
  * via LIVESCOREAPI_DAILY_BUDGET.
  */
 import { Provider, fixtureKey } from './base.js';
+import { MAJOR_LEAGUES } from './liveScoreLeagues.js';
 
+// The bulk `/fixtures/list.json?date=` endpoint silently omits some curated
+// competitions even when they have real fixtures that day — confirmed by
+// probing `/fixtures/list.json?competition_id=362` (FIFA World Cup) directly:
+// it returns live semi-final fixtures (France v Spain, England v Argentina)
+// that the date-only query drops entirely. So on every fetchFixtures() call
+// we additionally fetch each curated competition by id and merge the
+// results in. This is safe budget-wise: fetchFixtures() itself is only
+// called every REFRESH_TTL_MS (4h, see matchesData.ensureFreshLeagues), so
+// the extra MAJOR_LEAGUES.length calls amount to a few dozen/day, nowhere
+// near the daily budget.
 export class LiveScoreApiProvider extends Provider {
   constructor(key, secret, base = 'https://livescore-api.com/api-client', dailyBudget = null) {
     const budget = Number.isFinite(dailyBudget) && dailyBudget > 0 ? dailyBudget : 10_000;
@@ -62,14 +73,30 @@ export class LiveScoreApiProvider extends Provider {
     return matches.map((m) => normalise(m, this.id, 'live'));
   }
 
-  /** Scheduled fixtures for today. */
+  /**
+   * Scheduled fixtures for today, plus every curated major competition's
+   * fixtures fetched explicitly by id (see the module comment — the
+   * date-only query silently drops some of them).
+   */
   async fetchFixtures(sport = 'football') {
     if (!this.enabled || sport !== 'football') return [];
     const today = new Date().toISOString().slice(0, 10);
     const url = `${this.base}/fixtures/list.json?date=${today}&${this.authQuery()}`;
     const json = await this.http(url);
-    const fixtures = json?.data?.fixtures || [];
-    return fixtures.map((m) => normalise(m, this.id, 'fixture'));
+    const fixtures = (json?.data?.fixtures || []).map((m) => normalise(m, this.id, 'fixture'));
+
+    const majorResults = await Promise.allSettled(
+      MAJOR_LEAGUES.map((l) =>
+        this.http(`${this.base}/fixtures/list.json?competition_id=${l.id}&${this.authQuery()}`),
+      ),
+    );
+    const majorFixtures = majorResults
+      .filter((r) => r.status === 'fulfilled')
+      .flatMap((r) => (r.value?.data?.fixtures || []).map((m) => normalise(m, this.id, 'fixture')));
+
+    const byKey = new Map();
+    for (const fx of [...fixtures, ...majorFixtures]) byKey.set(fx.key, fx);
+    return [...byKey.values()];
   }
 
   /** 1X2 odds for live/in-play + recently-finished matches. */
