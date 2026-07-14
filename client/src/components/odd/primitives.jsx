@@ -1176,6 +1176,9 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
   }, [onClose]);
 
   // Reset all detail state when the sheet switches to a different match.
+  // For a live match, open straight to Stats (live possession/shots/etc. are
+  // the moment's most useful view) — but only when we have a source id to
+  // fetch them with; otherwise fall back to Markets.
   useEffect(() => {
     fetchedFor.current = null;
     statsFetchedFor.current = null;
@@ -1186,8 +1189,8 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
     setStatsState('idle');
     setH2h(null);
     setH2hState('idle');
-    setTab('markets');
-  }, [srcId]);
+    setTab(match?.isLive && srcId ? 'stats' : 'markets');
+  }, [srcId, match?.isLive]);
 
   // Lazy-load events + lineups the first time the lineups/events tab is opened.
   useEffect(() => {
