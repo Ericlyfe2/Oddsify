@@ -126,6 +126,245 @@ export class LiveScoreApiProvider extends Provider {
     if (!lu || (!lu.home && !lu.away)) return null;
     return { home: normaliseLineupSide(lu.home), away: normaliseLineupSide(lu.away) };
   }
+
+  /**
+   * Top goalscorers for a competition's current edition. Returns
+   *   { competition:{id,name}, season:{name}, rows:[{ rank, player, playerId,
+   *     photo, team, teamId, teamLogo, goals, assists, played }] }
+   * `rank` is derived from list order (the feed is already sorted by goals).
+   */
+  async fetchTopScorers(competitionId) {
+    if (!this.enabled || !competitionId) return null;
+    const url = `${this.base}/competitions/topscorers.json?competition_id=${encodeURIComponent(competitionId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const data = json?.data;
+    if (!data) return null;
+    return normaliseTopScorers(data);
+  }
+
+  /**
+   * The list of groups/stages in a competition (World Cup, UCL group stage…).
+   * Returns [{ id, name, stage }]; each `id` feeds fetchGroupTable(). Empty for
+   * single-table leagues.
+   */
+  async fetchCompetitionGroups(competitionId) {
+    if (!this.enabled || !competitionId) return [];
+    const url = `${this.base}/competitions/groups.json?competition_id=${encodeURIComponent(competitionId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const groups = Array.isArray(json?.data) ? json.data : [];
+    return groups.map((g) => ({
+      id: g.id != null ? String(g.id) : '',
+      name: g.name || '',
+      stage: g.stage || '',
+    }));
+  }
+
+  /**
+   * Standings for a single group (by `group_id` from fetchCompetitionGroups).
+   * Returns { competition:{id,name}, season:{name}, stage:{id,name},
+   *           group:{ id, name, rows:[…standings] } } or null.
+   */
+  async fetchGroupTable(groupId) {
+    if (!this.enabled || !groupId) return null;
+    const url = `${this.base}/groups/table.json?group_id=${encodeURIComponent(groupId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const data = json?.data;
+    if (!data || !data.group) return null;
+    return {
+      competition: { id: data.competition?.id ?? null, name: data.competition?.name || '' },
+      season: { name: data.season?.name || '' },
+      stage: { id: data.stage?.id ?? null, name: data.stage?.name || '' },
+      group: {
+        id: data.group.id != null ? String(data.group.id) : '',
+        name: data.group.name || '',
+        rows: (data.group.standings || []).map(normaliseStandingRow),
+      },
+    };
+  }
+
+  /**
+   * Full rosters for every team in a competition. Populated for national-team
+   * tournaments (World Cup, Euros, AFCON); empty `teams` for club leagues.
+   *   { competition:{id,name}, teams:[{ team, teamId, teamLogo,
+   *     players:[{ id, name, number, position }] }] }
+   */
+  async fetchRosters(competitionId) {
+    if (!this.enabled || !competitionId) return null;
+    const url = `${this.base}/competitions/rosters.json?competition_id=${encodeURIComponent(competitionId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const data = json?.data;
+    if (!data) return null;
+    return {
+      competition: { id: data.competition?.id ?? null, name: data.competition?.name || '' },
+      teams: (data.teams || []).map(normaliseRosterTeam),
+    };
+  }
+
+  /**
+   * A single team's squad within a competition. Unlike rosters.json, squads.json
+   * returns `data` as a FLAT array of players ({ id, name, shirt_number,
+   * position }) with no team/competition metadata, so those echo the args.
+   *   { competitionId, teamId, players:[{ id, name, number, position }] } | null.
+   */
+  async fetchSquad(competitionId, teamId) {
+    if (!this.enabled || !competitionId || !teamId) return null;
+    const url = `${this.base}/competitions/squads.json?competition_id=${encodeURIComponent(competitionId)}&team_id=${encodeURIComponent(teamId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const arr = Array.isArray(json?.data) ? json.data : json?.data?.squad || [];
+    if (!arr.length) return null;
+    const players = arr.map((p) => ({
+      id: p.id != null ? String(p.id) : p.player?.id != null ? String(p.player.id) : null,
+      name: p.name || p.player?.name || '',
+      number: p.shirt_number != null ? String(p.shirt_number) : '',
+      position: p.position || '',
+    }));
+    return { competitionId: String(competitionId), teamId: String(teamId), players };
+  }
+
+  /**
+   * Finished-match results, filterable. Reuses the shared nested-match
+   * normaliser (`history` kind parses final scores). Returns
+   *   { matches:[…normalised], totalPages }.
+   * All filters optional: { competitionId, teamId, from, to, round }.
+   */
+  async fetchHistory({ competitionId, teamId, from, to, round } = {}) {
+    if (!this.enabled) return { matches: [], totalPages: 0 };
+    const params = [];
+    if (competitionId) params.push(`competition_id=${encodeURIComponent(competitionId)}`);
+    if (teamId) params.push(`team_id=${encodeURIComponent(teamId)}`);
+    if (from) params.push(`from=${encodeURIComponent(from)}`);
+    if (to) params.push(`to=${encodeURIComponent(to)}`);
+    if (round) params.push(`round=${encodeURIComponent(round)}`);
+    const q = params.length ? `${params.join('&')}&` : '';
+    const url = `${this.base}/matches/history.json?${q}${this.authQuery()}`;
+    const json = await this.http(url);
+    const matches = json?.data?.match || [];
+    return {
+      matches: matches.map((m) => normalise(m, this.id, 'history')),
+      totalPages: Number(json?.data?.total_pages) || 0,
+    };
+  }
+
+  /**
+   * Per-match team statistics (possession, shots, corners…). Returns
+   *   { stats:[{ type, label, home, away }] }  (empty for matches without stats).
+   */
+  async fetchMatchStatistics(matchId) {
+    if (!this.enabled || !matchId) return { stats: [] };
+    const url = `${this.base}/statistics/matches.json?match_id=${encodeURIComponent(matchId)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    return {
+      stats: rows.map((r) => ({
+        type: r.type || '',
+        label: r.label || '',
+        home: r.home ?? null,
+        away: r.away ?? null,
+      })),
+    };
+  }
+
+  /**
+   * Head-to-head between two teams: each team's overall + h2h form, their last
+   * six matches, and the shared history. Returns
+   *   { team1, team2, h2h:[…tidy], team1LastSix:[…], team2LastSix:[…] } or null.
+   */
+  async fetchH2H(team1Id, team2Id) {
+    if (!this.enabled || !team1Id || !team2Id) return null;
+    const url = `${this.base}/teams/head2head.json?team1_id=${encodeURIComponent(team1Id)}&team2_id=${encodeURIComponent(team2Id)}&${this.authQuery()}`;
+    const json = await this.http(url);
+    const data = json?.data;
+    if (!data || (!data.team1 && !data.team2)) return null;
+    return {
+      team1: normaliseH2HTeam(data.team1),
+      team2: normaliseH2HTeam(data.team2),
+      h2h: (data.h2h || []).map(normaliseH2HMatch),
+      team1LastSix: (data.team1_last_6 || []).map(normaliseH2HMatch),
+      team2LastSix: (data.team2_last_6 || []).map(normaliseH2HMatch),
+    };
+  }
+
+  /**
+   * Paginated team directory, filterable by country/federation. Returns
+   *   { teams:[{ id, name, logo, stadium, countryId }], page, pages, total }.
+   */
+  async fetchTeams({ countryId, federationId, page } = {}) {
+    if (!this.enabled) return { teams: [], page: 1, pages: 0, total: 0 };
+    const params = [];
+    if (countryId) params.push(`country_id=${encodeURIComponent(countryId)}`);
+    if (federationId) params.push(`federation_id=${encodeURIComponent(federationId)}`);
+    if (page) params.push(`page=${encodeURIComponent(page)}`);
+    const q = params.length ? `${params.join('&')}&` : '';
+    const url = `${this.base}/teams/list.json?${q}${this.authQuery()}`;
+    const json = await this.http(url);
+    const data = json?.data || {};
+    return {
+      teams: (data.teams || []).map((t) => ({
+        id: t.id != null ? String(t.id) : '',
+        name: t.name || '',
+        logo: t.logo || null,
+        stadium: t.stadium || '',
+        countryId: t.country_id != null ? String(t.country_id) : null,
+      })),
+      page: Number(page) || 1,
+      pages: Number(data.pages) || 0,
+      total: Number(data.total) || 0,
+    };
+  }
+
+  /**
+   * Competitions directory, filterable by country/federation. Returns a flat
+   * list of { id, name, tier, isCup, isLeague, active, hasGroups, country, season }.
+   */
+  async fetchCompetitions({ countryId, federationId } = {}) {
+    if (!this.enabled) return [];
+    const params = [];
+    if (countryId) params.push(`country_id=${encodeURIComponent(countryId)}`);
+    if (federationId) params.push(`federation_id=${encodeURIComponent(federationId)}`);
+    const q = params.length ? `${params.join('&')}&` : '';
+    const url = `${this.base}/competitions/list.json?${q}${this.authQuery()}`;
+    const json = await this.http(url);
+    return (json?.data?.competition || []).map(normaliseCompetition);
+  }
+
+  /** Countries directory, optionally filtered by federation. [{ id, name, flag, fifaCode, uefaCode }]. */
+  async fetchCountries({ federationId } = {}) {
+    if (!this.enabled) return [];
+    const q = federationId ? `federation_id=${encodeURIComponent(federationId)}&` : '';
+    const url = `${this.base}/countries/list.json?${q}${this.authQuery()}`;
+    const json = await this.http(url);
+    return (json?.data?.country || []).map((c) => ({
+      id: c.id != null ? String(c.id) : '',
+      name: c.name || '',
+      flag: c.flag || null,
+      fifaCode: c.fifa_code || '',
+      uefaCode: c.uefa_code || '',
+    }));
+  }
+
+  /** Confederations list. [{ id, name }]. */
+  async fetchFederations() {
+    if (!this.enabled) return [];
+    const url = `${this.base}/federations/list.json?${this.authQuery()}`;
+    const json = await this.http(url);
+    return (json?.data?.federation || []).map((f) => ({
+      id: f.id != null ? String(f.id) : '',
+      name: f.name || '',
+    }));
+  }
+
+  /** Seasons list. [{ id, name, start, end }]. */
+  async fetchSeasons() {
+    if (!this.enabled) return [];
+    const url = `${this.base}/seasons/list.json?${this.authQuery()}`;
+    const json = await this.http(url);
+    return (json?.data?.seasons || []).map((s) => ({
+      id: s.id != null ? String(s.id) : '',
+      name: s.name || '',
+      start: s.start || '',
+      end: s.end || '',
+    }));
+  }
 }
 
 function hasOdds(o) {
@@ -159,6 +398,13 @@ function kickoffIso(m, kind) {
   if (kind === 'fixture') {
     return m.date && m.time ? `${m.date}T${m.time}` : m.date || '';
   }
+  // History rows carry an explicit `date` (YYYY-MM-DD) + `scheduled` (HH:MM),
+  // like fixtures but with `time` holding the status ("FT") instead of a clock.
+  if (kind === 'history') {
+    if (m.date) return m.scheduled ? `${m.date}T${m.scheduled}:00` : m.date;
+    const histDay = String(m.added || '').slice(0, 10);
+    return histDay && m.scheduled ? `${histDay}T${m.scheduled}:00` : '';
+  }
   const day = String(m.added || '').slice(0, 10);
   return day && m.scheduled ? `${day}T${m.scheduled}:00` : '';
 }
@@ -169,7 +415,8 @@ function normalise(m, providerId, kind) {
   const away = m.away?.name || '';
   const kickoff = kickoffIso(m, kind);
   const status = unifyStatus(m.status);
-  const [scoreHome, scoreAway] = kind === 'live' ? parseScore(m.scores?.score) : [null, null];
+  const hasScore = kind === 'live' || kind === 'history';
+  const [scoreHome, scoreAway] = hasScore ? parseScore(m.scores?.score) : [null, null];
   const pre = hasOdds(m.odds?.pre) ? m.odds.pre : null;
 
   return {
@@ -242,20 +489,7 @@ function normaliseStandings(data) {
   for (const stage of stages) {
     const stageName = stage?.stage?.name || '';
     for (const g of stage?.groups || []) {
-      const rows = (g?.standings || []).map((r) => ({
-        rank: r.rank ?? null,
-        team: r.team?.name || '',
-        teamId: r.team?.id != null ? String(r.team.id) : null,
-        teamLogo: r.team?.logo || null,
-        played: r.matches ?? null,
-        won: r.won ?? null,
-        drawn: r.drawn ?? null,
-        lost: r.lost ?? null,
-        gf: r.goals_scored ?? null,
-        ga: r.goals_conceded ?? null,
-        gd: r.goal_diff ?? null,
-        points: r.points ?? null,
-      }));
+      const rows = (g?.standings || []).map(normaliseStandingRow);
       if (!rows.length) continue;
       // Single-group leagues return a group named "A" or "1"; drop the
       // redundant label unless it's genuinely a multi-group competition.
@@ -301,5 +535,101 @@ function normaliseLineupSide(side) {
     team: side.team?.name || '',
     starters: players.filter((p) => !p.isSub),
     subs: players.filter((p) => p.isSub),
+  };
+}
+
+/** One standings row (table.json + groups/table.json share this shape). */
+function normaliseStandingRow(r) {
+  return {
+    rank: r.rank ?? null,
+    team: r.team?.name || '',
+    teamId: r.team?.id != null ? String(r.team.id) : null,
+    teamLogo: r.team?.logo || null,
+    played: r.matches ?? null,
+    won: r.won ?? null,
+    drawn: r.drawn ?? null,
+    lost: r.lost ?? null,
+    gf: r.goals_scored ?? null,
+    ga: r.goals_conceded ?? null,
+    gd: r.goal_diff ?? null,
+    points: r.points ?? null,
+  };
+}
+
+/** competitions/topscorers.json → tidy leaderboard. Rank comes from list order. */
+function normaliseTopScorers(data) {
+  const rows = (data.topscorers || []).map((s, i) => ({
+    rank: i + 1,
+    player: s.player?.name || '',
+    playerId: s.player?.id != null ? String(s.player.id) : null,
+    photo: s.player?.photo || null,
+    team: s.team?.name || '',
+    teamId: s.team?.id != null ? String(s.team.id) : null,
+    teamLogo: s.team?.logo || null,
+    goals: s.goals ?? null,
+    assists: s.assists ?? null,
+    played: s.played ?? null,
+  }));
+  return {
+    competition: { id: data.competition?.id ?? null, name: data.competition?.name || '' },
+    season: { name: data.season?.name || '' },
+    rows,
+  };
+}
+
+/** One team block from rosters.json / squads.json → tidy squad. */
+function normaliseRosterTeam(t) {
+  const players = (t.squad || []).map((row) => ({
+    id: row.player?.id != null ? String(row.player.id) : null,
+    name: row.player?.name || '',
+    number: row.shirt_number != null ? String(row.shirt_number) : '',
+    position: row.position || '',
+  }));
+  return {
+    team: t.team?.name || '',
+    teamId: t.team?.id != null ? String(t.team.id) : null,
+    teamLogo: t.team?.logo || null,
+    players,
+  };
+}
+
+/** head2head.json team block → { id, name, stadium, overallForm[], h2hForm[] }. */
+function normaliseH2HTeam(t) {
+  if (!t) return null;
+  return {
+    id: t.id != null ? String(t.id) : null,
+    name: t.name || '',
+    stadium: t.stadium || '',
+    overallForm: Array.isArray(t.overall_form) ? t.overall_form : [],
+    h2hForm: Array.isArray(t.h2h_form) ? t.h2h_form : [],
+  };
+}
+
+/** One match row inside head2head.json (h2h / last_6 lists). */
+function normaliseH2HMatch(m) {
+  return {
+    id: m.id != null ? String(m.id) : null,
+    date: m.date || '',
+    home: m.home_name || '',
+    away: m.away_name || '',
+    score: m.score || m.ft_score || '',
+    htScore: m.ht_score || '',
+    status: m.status || m.time || '',
+  };
+}
+
+/** competitions/list.json entry → tidy competition record. */
+function normaliseCompetition(c) {
+  const country = Array.isArray(c.countries) && c.countries[0] ? c.countries[0] : null;
+  return {
+    id: c.id != null ? String(c.id) : '',
+    name: (c.name || '').trim(),
+    tier: c.tier != null ? Number(c.tier) : null,
+    isCup: String(c.is_cup) === '1' || c.is_cup === true,
+    isLeague: String(c.is_league) === '1' || c.is_league === true,
+    active: String(c.active) === '1' || c.active === true,
+    hasGroups: String(c.has_groups) === '1' || c.has_groups === true,
+    country: country ? { id: String(country.id), name: country.name || '', flag: country.flag || null } : null,
+    season: c.season ? { id: c.season.id != null ? String(c.season.id) : null, name: c.season.name || '' } : null,
   };
 }

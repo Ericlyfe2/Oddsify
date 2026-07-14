@@ -19,6 +19,7 @@ import { adminLookupSelection, adminLookupFixture, buildPublicSnapshot } from '.
 import { listActivePromotions } from '../db/promotions.js';
 import { oddsApiStatus } from '../services/oddsApi.js';
 import { getProvider } from '../services/providerRegistry.js';
+import { getMajorLeagues } from '../providers/liveScoreLeagues.js';
 import { get as cacheGet, set as cacheSet } from '../services/cache.js';
 import { getRecentWins } from '../services/recentWins.js';
 import { createStore } from '../db/store.js';
@@ -317,6 +318,320 @@ router.get(
     const payload = { events: events || [], lineups: lineups || null };
     await cacheSet(cacheKey, payload, { ex: 30 });
     res.json({ updatedAt: new Date().toISOString(), cached: false, ...payload });
+  }),
+);
+
+/* ------------ live-score-api.com data endpoints ------------ */
+/*
+ * A family of public, cached GETs backed by the liveScoreApi provider. All
+ * follow the same shape as /standings above: validate → cache → provider call
+ * → { updatedAt, cached, ...payload }. `?competition`, `?matchId`, etc. are
+ * numeric live-score-api ids; the curated major-league ids are in
+ * providers/liveScoreLeagues.js and surfaced by /leagues/major.
+ */
+
+const NUM = /^\d+$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Shared helper: assert the provider is enabled and exposes `method`. */
+function liveScoreProvider(method) {
+  const provider = getProvider('liveScoreApi');
+  if (!provider || !provider.enabled || typeof provider[method] !== 'function') {
+    throw notFound('This data is not available (provider disabled)');
+  }
+  return provider;
+}
+
+/**
+ * Small wrapper for the "validate a numeric ?competition, cache, call one
+ * provider method" endpoints that make up most of this family. `emptyCheck`
+ * returns true when the payload should 404 (no data) rather than be cached.
+ */
+function competitionRoute({ path, param = 'competition', method, ttl, emptyCheck, keyPrefix }) {
+  router.get(
+    path,
+    asyncHandler(async (req, res) => {
+      const id = String(req.query[param] || '').trim();
+      if (!NUM.test(id)) throw badRequest(`A numeric ?${param} id is required`);
+
+      const cacheKey = `${keyPrefix}:${id}`;
+      const cached = await cacheGet(cacheKey);
+      if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+      const provider = liveScoreProvider(method);
+      const data = await provider[method](id).catch(() => null);
+      if (emptyCheck(data)) throw notFound('No data for this id');
+
+      await cacheSet(cacheKey, data, { ex: ttl });
+      res.json({ updatedAt: new Date().toISOString(), cached: false, ...data });
+    }),
+  );
+}
+
+/** GET /api/bet/leagues/major — the curated featured-competitions catalog. */
+router.get(
+  '/leagues/major',
+  asyncHandler(async (_req, res) => {
+    res.json({ updatedAt: new Date().toISOString(), leagues: getMajorLeagues() });
+  }),
+);
+
+// GET /api/bet/top-scorers?competition=2
+competitionRoute({
+  path: '/top-scorers',
+  method: 'fetchTopScorers',
+  ttl: 600,
+  keyPrefix: 'topscorers',
+  emptyCheck: (d) => !d || !d.rows?.length,
+});
+
+// GET /api/bet/rosters?competition=362
+competitionRoute({
+  path: '/rosters',
+  method: 'fetchRosters',
+  ttl: 3600,
+  keyPrefix: 'rosters',
+  emptyCheck: (d) => !d || !d.teams?.length,
+});
+
+/**
+ * GET /api/bet/competition-groups?competition=362
+ * The groups/stages of a tournament. Empty array is a valid answer (leagues
+ * have no groups), so this caches [] rather than 404-ing.
+ */
+router.get(
+  '/competition-groups',
+  asyncHandler(async (req, res) => {
+    const competition = String(req.query.competition || '').trim();
+    if (!NUM.test(competition)) throw badRequest('A numeric ?competition id is required');
+
+    const cacheKey = `compgroups:${competition}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchCompetitionGroups');
+    const groups = await provider.fetchCompetitionGroups(competition).catch(() => []);
+    const payload = { groups };
+    await cacheSet(cacheKey, payload, { ex: 3600 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...payload });
+  }),
+);
+
+/** GET /api/bet/group-standings?group=1913 */
+router.get(
+  '/group-standings',
+  asyncHandler(async (req, res) => {
+    const group = String(req.query.group || '').trim();
+    if (!NUM.test(group)) throw badRequest('A numeric ?group id is required');
+
+    const cacheKey = `grouptable:${group}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchGroupTable');
+    const table = await provider.fetchGroupTable(group).catch(() => null);
+    if (!table || !table.group?.rows?.length) throw notFound('No standings for this group');
+
+    await cacheSet(cacheKey, table, { ex: 600 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...table });
+  }),
+);
+
+/** GET /api/bet/squad?competition=362&team=1450 */
+router.get(
+  '/squad',
+  asyncHandler(async (req, res) => {
+    const competition = String(req.query.competition || '').trim();
+    const team = String(req.query.team || '').trim();
+    if (!NUM.test(competition) || !NUM.test(team)) {
+      throw badRequest('Numeric ?competition and ?team ids are required');
+    }
+
+    const cacheKey = `squad:${competition}:${team}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchSquad');
+    const squad = await provider.fetchSquad(competition, team).catch(() => null);
+    if (!squad || !squad.players?.length) throw notFound('No squad for this competition/team');
+
+    await cacheSet(cacheKey, squad, { ex: 3600 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...squad });
+  }),
+);
+
+/**
+ * GET /api/bet/history?competition=&team=&from=&to=&round=
+ * Finished-match results. All filters optional, but at least one is required
+ * so we never fetch the entire firehose. Dates must be ISO (YYYY-MM-DD).
+ */
+router.get(
+  '/history',
+  asyncHandler(async (req, res) => {
+    const competition = String(req.query.competition || '').trim();
+    const team = String(req.query.team || '').trim();
+    const from = String(req.query.from || '').trim();
+    const to = String(req.query.to || '').trim();
+    const round = String(req.query.round || '').trim();
+
+    if (competition && !NUM.test(competition)) throw badRequest('?competition must be numeric');
+    if (team && !NUM.test(team)) throw badRequest('?team must be numeric');
+    if (round && !NUM.test(round)) throw badRequest('?round must be numeric');
+    if (from && !ISO_DATE.test(from)) throw badRequest('?from must be YYYY-MM-DD');
+    if (to && !ISO_DATE.test(to)) throw badRequest('?to must be YYYY-MM-DD');
+    if (!competition && !team && !from && !to) {
+      throw badRequest('Provide at least one filter: competition, team, or a from/to date');
+    }
+
+    const cacheKey = `history:${competition}:${team}:${from}:${to}:${round}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchHistory');
+    const result = await provider
+      .fetchHistory({ competitionId: competition, teamId: team, from, to, round })
+      .catch(() => ({ matches: [], totalPages: 0 }));
+
+    await cacheSet(cacheKey, result, { ex: 300 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...result });
+  }),
+);
+
+/** GET /api/bet/match-stats?matchId=385735 */
+router.get(
+  '/match-stats',
+  asyncHandler(async (req, res) => {
+    const matchId = String(req.query.matchId || '').trim();
+    if (!NUM.test(matchId)) throw badRequest('A numeric ?matchId is required');
+
+    const cacheKey = `matchstats:${matchId}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchMatchStatistics');
+    const stats = await provider.fetchMatchStatistics(matchId).catch(() => ({ stats: [] }));
+    await cacheSet(cacheKey, stats, { ex: 30 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...stats });
+  }),
+);
+
+/** GET /api/bet/h2h?team1=27&team2=21 */
+router.get(
+  '/h2h',
+  asyncHandler(async (req, res) => {
+    const team1 = String(req.query.team1 || '').trim();
+    const team2 = String(req.query.team2 || '').trim();
+    if (!NUM.test(team1) || !NUM.test(team2)) throw badRequest('Numeric ?team1 and ?team2 ids are required');
+
+    const cacheKey = `h2h:${team1}:${team2}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchH2H');
+    const h2h = await provider.fetchH2H(team1, team2).catch(() => null);
+    if (!h2h) throw notFound('No head-to-head data for these teams');
+
+    await cacheSet(cacheKey, h2h, { ex: 3600 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...h2h });
+  }),
+);
+
+/** GET /api/bet/teams?country=&federation=&page= */
+router.get(
+  '/teams',
+  asyncHandler(async (req, res) => {
+    const country = String(req.query.country || '').trim();
+    const federation = String(req.query.federation || '').trim();
+    const page = String(req.query.page || '').trim();
+    if (country && !NUM.test(country)) throw badRequest('?country must be numeric');
+    if (federation && !NUM.test(federation)) throw badRequest('?federation must be numeric');
+    if (page && !NUM.test(page)) throw badRequest('?page must be numeric');
+
+    const cacheKey = `teams:${country}:${federation}:${page || 1}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, ...cached });
+
+    const provider = liveScoreProvider('fetchTeams');
+    const result = await provider
+      .fetchTeams({ countryId: country, federationId: federation, page })
+      .catch(() => ({ teams: [], page: 1, pages: 0, total: 0 }));
+
+    await cacheSet(cacheKey, result, { ex: 86400 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, ...result });
+  }),
+);
+
+/** GET /api/bet/competitions?country=&federation= */
+router.get(
+  '/competitions',
+  asyncHandler(async (req, res) => {
+    const country = String(req.query.country || '').trim();
+    const federation = String(req.query.federation || '').trim();
+    if (country && !NUM.test(country)) throw badRequest('?country must be numeric');
+    if (federation && !NUM.test(federation)) throw badRequest('?federation must be numeric');
+
+    const cacheKey = `competitions:${country}:${federation}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, competitions: cached });
+
+    const provider = liveScoreProvider('fetchCompetitions');
+    const competitions = await provider
+      .fetchCompetitions({ countryId: country, federationId: federation })
+      .catch(() => []);
+
+    await cacheSet(cacheKey, competitions, { ex: 86400 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, competitions });
+  }),
+);
+
+/** GET /api/bet/countries?federation= */
+router.get(
+  '/countries',
+  asyncHandler(async (req, res) => {
+    const federation = String(req.query.federation || '').trim();
+    if (federation && !NUM.test(federation)) throw badRequest('?federation must be numeric');
+
+    const cacheKey = `countries:${federation}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, countries: cached });
+
+    const provider = liveScoreProvider('fetchCountries');
+    const countries = await provider.fetchCountries({ federationId: federation }).catch(() => []);
+
+    await cacheSet(cacheKey, countries, { ex: 86400 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, countries });
+  }),
+);
+
+/** GET /api/bet/federations */
+router.get(
+  '/federations',
+  asyncHandler(async (_req, res) => {
+    const cacheKey = 'federations:all';
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, federations: cached });
+
+    const provider = liveScoreProvider('fetchFederations');
+    const federations = await provider.fetchFederations().catch(() => []);
+
+    await cacheSet(cacheKey, federations, { ex: 86400 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, federations });
+  }),
+);
+
+/** GET /api/bet/seasons */
+router.get(
+  '/seasons',
+  asyncHandler(async (_req, res) => {
+    const cacheKey = 'seasons:all';
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ updatedAt: new Date().toISOString(), cached: true, seasons: cached });
+
+    const provider = liveScoreProvider('fetchSeasons');
+    const seasons = await provider.fetchSeasons().catch(() => []);
+
+    await cacheSet(cacheKey, seasons, { ex: 86400 });
+    res.json({ updatedAt: new Date().toISOString(), cached: false, seasons });
   }),
 );
 
