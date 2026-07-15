@@ -61,3 +61,7 @@ services:
         sync: false
       - key: LIVESCOREAPI_DAILY_BUDGET
         value: "40000"
+      - key: APIFOOTBALL_KEY
+        sync: false
+      - key: APIFOOTBALL_HOST
+        value: v3.football.api-sports.io
