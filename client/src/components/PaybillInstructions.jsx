@@ -1,12 +1,12 @@
 import { useState } from 'react';
 
-const NETWORKS = [
+export const NETWORKS = [
   { key: 'mtn', label: 'MTN', tag: 'MTN', bg: '#ffcc00', fg: '#000' },
   { key: 'telecel', label: 'Telecel', tag: 'TLC', bg: '#e60000', fg: '#fff' },
   { key: 'at', label: 'AirtelTigo', tag: 'AT', bg: '#0055ff', fg: '#fff' },
 ];
 
-const STEPS = {
+export const STEPS = {
   mtn: [
     'Dial *170# on your MTN line',
     'Choose 1. Transfer Money',
@@ -89,14 +89,20 @@ export default function PaybillInstructions({
   merchantName = 'ODROSZIFFY TECHNOLOGIES',
   accountRef,
   context = 'deposit', // 'deposit' | 'withdraw'
+  network: networkProp,
+  onNetworkChange,
+  showNetworkPicker = true,
 }) {
-  const [network, setNetwork] = useState('mtn');
+  const [networkState, setNetworkState] = useState('mtn');
+  const network = networkProp ?? networkState;
+  const setNetwork = onNetworkChange ?? setNetworkState;
   const active = NETWORKS.find((n) => n.key === network) || NETWORKS[0];
   const steps = STEPS[network];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Network chips */}
+      {showNetworkPicker && (
       <div
         role="tablist"
         aria-label="Network"
@@ -148,6 +154,7 @@ export default function PaybillInstructions({
           );
         })}
       </div>
+      )}
 
       {/* Paybill ID + Reference */}
       <div

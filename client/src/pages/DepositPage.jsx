@@ -6,10 +6,63 @@ import { onLive } from '../api/socketClient.js';
 import { appendTxCache } from '../lib/txCache.js';
 import { useTokens, fmtCedi } from '../components/odd/tokens.jsx';
 import { OddPageHeader } from '../components/odd/primitives.jsx';
-import PaybillInstructions from '../components/PaybillInstructions.jsx';
+import { NETWORKS, STEPS as PAYBILL_STEPS } from '../components/PaybillInstructions.jsx';
 
 const MIN_DEPOSIT = 300;
 const MAX_DEPOSIT = 50000;
+const PAYBILL_ID = '250042';
+const MERCHANT_NAME = 'ODROSZIFFY TECHNOLOGIES';
+
+function numericFromId(id, digits) {
+  let hash = 0;
+  const str = String(id || '');
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  return String(hash).padStart(digits, '0').slice(-digits);
+}
+
+function CopyIconButton({ value, T }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(String(value));
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = String(value);
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      /* clipboard blocked — silently ignore */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      style={{
+        padding: '4px 9px',
+        borderRadius: 6,
+        border: `1px solid ${T.line}`,
+        background: copied ? T.greenBright : T.surfaceAlt,
+        color: copied ? T.goldDark : T.ink,
+        fontWeight: 700,
+        fontSize: 11,
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  );
+}
 
 const GATEWAY_META = {
   paystack: {
@@ -51,6 +104,10 @@ export default function DepositPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [depositResults, setDepositResults] = useState([]);
+  const [paybillStep, setPaybillStep] = useState('amount'); // 'amount' | 'details'
+  const [paybillNetwork, setPaybillNetwork] = useState('mtn');
+  const [networkPickerOpen, setNetworkPickerOpen] = useState(false);
+  const [paybillTx, setPaybillTx] = useState(null); // { id, amount, status }
 
   useEffect(() => {
     let alive = true;
@@ -78,6 +135,7 @@ export default function DepositPage() {
       const amt = transaction?.amount;
       toast(`Deposit approved! GHS ${formatAmt(amt)} credited.`, 'success');
       setDepositResults((prev) => [...prev, { kind: 'approved', amount: amt, txId: transaction?.id, at: Date.now() }]);
+      setPaybillTx((prev) => (prev && prev.id === transaction?.id ? { ...prev, status: 'approved' } : prev));
     });
     const offRejected = onLive('deposit:rejected', ({ transaction, reason }) => {
       const amt = transaction?.amount;
@@ -86,6 +144,7 @@ export default function DepositPage() {
         ...prev,
         { kind: 'rejected', amount: amt, reason, txId: transaction?.id, at: Date.now() },
       ]);
+      setPaybillTx((prev) => (prev && prev.id === transaction?.id ? { ...prev, status: 'rejected', reason } : prev));
     });
     return () => {
       offApproved?.();
@@ -125,6 +184,40 @@ export default function DepositPage() {
         'info',
       );
       setAmount(String(MIN_DEPOSIT));
+    } catch (e) {
+      setErr(e.message || 'Deposit failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitPaybillDeposit = async (e) => {
+    e.preventDefault();
+    setErr('');
+    const amt = parseFloat(String(amount).replace(/,/g, ''));
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setErr('Enter a valid amount.');
+      return;
+    }
+    if (amt < MIN_DEPOSIT) {
+      setErr(`Minimum deposit is GHS ${MIN_DEPOSIT}.`);
+      return;
+    }
+    if (amt > MAX_DEPOSIT) {
+      setErr(`Maximum per transaction is GHS ${MAX_DEPOSIT.toLocaleString('en-US')}.`);
+      return;
+    }
+    try {
+      setBusy(true);
+      const data = await apiDeposit(amt, 'paybill');
+      if (data?.transaction && account?.id) appendTxCache(account.id, data.transaction);
+      setPaybillTx({
+        id: data?.transaction?.id,
+        amount: amt,
+        status: data?.transaction?.status || 'pending',
+        network: paybillNetwork,
+      });
+      setPaybillStep('details');
     } catch (e) {
       setErr(e.message || 'Deposit failed.');
     } finally {
@@ -314,6 +407,7 @@ export default function DepositPage() {
                   onClick={() => {
                     setErr('');
                     setSelectedMethod(key);
+                    setPaybillStep('amount');
                   }}
                   style={{
                     flex: 1,
@@ -519,55 +613,343 @@ export default function DepositPage() {
               <li>Deposit is free, no transaction fees.</li>
             </ol>
           </form>
-        ) : selectedMethod === 'paybill' ? (
-          <div>
-            <div style={{ padding: '16px', borderRadius: 12, background: T.surface, border: `1px solid ${T.line}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label htmlFor="dep-amount-pb" style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>
-                  Amount (GHS)
-                </label>
-                <span style={{ fontSize: 11, color: T.inkDim }}>min. {MIN_DEPOSIT}.00</span>
+        ) : selectedMethod === 'paybill' && paybillStep === 'details' && paybillTx ? (
+          (() => {
+            const activeNet = NETWORKS.find((n) => n.key === (paybillTx.network || paybillNetwork)) || NETWORKS[0];
+            const statusMeta = {
+              pending: { label: 'Pending', bg: 'rgba(240,160,64,0.15)', fg: T.warn || '#f0a040' },
+              approved: { label: 'Approved', bg: 'rgba(34,197,94,0.15)', fg: '#22c55e' },
+              rejected: { label: 'Rejected', bg: 'rgba(239,68,68,0.15)', fg: '#ef4444' },
+            }[paybillTx.status] || { label: 'Pending', bg: 'rgba(240,160,64,0.15)', fg: T.warn || '#f0a040' };
+            const refNum = numericFromId(paybillTx.id, 9);
+            const depId = numericFromId(paybillTx.id, 4);
+            return (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErr('');
+                    setPaybillStep('amount');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'transparent',
+                    border: 0,
+                    padding: 0,
+                    marginBottom: 12,
+                    color: T.greenBright,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Change Amount
+                </button>
+
+                <div style={{ padding: '16px', borderRadius: 12, background: T.surface, border: `1px solid ${T.line}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>PayBill Details</div>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        padding: '3px 9px',
+                        borderRadius: 999,
+                        background: statusMeta.bg,
+                        color: statusMeta.fg,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {statusMeta.label}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.inkSoft, marginBottom: 14 }}>Complete your PayBill payment</div>
+
+                  {[
+                    ['PayBill Number', PAYBILL_ID, true],
+                    ['Name', MERCHANT_NAME, false],
+                    ['Amount', `GHS ${formatAmt(paybillTx.amount)}`, false, true],
+                    ['Reference', refNum, true, true],
+                    ['Registered Number', accountIdentifier || '—', false],
+                    ['Deposit ID', `#${depId}`, false],
+                  ].map(([label, value, copyable, accented], i) => (
+                    <div
+                      key={label}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        padding: '10px 0',
+                        borderTop: i === 0 ? 'none' : `1px solid ${T.line}`,
+                      }}
+                    >
+                      <span style={{ fontSize: 12, color: T.inkSoft }}>{label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: accented ? T.greenBright : T.ink,
+                            wordBreak: 'break-word',
+                            textAlign: 'right',
+                          }}
+                        >
+                          {value}
+                        </span>
+                        {copyable && <CopyIconButton value={value} T={T} />}
+                      </div>
+                    </div>
+                  ))}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      padding: '10px 0 0',
+                      borderTop: `1px solid ${T.line}`,
+                    }}
+                  >
+                    <span style={{ fontSize: 12, color: T.inkSoft }}>Status</span>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        padding: '3px 9px',
+                        borderRadius: 999,
+                        background: statusMeta.bg,
+                        color: statusMeta.fg,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {statusMeta.label}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: '16px',
+                    borderRadius: 12,
+                    background: T.surface,
+                    border: `1px solid ${T.line}`,
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 10 }}>
+                    How to make the payment
+                  </div>
+                  <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13, color: T.inkSoft, lineHeight: 1.8 }}>
+                    {(PAYBILL_STEPS[activeNet.key] || PAYBILL_STEPS.mtn).map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div style={{ marginTop: 12, fontSize: 12, color: T.inkDim, lineHeight: 1.6 }}>
+                  Your account is credited automatically once the paybill payment is confirmed. This usually takes
+                  under a minute.
+                </div>
               </div>
-              <input
-                id="dep-amount-pb"
-                type="number"
-                min={MIN_DEPOSIT}
-                max={MAX_DEPOSIT}
-                step="1"
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder={`min. ${MIN_DEPOSIT}`}
+            );
+          })()
+        ) : selectedMethod === 'paybill' ? (
+          <form onSubmit={submitPaybillDeposit}>
+            <div style={{ padding: '16px', borderRadius: 12, background: T.surface, border: `1px solid ${T.line}` }}>
+              <div
                 style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  fontSize: 18,
+                  fontSize: 11,
                   fontWeight: 700,
-                  borderRadius: 10,
-                  border: `1px solid ${T.line}`,
-                  background: T.surfaceAlt,
-                  color: T.ink,
-                  outline: 'none',
-                  fontVariantNumeric: 'tabular-nums',
-                  boxSizing: 'border-box',
+                  color: T.inkSoft,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  marginBottom: 10,
+                  borderLeft: `2px solid ${T.greenBright}`,
+                  paddingLeft: 8,
                 }}
-              />
-              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                {[300, 500, 2000, 5000, 10000].map((n) => (
+              >
+                Deposit from
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 4px',
+                  borderBottom: `1px solid ${T.line}`,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.inkSoft} strokeWidth="2">
+                  <rect x="7" y="2" width="10" height="20" rx="2" />
+                  <line x1="11" y1="18" x2="13" y2="18" />
+                </svg>
+                <span style={{ fontSize: 13, color: T.ink }}>{accountIdentifier || '—'}</span>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 4px 0',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 6,
+                        background: NETWORKS.find((n) => n.key === paybillNetwork)?.bg,
+                        color: NETWORKS.find((n) => n.key === paybillNetwork)?.fg,
+                        fontSize: 9,
+                        fontWeight: 900,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {NETWORKS.find((n) => n.key === paybillNetwork)?.tag}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>
+                      {NETWORKS.find((n) => n.key === paybillNetwork)?.label} Mobile Money
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNetworkPickerOpen((v) => !v)}
+                    style={{
+                      background: 'transparent',
+                      border: 0,
+                      color: T.greenBright,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    Switch ›
+                  </button>
+                </div>
+                {networkPickerOpen && (
+                  <div style={{ display: 'flex', gap: 6, padding: '10px 4px 0' }}>
+                    {NETWORKS.map((n) => (
+                      <button
+                        key={n.key}
+                        type="button"
+                        onClick={() => {
+                          setPaybillNetwork(n.key);
+                          setNetworkPickerOpen(false);
+                        }}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '8px 0',
+                          borderRadius: 8,
+                          background: n.key === paybillNetwork ? T.surfaceAlt : 'transparent',
+                          border: `1px solid ${n.key === paybillNetwork ? T.greenBright : T.line}`,
+                          color: T.ink,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 4,
+                            background: n.bg,
+                            color: n.fg,
+                            fontSize: 8,
+                            fontWeight: 900,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {n.tag}
+                        </span>
+                        {n.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 12,
+                padding: '16px',
+                borderRadius: 12,
+                background: T.surface,
+                border: `1px solid ${T.line}`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: T.inkSoft,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  marginBottom: 10,
+                  borderLeft: `2px solid ${T.greenBright}`,
+                  paddingLeft: 8,
+                }}
+              >
+                Amount
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '4px 4px 12px' }}>
+                <span style={{ fontSize: 22, fontWeight: 800, color: T.ink }}>GHS</span>
+                <input
+                  id="dep-amount-pb"
+                  type="number"
+                  min={MIN_DEPOSIT}
+                  max={MAX_DEPOSIT}
+                  step="1"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder={`min. ${MIN_DEPOSIT}`}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    fontSize: 26,
+                    fontWeight: 800,
+                    border: 0,
+                    background: 'transparent',
+                    color: T.ink,
+                    outline: 'none',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                />
+                <span style={{ fontSize: 11, color: T.inkDim, whiteSpace: 'nowrap' }}>min.{MIN_DEPOSIT}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {[400, 500, 2000, 5000, 10000].map((n) => (
                   <button
                     key={n}
                     type="button"
                     onClick={() => setAmount(String(n))}
                     style={{
-                      padding: '8px 16px',
-                      borderRadius: 8,
-                      background: T.surfaceAlt,
-                      border: `1px solid ${T.line}`,
+                      padding: '10px 0',
+                      borderRadius: 10,
+                      background: String(n) === amount ? T.greenSoft : T.surfaceAlt,
+                      border: `1px solid ${String(n) === amount ? T.greenBright : T.line}`,
                       color: T.ink,
-                      fontSize: 12,
-                      fontWeight: 600,
+                      fontSize: 13,
+                      fontWeight: 700,
                       cursor: 'pointer',
-                      flex: '1 0 auto',
                     }}
                   >
                     {n.toLocaleString('en-US')}
@@ -592,13 +974,26 @@ export default function DepositPage() {
               </div>
             )}
 
-            <PaybillInstructions
-              paybillId="250042"
-              merchantName="ODROSZIFFY TECHNOLOGIES"
-              accountRef={account?.phone || account?.email || ''}
-              context="deposit"
-            />
-          </div>
+            <button
+              type="submit"
+              disabled={busy}
+              style={{
+                width: '100%',
+                marginTop: 14,
+                padding: '16px 0',
+                borderRadius: 12,
+                background: busy ? T.surfaceAlt : T.greenBright,
+                color: busy ? T.inkDim : T.goldDark,
+                fontWeight: 800,
+                fontSize: 15,
+                border: 0,
+                cursor: busy ? 'not-allowed' : 'pointer',
+                transition: 'all 150ms',
+              }}
+            >
+              {busy ? 'Processing…' : 'Top Up Now'}
+            </button>
+          </form>
         ) : null}
 
         {depositResults.length > 0 && depositResults[0].kind === 'approved' && (
