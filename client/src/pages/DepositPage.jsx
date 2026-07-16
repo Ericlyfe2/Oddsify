@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPaymentGateways, deposit as apiDeposit } from '../api/betApi.js';
+import { fetchPaymentGateways, deposit as apiDeposit, fetchTransactions } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { onLive } from '../api/socketClient.js';
 import { appendTxCache } from '../lib/txCache.js';
 import { useTokens, fmtCedi } from '../components/odd/tokens.jsx';
 import { OddPageHeader } from '../components/odd/primitives.jsx';
-import { NETWORKS, STEPS as PAYBILL_STEPS } from '../components/PaybillInstructions.jsx';
+import { NETWORKS } from '../components/PaybillInstructions.jsx';
 
 const MIN_DEPOSIT = 300;
 const MAX_DEPOSIT = 50000;
@@ -18,6 +18,41 @@ function numericFromId(id, digits) {
   const str = String(id || '');
   for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
   return String(hash).padStart(digits, '0').slice(-digits);
+}
+
+function buildPaybillSteps(networkKey, paybillId, reference, amount) {
+  const amt = `GHS ${formatAmt(amount)}`;
+  if (networkKey === 'telecel') {
+    return [
+      'Dial *110#.',
+      'Choose 3 - Make Payment.',
+      'Choose 1 - Pay Merchant.',
+      `Enter the merchant ID: ${paybillId}.`,
+      `When asked for reference, enter ${reference}.`,
+      `Enter the amount: ${amt}.`,
+      'Enter your PIN.',
+    ];
+  }
+  if (networkKey === 'at') {
+    return [
+      'Dial *110#.',
+      'Choose Payments.',
+      'Choose Pay Bill / Merchant.',
+      `Enter the merchant ID: ${paybillId}.`,
+      `When asked for reference, enter ${reference}.`,
+      `Enter the amount: ${amt}.`,
+      'Enter your PIN.',
+    ];
+  }
+  return [
+    'Dial *170#.',
+    'Choose 2 - MoMoPay & PayBill.',
+    'Choose 1 - MoMo Pay.',
+    `Enter the merchant ID: ${paybillId}.`,
+    `When asked for reference, enter ${reference}.`,
+    `Enter the amount: ${amt}.`,
+    'Enter your PIN.',
+  ];
 }
 
 function CopyIconButton({ value, T }) {
@@ -108,6 +143,7 @@ export default function DepositPage() {
   const [paybillNetwork, setPaybillNetwork] = useState('mtn');
   const [networkPickerOpen, setNetworkPickerOpen] = useState(false);
   const [paybillTx, setPaybillTx] = useState(null); // { id, amount, status }
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -222,6 +258,30 @@ export default function DepositPage() {
       setErr(e.message || 'Deposit failed.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleBackToDeposit = () => {
+    setErr('');
+    setPaybillTx(null);
+    setAmount(String(MIN_DEPOSIT));
+    setPaybillStep('amount');
+  };
+
+  const handleRefreshStatus = async () => {
+    if (!paybillTx?.id || refreshingStatus) return;
+    setRefreshingStatus(true);
+    try {
+      const data = await fetchTransactions();
+      const match = (data?.transactions || []).find((t) => t.id === paybillTx.id);
+      if (match) {
+        setPaybillTx((prev) => (prev ? { ...prev, status: match.status } : prev));
+        if (match.status === 'pending') toast('Still pending admin approval.', 'info');
+      }
+    } catch (e) {
+      toast(e.message || 'Could not check status.', 'warn');
+    } finally {
+      setRefreshingStatus(false);
     }
   };
 
@@ -745,7 +805,7 @@ export default function DepositPage() {
                     How to make the payment
                   </div>
                   <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13, color: T.inkSoft, lineHeight: 1.8 }}>
-                    {(PAYBILL_STEPS[activeNet.key] || PAYBILL_STEPS.mtn).map((s, i) => (
+                    {buildPaybillSteps(activeNet.key, PAYBILL_ID, refNum, paybillTx.amount).map((s, i) => (
                       <li key={i}>{s}</li>
                     ))}
                   </ol>
@@ -754,6 +814,44 @@ export default function DepositPage() {
                 <div style={{ marginTop: 12, fontSize: 12, color: T.inkDim, lineHeight: 1.6 }}>
                   Your account is credited automatically once the paybill payment is confirmed. This usually takes
                   under a minute.
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                  <button
+                    type="button"
+                    onClick={handleBackToDeposit}
+                    style={{
+                      flex: 1,
+                      padding: '14px 0',
+                      borderRadius: 12,
+                      background: T.surface,
+                      border: `1px solid ${T.line}`,
+                      color: T.ink,
+                      fontWeight: 800,
+                      fontSize: 14,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Back to Deposit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRefreshStatus}
+                    disabled={refreshingStatus}
+                    style={{
+                      flex: 1,
+                      padding: '14px 0',
+                      borderRadius: 12,
+                      background: refreshingStatus ? T.surfaceAlt : T.greenBright,
+                      border: 0,
+                      color: refreshingStatus ? T.inkDim : T.goldDark,
+                      fontWeight: 800,
+                      fontSize: 14,
+                      cursor: refreshingStatus ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {refreshingStatus ? 'Checking…' : 'Refresh Status'}
+                  </button>
                 </div>
               </div>
             );
