@@ -232,8 +232,7 @@ export default function AppProviders({ children }) {
         setAccount((prev) => (prev ? { ...prev, balance } : prev));
       }
     });
-    const offPending = onLive('wallet:pending', ({ transaction, amount }) => {
-      toast(`Deposit of GHS ${formatAmt(amount)} is pending admin approval.`, 'info', { ttl: 5000 });
+    const offPending = onLive('wallet:pending', ({ transaction }) => {
       if (accountId && transaction) appendTxCache(accountId, transaction);
     });
     const offApproved = onLive('deposit:approved', ({ transaction, account: updatedAccount }) => {
