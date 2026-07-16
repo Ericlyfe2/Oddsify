@@ -765,7 +765,14 @@ export default function WithdrawPage() {
             </form>
           )}
 
-          {tab === 'paybill' && <PaybillInstructions paybillId="222000" accountRef={accountPhone} context="withdraw" />}
+          {tab === 'paybill' && (
+            <PaybillInstructions
+              paybillId="250042"
+              merchantName="ODROSZIFFY TECHNOLOGIES"
+              accountRef={accountPhone}
+              context="withdraw"
+            />
+          )}
 
           {tab === 'card' && (
             <div style={{ padding: '32px 8px', textAlign: 'center', color: 'var(--text-soft)' }}>

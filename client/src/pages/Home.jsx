@@ -237,10 +237,10 @@ export default function Home() {
  * Footer — payment-methods / compliance block.
  * Structure ported from the SportyBet landing footer (paybill,
  * payment grid, partner row, links, Back to Top); content and
- * colours are Oddsify's own (theme tokens, Paybill 222000,
+ * colours are Oddsify's own (theme tokens, Paybill 250042,
  * MTN/Telecel/AirtelTigo, licence #ODSGH-2026).
  * ───────────────────────────────────────────────────────────── */
-const PAYBILL_ID = '222000';
+const PAYBILL_ID = '250042';
 
 const PAY_METHODS = [
   { key: 'mtn', label: 'MTN', bg: '#ffcc00', fg: '#000' },

@@ -593,7 +593,8 @@ export default function DepositPage() {
             )}
 
             <PaybillInstructions
-              paybillId="222000"
+              paybillId="250042"
+              merchantName="ODROSZIFFY TECHNOLOGIES"
               accountRef={account?.phone || account?.email || ''}
               context="deposit"
             />

@@ -11,7 +11,7 @@ const GATEWAY_META = {
   },
   paybill: {
     label: 'Paybill',
-    description: 'Mobile money via shortcode 222000',
+    description: 'Mobile money via shortcode 250042 (ODROSZIFFY TECHNOLOGIES)',
     docs: null,
   },
 };

@@ -85,7 +85,8 @@ function CopyButton({ value, label }) {
 }
 
 export default function PaybillInstructions({
-  paybillId = '222000',
+  paybillId = '250042',
+  merchantName = 'ODROSZIFFY TECHNOLOGIES',
   accountRef,
   context = 'deposit', // 'deposit' | 'withdraw'
 }) {
@@ -160,6 +161,23 @@ export default function PaybillInstructions({
           gap: 12,
         }}
       >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 700,
+              }}
+            >
+              Merchant Name
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{merchantName}</div>
+          </div>
+        </div>
+        <div style={{ height: 1, background: 'var(--line)' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
             <div
