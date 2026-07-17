@@ -51,6 +51,7 @@ import { getEnabledGateways } from './db/paymentGateways.js';
 import { startSettlementLoop } from './services/settlement.js';
 import { attachRealtime } from './services/realtime.js';
 import { startAggregator, startLiveTrack } from './services/oddsAggregator.js';
+import { startSportsLiveClock } from './services/sportsLiveClock.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -239,6 +240,7 @@ async function boot() {
     startSettlementLoop();
     startAggregator();
     startLiveTrack();
+    startSportsLiveClock();
   } catch (e) {
     log.error('post-boot error', e?.message || e);
   }

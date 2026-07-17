@@ -115,6 +115,11 @@ export function createMatch(input) {
     status: 'scheduled',
     homeScore: null,
     awayScore: null,
+    // Manual live-clock state (admin-driven fixtures only — provider-sourced
+    // fixtures get their minute/score from the odds aggregator instead).
+    clockStatus: 'not_started', // not_started | running | paused | ht | ft
+    minuteBase: 0, // minutes banked before the current running segment
+    minuteStartedAt: null, // ISO ts the clock was last (re)started, or null when not running
     dedupeHash: hash,
     externalRef: input.externalRef || '',
     createdAt: new Date().toISOString(),
@@ -154,4 +159,92 @@ export function archiveMatch(id) {
   if (!cur) return null;
   assertTransition(cur.status, 'archived');
   return updateMatch(id, { status: 'archived' });
+}
+
+/* ── Manual live clock (admin-driven fixtures) ──────────────
+ * A single server-side source of truth for minute/score so the admin panel
+ * and the player-facing site never drift: minuteBase banks the minutes
+ * accumulated before the current running segment, minuteStartedAt marks when
+ * the current segment began. Elapsed time is always derived, never stored,
+ * so there's nothing to fall out of sync between reads.
+ */
+const STOPPAGE_CAP_MIN = 15; // sanity cap — freezes ~90+15 instead of running forever
+
+/** Minutes elapsed right now, including any running segment. Not display-formatted. */
+export function currentElapsedMinutes(m) {
+  let total = m.minuteBase || 0;
+  if (m.clockStatus === 'running' && m.minuteStartedAt) {
+    total += Math.floor((Date.now() - new Date(m.minuteStartedAt).getTime()) / 60000);
+  }
+  return total;
+}
+
+/** Display string for the current minute: '23', '45+2', 'HT', 'FT', or null pre-kickoff. */
+export function computeMinuteDisplay(m) {
+  if (!m || m.clockStatus === 'not_started') return null;
+  if (m.clockStatus === 'ht') return 'HT';
+  if (m.clockStatus === 'ft') return 'FT';
+
+  const total = currentElapsedMinutes(m);
+  if (total >= 90) {
+    const extra = Math.min(total - 90, STOPPAGE_CAP_MIN);
+    if (total - 90 >= STOPPAGE_CAP_MIN) return 'FT';
+    return extra > 0 ? `90+${extra}` : '90';
+  }
+  return String(total);
+}
+
+/** Whether this running match has hit the sanity cap and should auto-flip to FT. */
+export function isPastStoppageCap(m) {
+  return m.clockStatus === 'running' && currentElapsedMinutes(m) - 90 >= STOPPAGE_CAP_MIN;
+}
+
+export function startClock(id) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  const patch = { clockStatus: 'running', minuteBase: 0, minuteStartedAt: new Date().toISOString() };
+  if (cur.status === 'scheduled') assertTransition(cur.status, 'live');
+  return updateMatch(id, cur.status === 'scheduled' ? { ...patch, status: 'live' } : patch);
+}
+
+export function pauseClock(id) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  const minuteBase = currentElapsedMinutes(cur);
+  return updateMatch(id, { clockStatus: 'paused', minuteBase, minuteStartedAt: null });
+}
+
+export function resumeClock(id) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  return updateMatch(id, { clockStatus: 'running', minuteStartedAt: new Date().toISOString() });
+}
+
+export function goToHalftime(id) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  return updateMatch(id, { clockStatus: 'ht', minuteBase: 45, minuteStartedAt: null });
+}
+
+export function startSecondHalf(id) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  return updateMatch(id, { clockStatus: 'running', minuteBase: 45, minuteStartedAt: new Date().toISOString() });
+}
+
+export function goToFulltime(id) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  return updateMatch(id, { clockStatus: 'ft', minuteBase: 90, minuteStartedAt: null });
+}
+
+export function setLiveScore(id, homeScore, awayScore) {
+  const cur = store.get(id);
+  if (!cur) return null;
+  return updateMatch(id, { homeScore: Number(homeScore), awayScore: Number(awayScore) });
+}
+
+/** Every match currently ticking — polled by the manual live-clock broadcaster. */
+export function listRunningClockMatches() {
+  return Object.values(store.all() || {}).filter((m) => m.clockStatus === 'running');
 }

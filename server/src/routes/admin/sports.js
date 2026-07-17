@@ -21,9 +21,17 @@ import {
   removeMarketFromFixture,
   readSportsAdmin,
   findDuplicateFixture,
+  startClock,
+  pauseClock,
+  resumeClock,
+  goToHalftime,
+  startSecondHalf,
+  goToFulltime,
+  setLiveScore,
 } from '../../db/sportsAdmin.js';
 import { settleNow } from '../../services/settlement.js';
-import { emitAdmin } from '../../services/realtime.js';
+import { emitAdmin, emitScoreUpdate } from '../../services/realtime.js';
+import * as cashOutEngine from '../../services/cashOutEngine.js';
 
 const router = Router();
 
@@ -436,10 +444,102 @@ router.patch(
     if (!view) return next(notFound('Fixture not found'));
     patchOverride(req.params.id, req.body);
     audit(req, { action: 'sports.fixture.patch', target: req.params.id, targetType: 'fixture', meta: req.body });
-    const refreshed = adminLookupFixture(req.params.id);
-    const result = { fixture: { ...refreshed.match, sport: refreshed.sport?.id, leagueId: refreshed.league?.id } };
-    emitAdmin('sports:fixture:updated', result);
-    res.json(result);
+    const fixture = broadcastFixture(req.params.id);
+    res.json({ fixture });
+  },
+);
+
+/** Broadcast a fixture's current score/minute to both the admin panel and the
+ *  player-facing live socket, so the two views can never show different
+ *  numbers — there is exactly one source of truth (the compiled override). */
+function broadcastFixture(id, extra = {}) {
+  const view = adminLookupFixture(id);
+  if (!view) return null;
+  const fixture = { ...view.match, sport: view.sport?.id, leagueId: view.league?.id };
+  emitAdmin('sports:fixture:updated', { fixture });
+  emitScoreUpdate({
+    fixtureId: id,
+    sport: view.sport?.id,
+    scoreHome: fixture.scoreHome ?? 0,
+    scoreAway: fixture.scoreAway ?? 0,
+    minute: fixture.minute ?? null,
+    ...extra,
+  });
+  return fixture;
+}
+
+/* ── Manual live-clock control ────────────────────────────────
+ * One server-side clock per fixture (see db/sportsAdmin.js) so admin and
+ * player views read the same minute instead of running independent timers
+ * that drift apart. Every action re-broadcasts immediately.
+ */
+router.post('/fixtures/:id/live/start', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+  startClock(req.params.id);
+  audit(req, { action: 'sports.live.start', target: req.params.id, targetType: 'fixture' });
+  const fixture = broadcastFixture(req.params.id, { eventKind: 'kick_off' });
+  res.json({ fixture });
+});
+
+router.post('/fixtures/:id/live/pause', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+  pauseClock(req.params.id);
+  audit(req, { action: 'sports.live.pause', target: req.params.id, targetType: 'fixture' });
+  const fixture = broadcastFixture(req.params.id);
+  res.json({ fixture });
+});
+
+router.post('/fixtures/:id/live/resume', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+  resumeClock(req.params.id);
+  audit(req, { action: 'sports.live.resume', target: req.params.id, targetType: 'fixture' });
+  const fixture = broadcastFixture(req.params.id);
+  res.json({ fixture });
+});
+
+router.post('/fixtures/:id/live/halftime', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+  goToHalftime(req.params.id);
+  audit(req, { action: 'sports.live.halftime', target: req.params.id, targetType: 'fixture' });
+  const fixture = broadcastFixture(req.params.id, { eventKind: 'half_time' });
+  res.json({ fixture });
+});
+
+router.post('/fixtures/:id/live/second-half', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+  startSecondHalf(req.params.id);
+  audit(req, { action: 'sports.live.second-half', target: req.params.id, targetType: 'fixture' });
+  const fixture = broadcastFixture(req.params.id);
+  res.json({ fixture });
+});
+
+router.post('/fixtures/:id/live/fulltime', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+  goToFulltime(req.params.id);
+  audit(req, { action: 'sports.live.fulltime', target: req.params.id, targetType: 'fixture' });
+  const fixture = broadcastFixture(req.params.id, { eventKind: 'full_time' });
+  // Cash-out stops the instant live play ends; result entry/settlement is a
+  // separate, later admin step.
+  cashOutEngine.lockFixture(req.params.id, 'match_ended');
+  res.json({ fixture });
+});
+
+router.post(
+  '/fixtures/:id/live/score',
+  requireAdmin,
+  requireRole('odds_manager'),
+  validate(
+    z.object({
+      scoreHome: z.number().int().min(0),
+      scoreAway: z.number().int().min(0),
+    }),
+  ),
+  (req, res, next) => {
+    if (!adminLookupFixture(req.params.id)) return next(notFound('Fixture not found'));
+    setLiveScore(req.params.id, req.body.scoreHome, req.body.scoreAway);
+    audit(req, { action: 'sports.live.score', target: req.params.id, targetType: 'fixture', meta: req.body });
+    const fixture = broadcastFixture(req.params.id);
+    res.json({ fixture });
   },
 );
 

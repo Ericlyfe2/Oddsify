@@ -187,6 +187,15 @@ export const adminSuspend = (id, body) => post(`/sports/fixtures/${encodeURIComp
 export const adminClearSuspend = (id) => del(`/sports/fixtures/${encodeURIComponent(id)}/suspend`);
 export const adminRecordResult = (id, body) => post(`/sports/fixtures/${encodeURIComponent(id)}/result`, body);
 export const adminTriggerSettle = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/settle`);
+
+/* manual live-clock control */
+export const adminLiveStart = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/start`);
+export const adminLivePause = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/pause`);
+export const adminLiveResume = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/resume`);
+export const adminLiveHalftime = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/halftime`);
+export const adminLiveSecondHalf = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/second-half`);
+export const adminLiveFulltime = (id) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/fulltime`);
+export const adminLiveScore = (id, body) => post(`/sports/fixtures/${encodeURIComponent(id)}/live/score`, body);
 export const adminLeagues = () => get('/sports/leagues');
 export const adminCreateLeague = (body) => post('/sports/leagues', body);
 export const adminAddMarket = (id, body) => post(`/sports/fixtures/${encodeURIComponent(id)}/markets`, body);

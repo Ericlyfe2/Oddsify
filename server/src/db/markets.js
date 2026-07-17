@@ -135,26 +135,59 @@ export function markSelectionWinner(id, isWinner) {
 
 /* ── Auto-attach (generate markets from templates) ──────── */
 
+/** k! for small k (correct-score grids never need more than ~8). */
+function factorial(k) {
+  let out = 1;
+  for (let i = 2; i <= k; i++) out *= i;
+  return out;
+}
+
+/** Poisson P(X = k) for mean lambda. */
+function poissonProb(lambda, k) {
+  return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
+}
+
+/** Convert a raw probability into a priced-in odds figure with house margin. */
+function probToOdds(prob, marginPct = 0.12) {
+  const safeProb = Math.max(prob, 0.0025);
+  const fairOdds = 1 / safeProb;
+  const priced = fairOdds * (1 - marginPct);
+  return Math.max(1.05, Math.min(999, Math.round(priced * 100) / 100));
+}
+
 /**
- * Generate the correct-score selection grid for a market.
+ * Generate the correct-score selection grid for a market, with realistic,
+ * distinct odds per scoreline instead of every cell defaulting to the same
+ * flat price. Uses independent-Poisson expected goals for home/away (typical
+ * for a competitive match) so likely scorelines (1-0, 1-1, 2-1) price short
+ * and unlikely ones (4-4) price long.
  */
 function generateCorrectScoreGrid(template) {
   const maxHome = template.selectionSpec?.maxHome ?? 4;
   const maxAway = template.selectionSpec?.maxAway ?? 4;
   const includeOther = template.selectionSpec?.includeOther !== false;
+  const lambdaHome = template.selectionSpec?.lambdaHome ?? 1.35;
+  const lambdaAway = template.selectionSpec?.lambdaAway ?? 1.1;
   const selections = [];
   let sortOrder = 0;
+  let coveredProb = 0;
 
   for (let h = 0; h <= maxHome; h++) {
     for (let a = 0; a <= maxAway; a++) {
-      selections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, sortOrder: sortOrder++ });
+      const prob = poissonProb(lambdaHome, h) * poissonProb(lambdaAway, a);
+      coveredProb += prob;
+      selections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, sortOrder: sortOrder++, price: probToOdds(prob) });
     }
   }
 
   if (includeOther) {
-    selections.push({ key: 'OTHER_HOME', label: 'Any Other Home Win', sortOrder: sortOrder++ });
-    selections.push({ key: 'OTHER_AWAY', label: 'Any Other Away Win', sortOrder: sortOrder++ });
-    selections.push({ key: 'OTHER_DRAW', label: 'Any Other Draw', sortOrder: sortOrder++ });
+    // Remaining probability mass outside the grid, split across the three
+    // "any other" buckets roughly in proportion to how draws/home/away wins
+    // typically distribute in the long tail.
+    const remaining = Math.max(0, 1 - coveredProb);
+    selections.push({ key: 'OTHER_HOME', label: 'Any Other Home Win', sortOrder: sortOrder++, price: probToOdds(remaining * 0.45) });
+    selections.push({ key: 'OTHER_AWAY', label: 'Any Other Away Win', sortOrder: sortOrder++, price: probToOdds(remaining * 0.4) });
+    selections.push({ key: 'OTHER_DRAW', label: 'Any Other Draw', sortOrder: sortOrder++, price: probToOdds(remaining * 0.15) });
   }
 
   return selections;
@@ -216,7 +249,7 @@ export function autoAttachMarkets(matchId, sportId, templates) {
 
     const outcomeDefs = generateSelections(tmpl);
     for (const def of outcomeDefs) {
-      const sel = createSelection(market.id, def);
+      const sel = createSelection(market.id, def, def.price ?? 2.0);
       if (sel) selections.push(sel);
     }
   }
@@ -226,7 +259,7 @@ export function autoAttachMarkets(matchId, sportId, templates) {
 
 export function autoAttachSelections(marketId, template) {
   const outcomeDefs = generateSelections(template);
-  return outcomeDefs.map((def) => createSelection(marketId, def)).filter(Boolean);
+  return outcomeDefs.map((def) => createSelection(marketId, def, def.price ?? 2.0)).filter(Boolean);
 }
 
 /**

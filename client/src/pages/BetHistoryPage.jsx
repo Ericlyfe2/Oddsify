@@ -31,7 +31,7 @@ import {
 import { fetchBetHistory, cashOutBet } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
-import { onLive } from '../api/socketClient.js';
+import { onLive, subscribeFixtures, unsubscribeFixtures } from '../api/socketClient.js';
 import { useTokens, fmtCedi } from '../components/odd/tokens.jsx';
 import { useTheme } from '../providers/ThemeProvider.jsx';
 import { expandMarketName, getSelectionLabel, humanizePick } from '../lib/marketNames.js';
@@ -138,6 +138,7 @@ export default function BetHistoryPage() {
   const [cashingOut, setCashingOut] = useState(null);
   const [cashoutSuccess, setCashoutSuccess] = useState(null);
   const [cashoutSuccessAmount, setCashoutSuccessAmount] = useState(0);
+  const [liveScores, setLiveScores] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -180,6 +181,38 @@ export default function BetHistoryPage() {
   }, [account, load]);
 
   const openBets = useMemo(() => bets.filter((b) => isBetOpen(b)), [bets]);
+
+  // Live score/minute for open-bet legs: join each fixture's room so the
+  // server pushes score:update (and an immediate live:snapshot on join) for
+  // matches this user actually has an open bet on.
+  const openFixtureIds = useMemo(() => {
+    const ids = new Set();
+    for (const b of openBets) {
+      for (const leg of b.legs || b.selections || []) {
+        if (leg.matchId) ids.add(String(leg.matchId));
+      }
+    }
+    return Array.from(ids);
+  }, [openBets]);
+
+  useEffect(() => {
+    if (!account || openFixtureIds.length === 0) return;
+    subscribeFixtures(openFixtureIds);
+    const applyScore = ({ fixtureId, scoreHome, scoreAway, minute }) => {
+      if (!fixtureId) return;
+      setLiveScores((prev) => ({
+        ...prev,
+        [fixtureId]: { scoreHome: scoreHome ?? prev[fixtureId]?.scoreHome, scoreAway: scoreAway ?? prev[fixtureId]?.scoreAway, minute: minute ?? prev[fixtureId]?.minute },
+      }));
+    };
+    const offUpdate = onLive('score:update', applyScore);
+    const offSnapshot = onLive('live:snapshot', applyScore);
+    return () => {
+      offUpdate?.();
+      offSnapshot?.();
+      unsubscribeFixtures(openFixtureIds);
+    };
+  }, [account, openFixtureIds]);
   const settledBets = useMemo(() => bets.filter((b) => !isBetOpen(b)), [bets]);
   const filteredOpen = useMemo(() => {
     let f = filterBets(openBets, filter);
@@ -306,6 +339,7 @@ export default function BetHistoryPage() {
                     key={bet.id}
                     bet={bet}
                     liveOffer={cashoutOffers[bet.id] || null}
+                    liveScores={liveScores}
                     cashingOut={cashingOut === bet.id}
                     onCashOut={() => openCashoutConfirm(bet)}
                     onDetails={() => navigate(`/bets/${bet.id}`)}
@@ -528,7 +562,7 @@ function FilterBar({ tab, filter, onFilterChange, historyFilter, onHistoryFilter
 
 // ─── Bet Card ────────────────────────────────────────────────────
 // ─── OpenBetCard — design port (SportyBet layout / Oddsify gold) ────
-function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onRebook }) {
+function OpenBetCard({ bet, liveOffer, liveScores, cashingOut, onCashOut, onDetails, onRebook }) {
   const [open, setOpen] = useState(true);
   const legs = bet.legs || bet.selections || [];
   const stake = Number(bet.stake || 0);
@@ -606,7 +640,7 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
 
         {/* Selection rows */}
         {legs.map((leg, i) => (
-          <SelectionRow key={i} leg={leg} last={i === legs.length - 1} />
+          <SelectionRow key={i} leg={leg} last={i === legs.length - 1} live={liveScores?.[leg.matchId]} />
         ))}
 
         {/* Hide/Show match details toggle */}
@@ -714,7 +748,7 @@ function OpenBetCard({ bet, liveOffer, cashingOut, onCashOut, onDetails, onReboo
 }
 
 // ─── SelectionRow — clock + crosshair + underlined match name ────
-function SelectionRow({ leg, last }) {
+function SelectionRow({ leg, last, live }) {
   const rawPick = getSelectionLabel(leg);
   const home = leg.home || '';
   const away = leg.away || '';
@@ -723,6 +757,7 @@ function SelectionRow({ leg, last }) {
   const odds = Number(leg.odds || 0);
   const dt = leg.matchDate || leg.kickoff;
   const dtFormatted = dt ? fmtDate(dt) : '';
+  const isLive = !!live && live.minute != null && live.minute !== 'FT';
 
   return (
     <div
@@ -754,7 +789,7 @@ function SelectionRow({ leg, last }) {
           </span>
           <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-dim)' }}>{market}</span>
         </div>
-        <div style={{ marginTop: 4 }}>
+        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span
             style={{
               color: 'var(--text)',
@@ -767,6 +802,33 @@ function SelectionRow({ leg, last }) {
           >
             {home} vs {away}
           </span>
+          {isLive && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: 'rgba(255,91,120,0.15)',
+                color: 'var(--danger, #ff5b78)',
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 999,
+                fontFamily: MONO,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  background: 'currentColor',
+                  display: 'inline-block',
+                }}
+              />
+              {String(live.minute).replace("'", '')}' {Number(live.scoreHome ?? 0)}-{Number(live.scoreAway ?? 0)}
+            </span>
+          )}
         </div>
         {dtFormatted && (
           <div style={{ marginTop: 4, color: 'var(--text-dim)', fontSize: 12, fontFamily: MONO }}>{dtFormatted}</div>

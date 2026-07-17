@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 
+const SECOND_HALF_INJURY_CAP_MIN = 15; // sanity cap: freeze around 90+X, never run away
+
 export function useLiveTimer(match) {
   const [display, setDisplay] = useState('');
   const baseMinRef = useRef(0);
@@ -8,10 +10,12 @@ export function useLiveTimer(match) {
   const isFixedRef = useRef(false);
   const injuryAppliedRef = useRef(false);
   const injuryLenRef = useRef(0);
+  const matchIdRef = useRef(null);
 
   useEffect(() => {
     if (!match?.isLive || match?.finished) {
       setDisplay('');
+      matchIdRef.current = null;
       return;
     }
 
@@ -30,22 +34,42 @@ export function useLiveTimer(match) {
       return;
     }
 
-    let baseMin = 0;
-    let baseExtra = 0;
+    let newBaseMin = 0;
+    let newBaseExtra = 0;
     if (raw.includes('+')) {
       const p = raw.split('+');
-      baseMin = parseInt(p[0]) || 0;
-      baseExtra = parseInt(p[1]) || 0;
+      newBaseMin = parseInt(p[0]) || 0;
+      newBaseExtra = parseInt(p[1]) || 0;
     } else {
-      baseMin = parseInt(raw) || 0;
+      newBaseMin = parseInt(raw) || 0;
     }
 
-    baseMinRef.current = baseMin;
-    baseExtraRef.current = baseExtra;
-    isFixedRef.current = match.fixed === true;
-    injuryAppliedRef.current = false;
-    injuryLenRef.current = 0;
-    startRef.current = Date.now();
+    const isNewMatch = matchIdRef.current !== match.id;
+    matchIdRef.current = match.id;
+
+    if (isNewMatch) {
+      baseMinRef.current = newBaseMin;
+      baseExtraRef.current = newBaseExtra;
+      isFixedRef.current = match.fixed === true;
+      injuryAppliedRef.current = false;
+      injuryLenRef.current = 0;
+      startRef.current = Date.now();
+    } else {
+      // Reconcile instead of hard-resetting: the server pushes on its own
+      // polling cadence, which can arrive "behind" a clock we've already
+      // ticked forward locally. Only accept the incoming minute as the new
+      // baseline when it implies the same or later point in the match — a
+      // push that implies going backward is stale and gets ignored, so the
+      // on-screen clock never visibly jumps backward.
+      const elapsedSec = Math.floor((Date.now() - startRef.current) / 1000);
+      const predictedTotalSec = baseMinRef.current * 60 + baseExtraRef.current * 60 + elapsedSec;
+      const incomingTotalSec = newBaseMin * 60 + newBaseExtra * 60;
+      if (incomingTotalSec >= predictedTotalSec) {
+        baseMinRef.current = newBaseMin;
+        baseExtraRef.current = newBaseExtra;
+        startRef.current = Date.now();
+      }
+    }
 
     const tick = () => {
       const elapsed = Math.floor((Date.now() - startRef.current) / 1000);
@@ -72,7 +96,7 @@ export function useLiveTimer(match) {
         injuryLenRef.current = 2 + Math.floor(Math.random() * 4);
       }
 
-      if (injuryAppliedRef.current && min >= 45) {
+      if (injuryAppliedRef.current && min >= 45 && min < 90) {
         const offset = totalSec - 45 * 60;
         const injMin = Math.floor(offset / 60);
         const injSec = offset % 60;
@@ -80,12 +104,21 @@ export function useLiveTimer(match) {
           setDisplay(`45+${injMin}:${String(injSec).padStart(2, '0')}`);
           return;
         }
-        setDisplay('FT');
+        setDisplay(`${min}:${String(sec).padStart(2, '0')}`);
         return;
       }
 
-      if (min > 99) {
-        setDisplay('FT');
+      // Sanity cap: freeze the clock around 90 minutes instead of counting
+      // forever. Show 90+X for stoppage time, then settle on FT.
+      if (min >= 90) {
+        const offset = totalSec - 90 * 60;
+        const extraMin = Math.floor(offset / 60);
+        const extraSec = offset % 60;
+        if (extraMin >= SECOND_HALF_INJURY_CAP_MIN) {
+          setDisplay('FT');
+          return;
+        }
+        setDisplay(`90+${extraMin}:${String(extraSec).padStart(2, '0')}`);
         return;
       }
 

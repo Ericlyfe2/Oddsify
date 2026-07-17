@@ -16,6 +16,13 @@ import {
   adminAddMarket,
   adminRemoveMarket,
   adminBulkFixtures,
+  adminLiveStart,
+  adminLivePause,
+  adminLiveResume,
+  adminLiveHalftime,
+  adminLiveSecondHalf,
+  adminLiveFulltime,
+  adminLiveScore,
 } from '../../api/adminApi.js';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
 import {
@@ -593,6 +600,28 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
     }
   };
 
+  const liveAction = async (fn, label) => {
+    try {
+      await fn(fx.id);
+      await reload();
+      onChange?.();
+    } catch (e) {
+      showToast(e.message || `Failed to ${label}.`, 'error');
+    }
+  };
+
+  const adjustScore = async (homeDelta, awayDelta) => {
+    const scoreHome = Math.max(0, (fx.scoreHome || 0) + homeDelta);
+    const scoreAway = Math.max(0, (fx.scoreAway || 0) + awayDelta);
+    try {
+      await adminLiveScore(fx.id, { scoreHome, scoreAway });
+      await reload();
+      onChange?.();
+    } catch (e) {
+      showToast(e.message || 'Failed to update score.', 'error');
+    }
+  };
+
   const recordResult = async (h, a) => {
     try {
       const r = await adminRecordResult(fx.id, { scoreHome: Number(h), scoreAway: Number(a), autoSettle: true });
@@ -696,6 +725,58 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
               </div>
             )}
           </Card>
+
+          {hasRole('odds_manager') && !fx.finished && (
+            <Card title="Live control">
+              <div className="adm-drawer-actions-row" style={{ marginBottom: 10 }}>
+                {(!fx.clockStatus || fx.clockStatus === 'not_started') && (
+                  <button className="adm-btn sm primary" onClick={() => liveAction(adminLiveStart, 'start clock')}>
+                    <IconLive size={12} /> Kick off
+                  </button>
+                )}
+                {fx.clockStatus === 'running' && (
+                  <button className="adm-btn sm" onClick={() => liveAction(adminLivePause, 'pause clock')}>
+                    Pause
+                  </button>
+                )}
+                {fx.clockStatus === 'paused' && (
+                  <button className="adm-btn sm primary" onClick={() => liveAction(adminLiveResume, 'resume clock')}>
+                    Resume
+                  </button>
+                )}
+                {fx.clockStatus === 'running' && (
+                  <button className="adm-btn sm" onClick={() => liveAction(adminLiveHalftime, 'go to half-time')}>
+                    Half-time
+                  </button>
+                )}
+                {fx.clockStatus === 'ht' && (
+                  <button className="adm-btn sm primary" onClick={() => liveAction(adminLiveSecondHalf, 'start second half')}>
+                    Kick off 2nd half
+                  </button>
+                )}
+                {(fx.clockStatus === 'running' || fx.clockStatus === 'paused') && (
+                  <button className="adm-btn sm warn" onClick={() => liveAction(adminLiveFulltime, 'end match')}>
+                    Full-time
+                  </button>
+                )}
+                {fx.clockStatus === 'ft' && <Badge tone="info">Full-time — cash-out locked</Badge>}
+              </div>
+              <div className="adm-drawer-actions-row" style={{ alignItems: 'center', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-dim, #888)' }}>{fx.home}</span>
+                  <button className="adm-btn sm" onClick={() => adjustScore(-1, 0)} aria-label="Decrease home score">−</button>
+                  <span style={{ fontWeight: 700, minWidth: 18, textAlign: 'center' }}>{fx.scoreHome ?? 0}</span>
+                  <button className="adm-btn sm" onClick={() => adjustScore(1, 0)} aria-label="Increase home score">+</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-dim, #888)' }}>{fx.away}</span>
+                  <button className="adm-btn sm" onClick={() => adjustScore(0, -1)} aria-label="Decrease away score">−</button>
+                  <span style={{ fontWeight: 700, minWidth: 18, textAlign: 'center' }}>{fx.scoreAway ?? 0}</span>
+                  <button className="adm-btn sm" onClick={() => adjustScore(0, 1)} aria-label="Increase away score">+</button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {Object.entries(fx.markets || {}).map(([mk, market]) => (
             <Card

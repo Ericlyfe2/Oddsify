@@ -201,6 +201,109 @@ export function deleteCustomLeague(id) {
   }
 }
 
+/* ── Manual live clock (admin-controlled fixtures) ───────────
+ * The minute/score an admin sets is stored directly on the override patch
+ * (scoreHome, scoreAway, minute) so the existing compiled-view machinery
+ * picks it up with no changes. The clock itself is derived, never stored as
+ * a raw counter: clockStartedAt marks when the current running segment
+ * began, clockBaseMinute banks minutes accumulated before it — so "what
+ * minute is it right now" is always computed fresh from a single source of
+ * truth instead of two clocks (admin + player) ticking independently and
+ * drifting apart.
+ */
+const STOPPAGE_CAP_MIN = 15; // sanity cap — freezes ~90+15 instead of running forever
+
+function getOverride(matchId) {
+  return (store.get('overrides') || {})[matchId] || {};
+}
+
+/** Minutes elapsed right now, including any running segment. Not display-formatted. */
+export function currentElapsedMinutes(ov) {
+  let total = ov.clockBaseMinute || 0;
+  if (ov.clockStatus === 'running' && ov.clockStartedAt) {
+    total += Math.floor((Date.now() - new Date(ov.clockStartedAt).getTime()) / 60000);
+  }
+  return total;
+}
+
+/** Display string for the current minute: '23', '45+2', 'HT', 'FT'. */
+export function computeMinuteDisplay(ov) {
+  if (!ov || !ov.clockStatus || ov.clockStatus === 'not_started') return ov?.minute ?? null;
+  if (ov.clockStatus === 'ht') return 'HT';
+  if (ov.clockStatus === 'ft') return 'FT';
+
+  const total = currentElapsedMinutes(ov);
+  if (total >= 90) {
+    if (total - 90 >= STOPPAGE_CAP_MIN) return 'FT';
+    const extra = total - 90;
+    return extra > 0 ? `90+${extra}` : '90';
+  }
+  return String(total);
+}
+
+export function isPastStoppageCap(ov) {
+  return ov.clockStatus === 'running' && currentElapsedMinutes(ov) - 90 >= STOPPAGE_CAP_MIN;
+}
+
+export function startClock(matchId) {
+  const patch = {
+    isLive: true,
+    status: 'live',
+    startedAt: new Date().toISOString(),
+    clockStatus: 'running',
+    clockBaseMinute: 0,
+    clockStartedAt: new Date().toISOString(),
+  };
+  patchOverride(matchId, { ...patch, minute: computeMinuteDisplay(patch) });
+  return getOverride(matchId);
+}
+
+export function pauseClock(matchId) {
+  const ov = { ...getOverride(matchId) };
+  const clockBaseMinute = currentElapsedMinutes(ov);
+  const patch = { clockStatus: 'paused', clockBaseMinute, clockStartedAt: null };
+  patchOverride(matchId, { ...patch, minute: computeMinuteDisplay({ ...ov, ...patch }) });
+  return getOverride(matchId);
+}
+
+export function resumeClock(matchId) {
+  const ov = { ...getOverride(matchId) };
+  const patch = { clockStatus: 'running', clockStartedAt: new Date().toISOString() };
+  patchOverride(matchId, { ...patch, minute: computeMinuteDisplay({ ...ov, ...patch }) });
+  return getOverride(matchId);
+}
+
+export function goToHalftime(matchId) {
+  const patch = { clockStatus: 'ht', clockBaseMinute: 45, clockStartedAt: null };
+  patchOverride(matchId, { ...patch, minute: 'HT' });
+  return getOverride(matchId);
+}
+
+export function startSecondHalf(matchId) {
+  const patch = { clockStatus: 'running', clockBaseMinute: 45, clockStartedAt: new Date().toISOString() };
+  patchOverride(matchId, { ...patch, minute: computeMinuteDisplay(patch) });
+  return getOverride(matchId);
+}
+
+export function goToFulltime(matchId) {
+  const patch = { clockStatus: 'ft', clockBaseMinute: 90, clockStartedAt: null };
+  patchOverride(matchId, { ...patch, minute: 'FT' });
+  return getOverride(matchId);
+}
+
+export function setLiveScore(matchId, scoreHome, scoreAway) {
+  patchOverride(matchId, { scoreHome: Number(scoreHome), scoreAway: Number(scoreAway) });
+  return getOverride(matchId);
+}
+
+/** Every fixture with a running clock — polled by the manual live-clock broadcaster. */
+export function listRunningClockFixtureIds() {
+  const overrides = store.get('overrides') || {};
+  return Object.entries(overrides)
+    .filter(([, ov]) => ov.clockStatus === 'running')
+    .map(([id]) => id);
+}
+
 /** Combined fixture lookup (admin view) — returns compiled match or null. */
 export function adminLookupFixture(matchId) {
   for (const sp of compiledLeagues()) {

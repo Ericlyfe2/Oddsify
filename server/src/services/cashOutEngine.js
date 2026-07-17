@@ -176,6 +176,40 @@ export function onLegSettled(fixtureKey, won) {
   }
 }
 
+/**
+ * Trigger: a fixture's live play has ended (full-time / admin lock) but the
+ * result hasn't been confirmed/settled yet. Zero out every open bet's offer
+ * so the cash-out button disappears immediately instead of staying live
+ * until the eventual settlement pass — mirrors onLegSettled's zero-offer
+ * shape but doesn't mark legs won/lost, since the outcome isn't known yet.
+ */
+export function lockFixture(fixtureKey, reason = 'match_ended') {
+  const bets = openBetsByFixture.get(fixtureKey);
+  if (!bets || bets.size === 0) return;
+  for (const betId of bets) {
+    const bet = betsById.get(betId);
+    if (!bet || bet.status !== 'open') {
+      unregisterBet(betId);
+      continue;
+    }
+    const payload = {
+      betId,
+      cashOut: 0,
+      potentialWin: Number((bet.stake * bet.totalOdds).toFixed(2)),
+      ts: Date.now(),
+      reason,
+    };
+    lastOfferByBet.set(betId, { cashOut: 0, ts: payload.ts });
+    _emit(bet.userId, 'cashout:offer', payload);
+    if (_onOffer)
+      try {
+        _onOffer(bet, payload);
+      } catch {
+        /* never break the loop */
+      }
+  }
+}
+
 /** Periodic cleanup — called every 60s from oddsAggregator. */
 export function sweep() {
   for (const [fixtureKey, set] of openBetsByFixture) {

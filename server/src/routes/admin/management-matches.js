@@ -10,6 +10,8 @@ import * as Sports from '../../db/sports.js';
 import { getAutoAttachTemplates } from '../../db/marketTemplates.js';
 import { autoAttachMarkets } from '../../db/markets.js';
 import { bridgeMatchCreated, bridgeMatchUpdated, bridgeMatchStatusChanged } from '../../services/catalogBridge.js';
+import { broadcastMatch } from '../../services/manualLiveClock.js';
+import * as cashOutEngine from '../../services/cashOutEngine.js';
 
 const router = Router();
 
@@ -110,5 +112,87 @@ router.post('/:id/archive', requireAdmin, requireRole('odds_manager', 'super_adm
   bridgeMatchStatusChanged(m);
   res.json({ match: m });
 });
+
+/* ── Manual live-clock control (admin-created fixtures) ──────
+ * Single server-side source of truth: every action here updates the match
+ * record's clock state and immediately re-broadcasts score:update so the
+ * admin panel and the player-facing site read the same minute/score instead
+ * of running independent timers that can drift apart.
+ */
+router.post('/:id/live/start', requireAdmin, requireRole('odds_manager', 'super_admin'), (req, res) => {
+  const m = Matches.startClock(req.params.id);
+  if (!m) throw notFound('Match not found');
+  audit(req, { action: 'match.live.start', target: req.params.id, targetType: 'match' });
+  bridgeMatchStatusChanged(m);
+  broadcastMatch(m, { eventKind: 'kick_off' });
+  res.json({ match: m });
+});
+
+router.post('/:id/live/pause', requireAdmin, requireRole('odds_manager', 'super_admin'), (req, res) => {
+  const m = Matches.pauseClock(req.params.id);
+  if (!m) throw notFound('Match not found');
+  audit(req, { action: 'match.live.pause', target: req.params.id, targetType: 'match' });
+  broadcastMatch(m);
+  res.json({ match: m });
+});
+
+router.post('/:id/live/resume', requireAdmin, requireRole('odds_manager', 'super_admin'), (req, res) => {
+  const m = Matches.resumeClock(req.params.id);
+  if (!m) throw notFound('Match not found');
+  audit(req, { action: 'match.live.resume', target: req.params.id, targetType: 'match' });
+  broadcastMatch(m);
+  res.json({ match: m });
+});
+
+router.post('/:id/live/halftime', requireAdmin, requireRole('odds_manager', 'super_admin'), (req, res) => {
+  const m = Matches.goToHalftime(req.params.id);
+  if (!m) throw notFound('Match not found');
+  audit(req, { action: 'match.live.halftime', target: req.params.id, targetType: 'match' });
+  broadcastMatch(m, { eventKind: 'half_time' });
+  res.json({ match: m });
+});
+
+router.post('/:id/live/second-half', requireAdmin, requireRole('odds_manager', 'super_admin'), (req, res) => {
+  const m = Matches.startSecondHalf(req.params.id);
+  if (!m) throw notFound('Match not found');
+  audit(req, { action: 'match.live.second-half', target: req.params.id, targetType: 'match' });
+  broadcastMatch(m);
+  res.json({ match: m });
+});
+
+router.post('/:id/live/fulltime', requireAdmin, requireRole('odds_manager', 'super_admin'), (req, res) => {
+  const m = Matches.goToFulltime(req.params.id);
+  if (!m) throw notFound('Match not found');
+  audit(req, { action: 'match.live.fulltime', target: req.params.id, targetType: 'match' });
+  broadcastMatch(m, { eventKind: 'full_time' });
+  // Cash-out stops the instant live play ends — the eventual result entry
+  // handles won/lost settlement separately.
+  cashOutEngine.lockFixture(m.id, 'match_ended');
+  res.json({ match: m });
+});
+
+router.post(
+  '/:id/live/score',
+  requireAdmin,
+  requireRole('odds_manager', 'super_admin'),
+  validate(
+    z.object({
+      homeScore: z.number().int().min(0),
+      awayScore: z.number().int().min(0),
+    }),
+  ),
+  (req, res) => {
+    const m = Matches.setLiveScore(req.params.id, req.body.homeScore, req.body.awayScore);
+    if (!m) throw notFound('Match not found');
+    audit(req, {
+      action: 'match.live.score',
+      target: req.params.id,
+      targetType: 'match',
+      meta: { homeScore: req.body.homeScore, awayScore: req.body.awayScore },
+    });
+    broadcastMatch(m);
+    res.json({ match: m });
+  },
+);
 
 export default router;
