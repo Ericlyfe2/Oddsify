@@ -8,6 +8,7 @@
  * Inline styles match the source so token churn touches one file.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useLiveTimer } from '../../hooks/useLiveTimer.js';
 import { T, fmtCedi, useTokens } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
 import { TeamLogo, LeagueLogo } from './teamBranding.jsx';
@@ -812,6 +813,7 @@ export function OddLeagueRow({ leagues = DEFAULT_LEAGUES, onPick }) {
 export function OddMatchCard({ match, picks, onPick, onMore }) {
   const T = useTokens();
   const live = match.isLive;
+  const liveTime = useLiveTimer(match);
   const pickedKey = picks?.[match.id]?.key;
   const odds = match.odds || {};
   const oddsEntries = sortOddsEntries(odds);
@@ -853,7 +855,7 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
           <span style={{ fontSize: 10, color: T.inkSoft }}>{(match.sport || 'SOCCER').toUpperCase()}</span>
         </div>
         {live ? (
-          <OddStatusChip kind="live" label={`LIVE ${match.minute || ''}`.trim()} />
+          <OddStatusChip kind="live" label={`LIVE ${liveTime || match.minute || ''}`.trim()} />
         ) : (
           <span
             style={{

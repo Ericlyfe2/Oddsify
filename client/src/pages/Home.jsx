@@ -17,6 +17,7 @@ import { fetchMatches, fetchRecentWins, fetchMajorLeagues } from '../api/betApi.
 import { subscribeSports, unsubscribeSports, onLive } from '../api/socketClient.js';
 import { useAccount } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
+import { useLiveTimer } from '../hooks/useLiveTimer.js';
 import {
   fmtCedi,
   OddTopHeader,
@@ -1322,6 +1323,7 @@ function LeagueTab({ active, label, onClick }) {
 function LiveMatchCard({ match, picks, onPick, onMore }) {
   const T = useTokens();
   const pickedKey = picks?.[match.id]?.key;
+  const liveTime = useLiveTimer(match);
   const leagueLabel = match.leagueName || match.league || 'Live';
   const sport = (match.sport || 'football').toLowerCase();
   const sportGlyph = sport === 'tennis' ? 'tennis' : sport === 'basketball' ? 'basket' : 'soccer';
@@ -1379,7 +1381,7 @@ function LiveMatchCard({ match, picks, onPick, onMore }) {
             {sport.toUpperCase()}
           </span>
         </div>
-        <OddStatusChip kind="live" label={`LIVE ${match.minute || ''}`.trim()} />
+        <OddStatusChip kind="live" label={`LIVE ${liveTime || match.minute || ''}`.trim()} />
       </div>
 
       {/* teams */}

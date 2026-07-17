@@ -230,8 +230,8 @@ export function adminListFixtures() {
   return rows;
 }
 
-/** Check for duplicate fixture (home + away + league + date + time). */
-export function findDuplicateFixture(home, away, leagueId, day, kickoff) {
+/** Check for duplicate fixture (home + away + league + date + time + sport). */
+export function findDuplicateFixture(home, away, leagueId, day, kickoff, sport) {
   const haystack = adminListFixtures();
   const normHome = home.toLowerCase().trim();
   const normAway = away.toLowerCase().trim();
@@ -242,6 +242,7 @@ export function findDuplicateFixture(home, away, leagueId, day, kickoff) {
       (mHome === normHome && mAway === normAway) ||
       (mHome === normAway && mAway === normHome);
     if (!sameTeams) return false;
+    if (sport && m.sport !== sport) return false;
     if (m.leagueId !== leagueId) return false;
     if (day && m.day && m.day.toLowerCase() !== day.toLowerCase()) return false;
     if (kickoff && m.kickoff && m.kickoff !== kickoff) return false;

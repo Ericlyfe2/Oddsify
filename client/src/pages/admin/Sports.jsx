@@ -40,7 +40,9 @@ import {
   IconBook,
   IconAlert,
   IconClose,
+  IconFixed,
 } from '../../components/admin/Icons.jsx';
+import { useLiveTimer } from '../../hooks/useLiveTimer.js';
 
 const SPORTS = ['football', 'basketball', 'tennis'];
 const MARKET_PRESETS = {
@@ -375,12 +377,12 @@ export default function SportsAdmin() {
                       />
                     </td>
                     <td>
-                      <div className="adm-fixture-name">{m.home} — {m.away}</div>
+                      <div className="adm-fixture-name">{m.home} — {m.away} {m.fixed ? <span style={{ fontSize: 9, color: 'var(--warn)', fontWeight: 700, marginLeft: 4 }}>FIXED</span> : ''}</div>
                       <div className="adm-fixture-meta">{m.sport} · {m.id}</div>
                     </td>
                     <td>{m.leagueName || m.leagueId}</td>
                     <td>
-                      {status === 'live' && <Badge tone="danger" dot>Live {m.minute || ''}</Badge>}
+                      {status === 'live' && <LiveBadge match={m} />}
                       {status === 'upcoming' && <Badge tone="info">Upcoming</Badge>}
                       {status === 'finished' && <Badge tone="success">Finished {m.scoreHome}-{m.scoreAway}</Badge>}
                       {status === 'suspended' && <Badge tone="warn">Suspended</Badge>}
@@ -480,6 +482,15 @@ function BulkScoreModal({ open, count, onClose, home, away, onHomeChange, onAway
       </div>
     </Modal>
   );
+}
+
+/* ================================================================
+   LIVE BADGE (with ticking timer)
+   ================================================================ */
+
+function LiveBadge({ match }) {
+  const liveTime = useLiveTimer(match);
+  return <Badge tone="danger" dot>Live {liveTime || match.minute || ''}</Badge>;
 }
 
 /* ================================================================
@@ -645,7 +656,7 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
                 {fx.finished ? (
                   <Badge tone="success">Finished {fx.scoreHome}-{fx.scoreAway}</Badge>
                 ) : fx.isLive ? (
-                  <Badge tone="danger" dot>Live {fx.minute || ''}</Badge>
+                  <LiveBadge match={fx} />
                 ) : (
                   <Badge tone="info">Upcoming</Badge>
                 )}
@@ -656,6 +667,12 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
                   <dd><Badge tone="warn">All markets suspended</Badge></dd>
                 </>
               )}
+              {fx.fixed && (
+                <>
+                  <dt>Fixed</dt>
+                  <dd><Badge tone="warn">Injury time at 45'</Badge></dd>
+                </>
+              )}
             </dl>
             {hasRole('odds_manager') && !fx.finished && (
               <div className="adm-drawer-actions-row">
@@ -664,6 +681,17 @@ function FixtureDrawer({ open, fixtureId, onClose, hasRole, showToast, onChange 
                 </button>
                 <button className="adm-btn sm" onClick={resetOdds} aria-label="Reset odds to default">
                   <IconRefresh size={12} /> Reset odds
+                </button>
+                <button className={`adm-btn sm${fx.fixed ? ' warn' : ''}`} onClick={async () => {
+                  try {
+                    await adminPatchFixture(fx.id, { fixed: !fx.fixed });
+                    await reload();
+                    onChange?.();
+                  } catch (e) {
+                    showToast(e.message, 'error');
+                  }
+                }} aria-label={fx.fixed ? 'Unmark fixed' : 'Mark fixed'}>
+                  <IconFixed size={12} /> {fx.fixed ? 'Fixed' : 'Fixed?'}
                 </button>
               </div>
             )}
@@ -1061,11 +1089,22 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
         { market: 'BTTS', type: 'yesno', yes: Number(form.bttsYes), no: Number(form.bttsNo) },
         { market: 'DC', type: 'dc', '1X': Number(form.dc1X), X2: Number(form.dcX2), 12: Number(form.dc12) },
         { market: 'DNB', type: 'dnb', homeOdds: Number(form.dnbHome), awayOdds: Number(form.dnbAway) },
-        { market: 'AH', type: 'ah', homeOdds: Number(form.ahHome), awayOdds: Number(form.ahAway) },
+        { market: 'AH1', type: 'ah', homeOdds: Number(form.ahHome), awayOdds: Number(form.ahAway) },
       );
 
       if (form.csEnabled && form.csScores.length >= 2) {
         extraMarkets.push({ market: 'CS', type: 'cs', scores: form.csScores });
+      }
+
+      let day = 'Today';
+      if (form.matchDate) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const diff = Math.round((new Date(form.matchDate) - new Date(todayStr)) / 86400000);
+        if (diff === 1) day = 'Tomorrow';
+        else if (diff > 1) {
+          const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          day = names[new Date(form.matchDate).getDay()];
+        }
       }
 
       await adminCreateFixture({
@@ -1073,7 +1112,7 @@ function CreateFixtureModal({ open, onClose, leagues, onCreated, showToast }) {
         leagueId: form.leagueId,
         home: form.home.trim(),
         away: form.away.trim(),
-        matchDate: form.matchDate || undefined,
+        day,
         kickoff: form.kickoff || undefined,
         venue: form.venue || undefined,
         isLive: form.status === 'live',

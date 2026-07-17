@@ -124,7 +124,7 @@ function ensureResult(match, sport) {
 
 /* ------------ leg resolvers ------------ */
 
-export function legWon(leg, scoreHome, scoreAway, htHome = null, htAway = null) {
+export function legWon(leg, scoreHome, scoreAway, htHome = null, htAway = null, csSelections = null) {
   const m = String(leg.market || '').toUpperCase();
   const o = String(leg.outcome || '');
   const total = scoreHome + scoreAway;
@@ -173,10 +173,11 @@ export function legWon(leg, scoreHome, scoreAway, htHome = null, htAway = null) 
     const actual = `${scoreHome}-${scoreAway}`;
     if (/^\d+-\d+$/.test(o)) return o === actual;
     const inGrid = scoreHome <= 4 && scoreAway <= 4;
-    if (o === 'OTHER_HOME') return !inGrid && homeWin;
-    if (o === 'OTHER_AWAY') return !inGrid && awayWin;
-    if (o === 'OTHER_DRAW') return !inGrid && draw;
-    if (o === 'OTHER') return !inGrid;
+    const isListed = csSelections?.some((s) => /^\d+-\d+$/.test(s.key) && s.key === actual) ?? false;
+    if (o === 'OTHER_HOME') return !isListed && homeWin;
+    if (o === 'OTHER_AWAY') return !isListed && awayWin;
+    if (o === 'OTHER_DRAW') return !isListed && draw;
+    if (o === 'OTHER') return !isListed;
   }
 
   const ahMatch = m.match(/^AH(\d)$/);
@@ -291,7 +292,8 @@ export function settleNow() {
         allReady = false;
         break;
       }
-      const won = legWon(leg, res.scoreHome, res.scoreAway, res.htHomeScore ?? null, res.htAwayScore ?? null);
+      const csSelections = view?.match?.markets?.CS?.selections ?? null;
+      const won = legWon(leg, res.scoreHome, res.scoreAway, res.htHomeScore ?? null, res.htAwayScore ?? null, csSelections);
       legResults.push({ leg, res, won });
     }
     if (!allReady) continue;

@@ -78,7 +78,9 @@ describe('Booking Code Endpoint Integration', () => {
     });
   });
 
-  after(() => {
+  after(async () => {
+    // Give debounced store flushes time to settle before close
+    await new Promise((r) => setTimeout(r, 100));
     server?.close();
   });
 

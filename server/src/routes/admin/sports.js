@@ -193,7 +193,8 @@ router.post('/fixtures', requireAdmin, requireRole('odds_manager'), validate(cre
     trimmedAway,
     b.leagueId,
     b.matchDate || b.day || '',
-    b.kickoff || ''
+    b.kickoff || '',
+    b.sport
   );
   if (duplicate) {
     throw conflict('Fixture already exists. A match with these teams in this league already exists.');
@@ -337,8 +338,8 @@ function buildFixtureMarkets(b, home, away) {
       fromExtra[em.market] = {
         name: em.name || 'Asian Handicap',
         selections: [
-          { key: 'Home', label: `${home} ${em.handicap || ''}`, odds: Math.max(em.homeOdds ?? 1.85, ODD_MIN) },
-          { key: 'Away', label: `${away} ${em.handicapAway || ''}`, odds: Math.max(em.awayOdds ?? 1.85, ODD_MIN) },
+          { key: 'H-1', label: `${home} -1`, odds: Math.max(em.homeOdds ?? 1.85, ODD_MIN) },
+          { key: 'A+1', label: `${away} +1`, odds: Math.max(em.awayOdds ?? 1.85, ODD_MIN) },
         ],
       };
     } else if (em.type === 'cs') {
@@ -427,6 +428,7 @@ router.patch(
       scoreAway: z.number().optional(),
       minute: z.string().optional(),
       status: z.string().optional(),
+      fixed: z.boolean().optional(),
     }),
   ),
   (req, res, next) => {
