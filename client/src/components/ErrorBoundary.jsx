@@ -1,5 +1,28 @@
 import { Component } from 'react';
 
+// A lazy chunk 404ing because a newer deploy replaced its hashed filename
+// looks like an ordinary crash to React, but it isn't recoverable via
+// "Try again" — the module just doesn't exist under the old URL anymore.
+// One reload fetches the current index.html (pointing at chunks that do
+// exist) and self-heals. Guarded against loop with the same key main.jsx's
+// vite:preloadError listener uses, so whichever fires first wins.
+const CHUNK_ERROR_RE = /Failed to fetch dynamically imported module|Loading chunk .* failed|ChunkLoadError/i;
+
+function isStaleChunkError(error) {
+  return CHUNK_ERROR_RE.test(error?.message || '');
+}
+
+function reloadOnceForStaleChunk() {
+  const key = 'oddsify:chunk-reload-at';
+  const last = Number(sessionStorage.getItem(key) || 0);
+  if (Date.now() - last > 10_000) {
+    sessionStorage.setItem(key, String(Date.now()));
+    window.location.reload();
+    return true;
+  }
+  return false;
+}
+
 // App-wide error boundary. A crash inside any route blanks the screen by
 // default in React. This catches the error, logs it to the console (so it
 // still shows up in dev), and offers a recoverable fallback the user can
@@ -18,6 +41,7 @@ export default class ErrorBoundary extends Component {
     if (typeof console !== 'undefined') {
       console.error('[oddsify] uncaught render error:', error, info?.componentStack);
     }
+    if (isStaleChunkError(error)) reloadOnceForStaleChunk();
   }
 
   reset = () => {
