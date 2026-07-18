@@ -66,6 +66,7 @@ export function normalizeMatch(m, leagueName = '') {
     markets: allMarkets,
     sport: m.sport,
     featured: m.featured,
+    adminCreated: !!m.adminCreated,
     fixed: m.fixed === true,
     leagueName,
     leagueLogo: m.leagueLogo || m.league?.logo || null,

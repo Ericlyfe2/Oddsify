@@ -118,21 +118,33 @@ export default function Home() {
   // or Champions League fixture under Icelandic/lower-division filler
   // whenever few top leagues had matches on (e.g. during the off-season).
   const upcoming = useMemo(() => {
+    const FEATURED_CAP = 8;
+    const MAX_PER_LEAGUE = 3;
+    const out = [];
+
+    // Admin-created fixtures don't carry the curated big-league priority
+    // that pushes World Cup/Champions League etc. to the front of `matches`,
+    // so without this they'd always lose their slot to the long tail of
+    // top-flight leagues — an admin creating a match would never see it
+    // featured on the home page. Give them a couple of guaranteed slots
+    // first, then fill the rest by the usual priority order.
+    const ADMIN_RESERVED = 2;
+    const adminUpcoming = matches.filter((m) => m.adminCreated && !m.isLive);
+    for (const m of adminUpcoming.slice(0, ADMIN_RESERVED)) out.push(m);
+
     const byLeague = new Map();
     for (const m of matches) {
-      if (m.isLive) continue;
+      if (m.isLive || out.includes(m)) continue;
       const key = m.leagueName || 'other';
       if (!byLeague.has(key)) byLeague.set(key, []);
       byLeague.get(key).push(m);
     }
-    const MAX_PER_LEAGUE = 3;
-    const out = [];
     for (const bucket of byLeague.values()) {
       for (const m of bucket.slice(0, MAX_PER_LEAGUE)) {
-        if (out.length >= 8) break;
+        if (out.length >= FEATURED_CAP) break;
         out.push(m);
       }
-      if (out.length >= 8) break;
+      if (out.length >= FEATURED_CAP) break;
     }
     return out;
   }, [matches]);
