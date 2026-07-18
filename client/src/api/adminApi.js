@@ -250,6 +250,11 @@ export const adminListPendingDeposits = () => get('/deposits/pending');
 export const adminApproveDeposit = (id) => post(`/deposits/${encodeURIComponent(id)}/approve`);
 export const adminRejectDeposit = (id, body) => post(`/deposits/${encodeURIComponent(id)}/reject`, body);
 
+/* withdrawals */
+export const adminListPendingWithdrawals = () => get('/withdrawals/pending');
+export const adminApproveWithdrawal = (id) => post(`/withdrawals/${encodeURIComponent(id)}/approve`);
+export const adminRejectWithdrawal = (id, body) => post(`/withdrawals/${encodeURIComponent(id)}/reject`, body);
+
 /* referrals */
 export const adminListReferrals = (params) => get(`/referrals${qs(params)}`);
 export const adminReferralStats = () => get('/referrals/stats');

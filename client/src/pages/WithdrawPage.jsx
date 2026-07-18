@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAccount, useToast } from '../providers/AccountProvider.jsx';
+import { useAccount } from '../providers/AccountProvider.jsx';
 import { fetchTransactions, withdraw } from '../api/betApi.js';
 import TxHeader from '../components/TxHeader.jsx';
 import PaybillInstructions from '../components/PaybillInstructions.jsx';
@@ -27,10 +27,22 @@ const NETWORKS = {
   airteltigo: { label: 'AT Money', tag: 'AT', bg: '#0055ff' },
 };
 
+// Masks a phone number for the confirm modal (e.g. "0244612481" -> "24****481").
+// Falls back to showing the value as-is for emails or anything too short to mask.
+function maskPhone(raw) {
+  if (!raw) return '—';
+  if (raw.includes('@')) return raw;
+  const digits = raw.replace(/\D/g, '');
+  let local = digits;
+  if (local.startsWith('233') && local.length > 9) local = local.slice(3);
+  else if (local.startsWith('0')) local = local.slice(1);
+  if (local.length < 5) return raw;
+  return `${local.slice(0, 2)}****${local.slice(-3)}`;
+}
+
 export default function WithdrawPage() {
   const navigate = useNavigate();
   const { account, openDeposit, setAccount } = useAccount();
-  const { toast } = useToast();
   const [txs, setTxs] = useState([]);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('momo');
@@ -39,6 +51,8 @@ export default function WithdrawPage() {
   const [showDepositReq, setShowDepositReq] = useState(false); // Stage 1 modal
   const [showExtraDeposit, setShowExtraDeposit] = useState(false); // Stage 2 modal
   const [showBlocked, setShowBlocked] = useState(false); // Stage 3 (blocked) modal
+  const [showConfirm, setShowConfirm] = useState(false); // Confirm-to-withdraw modal
+  const [pendingResult, setPendingResult] = useState(null); // Pending-request success screen data
   const [busy, setBusy] = useState(false);
 
   const MIN_WITHDRAW_DEFAULT = 550; // Stage 0, 1
@@ -109,7 +123,7 @@ export default function WithdrawPage() {
   // *why* the withdrawal can't proceed yet.
   const isAmountValid = amtNum >= MIN_WITHDRAW && amtNum <= MAX_WITHDRAW && !overBalance;
   const net = NETWORKS[method] || NETWORKS.momo;
-  const accountPhone = account.phone || account.email || '+233 59****943';
+  const accountPhone = account.phone || account.email || '+233 24****481';
 
   const bump = (n) => setAmount(String(Math.min(MAX_WITHDRAW, Math.round(amtNum + n))));
 
@@ -139,16 +153,24 @@ export default function WithdrawPage() {
       setShowExtraDeposit(true);
       return;
     }
-    // Stage 3 and not blocked — admin has cleared the lock, allow real
-    // withdrawal to go through.
+    // Stage 3 and not blocked — admin has cleared the lock. Show the confirm
+    // modal instead of submitting straight away; the actual API call happens
+    // in confirmWithdraw once the user reviews and confirms.
+    setShowConfirm(true);
+  };
+
+  const confirmWithdraw = async () => {
+    if (busy) return;
     try {
       setBusy(true);
       const data = await withdraw(amtNum, method);
       if (data.account) setAccount(data.account);
       if (data.transaction) setTxs((cur) => [data.transaction, ...cur].slice(0, 50));
-      toast(`Withdrew GHS ${fmt(amtNum)} to ${net.label}.`);
+      setShowConfirm(false);
+      setPendingResult({ amount: amtNum, network: net.label });
       setAmount('');
     } catch (e2) {
+      setShowConfirm(false);
       setErr(e2.message || 'Withdrawal failed.');
     } finally {
       setBusy(false);
@@ -495,6 +517,230 @@ export default function WithdrawPage() {
             >
               close
             </button>
+          </div>
+        </div>
+      )}
+
+      {showConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-withdraw-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 1000,
+          }}
+          onClick={() => !busy && setShowConfirm(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 380,
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              borderRadius: 16,
+              padding: '20px 20px 18px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+              border: '1px solid var(--line)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h2 id="confirm-withdraw-title" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
+                Confirm to Withdraw
+              </h2>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setShowConfirm(false)}
+                disabled={busy}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  border: '1px solid var(--line)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text-soft)',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: busy ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {[
+              ['Remaining Amount (GHS)', fmt(balance - amtNum)],
+              ['Withdraw To', net.label],
+              ['Mobile Number', maskPhone(accountPhone)],
+              ['Withdrawal Amount (GHS)', fmt(amtNum)],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: '1px solid var(--line)',
+                }}
+              >
+                <span style={{ fontSize: 13, color: 'var(--text-soft)' }}>{label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{value}</span>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                disabled={busy}
+                style={{
+                  flex: 1,
+                  padding: '13px 0',
+                  borderRadius: 10,
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--line)',
+                  color: 'var(--text)',
+                  fontWeight: 700,
+                  fontSize: 14.5,
+                  cursor: busy ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmWithdraw}
+                disabled={busy}
+                style={{
+                  flex: 1,
+                  padding: '13px 0',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: busy ? 'var(--surface-2)' : '#1aa64f',
+                  color: busy ? 'var(--text-dim)' : '#fff',
+                  fontWeight: 800,
+                  fontSize: 15,
+                  cursor: busy ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {busy ? 'Processing…' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingResult && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pending-request-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 1000,
+          }}
+          onClick={() => setPendingResult(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 380,
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              borderRadius: 16,
+              padding: '22px 20px 18px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+              border: '1px solid var(--line)',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                background: 'rgba(26,166,79,0.12)',
+                display: 'grid',
+                placeItems: 'center',
+                margin: '0 auto 14px',
+              }}
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="#1aa64f" strokeWidth="2" />
+                <path d="M8 12.5l2.5 2.5L16 9" stroke="#1aa64f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h2 id="pending-request-title" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
+              Pending Request
+            </h2>
+            <p style={{ margin: '10px 4px 16px', fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.55 }}>
+              Your withdrawal request of GHS {fmt(pendingResult.amount)} to {pendingResult.network} has been
+              submitted, awaiting confirmation. You can check the withdrawal records in a short while.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingResult(null);
+                  navigate('/wallet');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 0',
+                  borderRadius: 10,
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--line)',
+                  color: 'var(--text)',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                Transactions
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingResult(null);
+                  navigate('/');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 0',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: 'var(--accent)',
+                  color: 'var(--bg)',
+                  fontWeight: 800,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                Home
+              </button>
+            </div>
+            <p style={{ margin: '14px 0 0', fontSize: 11.5, color: 'var(--text-dim)' }}>
+              Withdrawal is free, no transaction fees.
+            </p>
           </div>
         </div>
       )}

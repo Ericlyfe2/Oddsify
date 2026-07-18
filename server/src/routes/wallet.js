@@ -108,17 +108,22 @@ router.post(
     }
     if (amount > user.balance) throw badRequest('Insufficient balance.');
 
+    // Funds are held immediately so a user can't place bets with money
+    // they've already asked to withdraw, but the payout itself is pending
+    // until an admin approves it (see routes/admin/withdrawals.js) — same
+    // review step deposits already go through.
     const updated = updateUser(user.id, { balance: Number((user.balance - amount).toFixed(2)) });
     const tx = pushTx(user.id, {
       kind: 'withdraw',
       amount,
       method,
-      status: 'completed',
+      status: 'pending',
       balanceAfter: updated.balance,
     });
     logActivity(user.id, { kind: 'withdraw', amount, method });
     emitToUser(user.id, 'wallet:update', { balance: updated.balance, delta: -amount, reason: 'withdraw', method });
-    emitAdmin('wallet:withdraw', { userId: user.id, amount, method });
+    emitToUser(user.id, 'wallet:pending', { transaction: tx, amount, method });
+    emitAdmin('wallet:withdraw', { userId: user.id, amount, method, transactionId: tx.id });
     res.json({
       ok: true,
       account: { ...updated, passwordHash: undefined, googleId: undefined, activity: undefined },

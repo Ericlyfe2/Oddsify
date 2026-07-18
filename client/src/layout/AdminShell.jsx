@@ -61,6 +61,7 @@ const NAV_SECTIONS = [
     items: [
       { to: '/admin/finance', label: 'Finance', icon: <IconCash /> },
       { to: '/admin/deposits', label: 'Deposits', icon: <IconCash /> },
+      { to: '/admin/withdrawals', label: 'Withdrawals', icon: <IconCash /> },
     ],
   },
   {

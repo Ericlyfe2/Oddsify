@@ -53,6 +53,7 @@ const AdminStats = lazy(() => import('./pages/admin/Stats.jsx'));
 const AdminProviders = lazy(() => import('./pages/admin/Providers.jsx'));
 const AdminHealth = lazy(() => import('./pages/admin/Health.jsx'));
 const AdminDeposits = lazy(() => import('./pages/admin/Deposits.jsx'));
+const AdminWithdrawals = lazy(() => import('./pages/admin/Withdrawals.jsx'));
 const AdminReferrals = lazy(() => import('./pages/admin/Referrals.jsx'));
 const AdminCatalog = lazy(() => import('./pages/admin/Catalog.jsx'));
 const AdminPaymentGateways = lazy(() => import('./pages/admin/PaymentGateways.jsx'));
@@ -90,6 +91,7 @@ function AdminApp() {
             <Route path="promotions" element={<AdminPromotions />} />
             <Route path="finance" element={<FinancePage />} />
             <Route path="deposits" element={<AdminDeposits />} />
+            <Route path="withdrawals" element={<AdminWithdrawals />} />
             <Route path="referrals" element={<AdminReferrals />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="support" element={<SupportPage />} />
