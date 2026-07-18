@@ -67,6 +67,12 @@ export default function OddIcon({ name, size = 20, color = 'currentColor', strok
         <path d="M8 11V8a4 4 0 1 1 8 0v3" />
       </>
     ),
+    pencil: (
+      <>
+        <path d="M4 20h4l10.5-10.5a2.12 2.12 0 0 0-3-3L5 17v3Z" />
+        <path d="m14.5 5.5 4 4" />
+      </>
+    ),
     play: <path d="M8 5v14l11-7L8 5Z" fill={color} />,
     trash: (
       <>

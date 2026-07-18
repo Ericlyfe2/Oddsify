@@ -89,28 +89,51 @@ function Row({ children, onClick, danger }) {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text', autoComplete, helper, error }) {
+function Field({ label, value, onChange, placeholder, type = 'text', autoComplete, helper, error, editable = true }) {
   const T = useTokens();
+  const inputId = `field-${label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
   return (
     <div style={{ padding: '12px 14px', borderBottom: `1px solid ${T.line}` }}>
-      <label style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4 }}>{label}</label>
-      <input
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        type={type}
-        autoComplete={autoComplete}
-        placeholder={placeholder}
+      <label htmlFor={inputId} style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4 }}>
+        {label}
+      </label>
+      <div
         style={{
-          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
           marginTop: 4,
-          background: 'transparent',
-          color: T.ink,
-          fontSize: 14,
-          fontWeight: 600,
-          border: 0,
-          outline: 'none',
+          ...(editable
+            ? {
+                background: T.surfaceAlt,
+                borderRadius: 8,
+                border: `1px solid ${T.line}`,
+                padding: '8px 10px',
+              }
+            : {}),
         }}
-      />
+      >
+        <input
+          id={inputId}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          type={type}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          readOnly={!editable}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: 'transparent',
+            color: T.ink,
+            fontSize: 14,
+            fontWeight: 600,
+            border: 0,
+            outline: 'none',
+          }}
+        />
+        {editable && type !== 'password' && <OddIcon name="pencil" size={14} color={T.inkSoft} />}
+      </div>
       {error && <div style={{ fontSize: 11, color: T.danger, marginTop: 4 }}>{error}</div>}
       {!error && helper && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 4 }}>{helper}</div>}
     </div>
@@ -596,6 +619,7 @@ export default function ProfilePage() {
           value={account.email}
           onChange={() => {}}
           helper="Sign-in identifier. Contact support to change."
+          editable={false}
         />
         <Field
           label="Phone number"
