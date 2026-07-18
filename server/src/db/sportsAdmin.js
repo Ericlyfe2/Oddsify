@@ -172,6 +172,26 @@ export function addMarketToFixture(matchId, marketKey, marketDef) {
   return markets[marketKey];
 }
 
+/** Add or overwrite a market (with selections) on a custom fixture — unlike
+ *  addMarketToFixture, replaces an existing market of the same key instead
+ *  of refusing. Used to rebuild a market from corrected pricing logic. */
+export function replaceMarketOnFixture(matchId, marketKey, marketDef) {
+  const cur = store.get('custom') || {};
+  const fx = cur[matchId];
+  if (!fx) return null;
+  const markets = { ...(fx.markets || {}) };
+  markets[marketKey] = {
+    name: marketDef.name || marketKey,
+    selections: (marketDef.selections || []).map((s) => ({
+      key: s.key,
+      label: s.label || s.key,
+      odds: Number(s.odds),
+    })),
+  };
+  store.set('custom', { ...cur, [matchId]: { ...fx, markets, moreMarkets: Object.keys(markets).length } });
+  return markets[marketKey];
+}
+
 /** Remove a market from a custom fixture. */
 export function removeMarketFromFixture(matchId, marketKey) {
   const cur = store.get('custom') || {};

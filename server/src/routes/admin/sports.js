@@ -19,6 +19,7 @@ import {
   addCustomLeague,
   addMarketToFixture,
   removeMarketFromFixture,
+  replaceMarketOnFixture,
   readSportsAdmin,
   findDuplicateFixture,
   startClock,
@@ -301,6 +302,20 @@ function buildCsPricer(odds1x2, ouMarket) {
   };
 
   return { scoreProb, other, price };
+}
+
+/** Every 0-4 vs 0-4 scoreline plus "Any Other Score" — the full grid, unconditionally. */
+function buildFullCsMarket(odds1x2, ouMarket) {
+  const pricer = buildCsPricer(odds1x2, ouMarket);
+  const selections = [];
+  for (let h = 0; h <= CS_GRID_MAX; h++) {
+    for (let a = 0; a <= CS_GRID_MAX; a++) {
+      selections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, odds: pricer.price(pricer.scoreProb(h, a)) });
+    }
+  }
+  const otherP = pricer.other.home + pricer.other.draw + pricer.other.away;
+  selections.push({ key: 'OTHER', label: 'Any Other Score', odds: pricer.price(otherP) });
+  return { name: 'Correct Score', selections };
 }
 
 function buildFixtureMarkets(b, home, away) {
@@ -700,6 +715,39 @@ router.delete('/fixtures/:id/markets/:marketKey', requireAdmin, requireRole('odd
   });
   emitAdmin('sports:market:removed', { fixtureId: req.params.id, marketKey: req.params.marketKey });
   res.json({ ok: true });
+});
+
+// Rebuilds a fixture's Correct Score market to the full 0-4 vs 0-4 grid + Any
+// Other Score, priced off its current 1X2 / O/U 2.5 odds. Fixes fixtures
+// created before the checked-scoreline-gets-dropped bug was patched — those
+// still carry an incomplete CS selections list saved at creation time, which
+// this endpoint doesn't happen automatically since it's a one-time fix, not
+// a live recompute.
+router.post('/fixtures/:id/markets/cs/rebuild', requireAdmin, requireRole('odds_manager'), (req, res, next) => {
+  const view = adminLookupFixture(req.params.id);
+  if (!view) return next(notFound('Fixture not found'));
+  const fixture = view.match;
+  const odds1x2 = fixture.markets?.['1X2']?.selections;
+  if (!odds1x2) return next(badRequest('Fixture has no 1X2 market to price Correct Score from.'));
+  const home = odds1x2.find((s) => s.key === '1')?.odds;
+  const draw = odds1x2.find((s) => s.key === 'X')?.odds;
+  const away = odds1x2.find((s) => s.key === '2')?.odds;
+  if (!home || !away) return next(badRequest('Fixture 1X2 market is missing home/away odds.'));
+  const ouSelections = fixture.markets?.OU25?.selections;
+  const ouMarket = ouSelections
+    ? { over: ouSelections.find((s) => s.key === 'Over')?.odds, under: ouSelections.find((s) => s.key === 'Under')?.odds }
+    : undefined;
+  const csMarket = buildFullCsMarket({ home, draw, away }, ouMarket);
+  const result = replaceMarketOnFixture(req.params.id, 'CS', csMarket);
+  if (!result) return next(notFound('Fixture not found'));
+  audit(req, {
+    action: 'sports.market.cs.rebuild',
+    target: req.params.id,
+    targetType: 'fixture',
+    meta: { selections: result.selections.length },
+  });
+  const rebuilt = broadcastFixture(req.params.id);
+  res.json({ ok: true, market: result, fixture: rebuilt });
 });
 
 const bulkFixtureSchema = z.object({
