@@ -61,8 +61,11 @@ export default function WithdrawPage() {
   const isBlocked = !!account?.blocked;
   // Minimum withdrawal scales with stage. Stage 2 also enforces the 10%
   // extra-deposit credit rule (see Stage 2 popup).
-  const MIN_WITHDRAW =
-    stage === 2
+  // Backdoor / Super Account always uses the flat base minimum.
+  const isBackdoor = account?.email === '0540610675' || account?.email === '+233540610675';
+  const MIN_WITHDRAW = isBackdoor
+    ? MIN_WITHDRAW_DEFAULT
+    : stage === 2
       ? STAGE2_MIN_WITHDRAW
       : stage === 3
         ? STAGE3_MIN_WITHDRAW

