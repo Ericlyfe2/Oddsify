@@ -97,12 +97,17 @@ function Field({ label, value, onChange, placeholder, type = 'text', autoComplet
       <label htmlFor={inputId} style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, letterSpacing: 0.4 }}>
         {label}
       </label>
-      <div
+      {/* A <label> wrapping the input means a click anywhere in the row —
+          including on the pencil icon, which isn't itself focusable —
+          focuses the input, same as clicking any native form label. */}
+      <label
+        htmlFor={inputId}
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 8,
           marginTop: 4,
+          cursor: editable ? 'text' : 'default',
           ...(editable
             ? {
                 background: T.surfaceAlt,
@@ -133,7 +138,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', autoComplet
           }}
         />
         {editable && type !== 'password' && <OddIcon name="pencil" size={14} color={T.inkSoft} />}
-      </div>
+      </label>
       {error && <div style={{ fontSize: 11, color: T.danger, marginTop: 4 }}>{error}</div>}
       {!error && helper && <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 4 }}>{helper}</div>}
     </div>
