@@ -1082,15 +1082,15 @@ function CorrectScoreGrid({ selections, suspended, pickedSel, marketKey, match, 
           </div>
         ))}
       </div>
-      {Array.from({ length: maxRows }).map((_, rowIdx) => (
-        <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-          {cols.map((col, colIdx) => (
-            <div key={colIdx} style={{ borderRight: colIdx < 2 ? `1px solid ${borderColor}` : 'none' }}>
-              {renderCell(col[rowIdx], rowIdx)}
-            </div>
-          ))}
-        </div>
-      ))}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'start' }}>
+        {cols.map((col, colIdx) => (
+          <div key={colIdx} style={{ display: 'flex', flexDirection: 'column', borderRight: colIdx < 2 ? `1px solid ${borderColor}` : 'none' }}>
+            {col.map((sel, rowIdx) => (
+              <div key={sel.key}>{renderCell(sel, rowIdx)}</div>
+            ))}
+          </div>
+        ))}
+      </div>
       {hasOtherRow && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
           {otherRow.map((sel, colIdx) => (
