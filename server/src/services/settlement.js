@@ -284,7 +284,15 @@ export function settleNow() {
       // time to override them. Manual or feed results settle immediately.
       if (res && res.source === 'simulated') {
         const simulatedAt = res.settledAt ? new Date(res.settledAt).getTime() : Date.now();
-        if (Date.now() - simulatedAt < SIM_SETTLE_WAIT_MS) {
+        // A bet can be placed on a fixture that already has a simulated
+        // result (see /bet/place). Anchor the grace period to whichever is
+        // LATER — the result's creation or the bet's own placement — so a
+        // freshly placed bet always gets a real window as "open" instead of
+        // being swept on the very next tick because the score happened to
+        // be generated long before this particular bet existed.
+        const placedAt = bet.placedAt ? new Date(bet.placedAt).getTime() : simulatedAt;
+        const readyAt = Math.max(simulatedAt, placedAt) + SIM_SETTLE_WAIT_MS;
+        if (Date.now() < readyAt) {
           allReady = false;
           break;
         }
