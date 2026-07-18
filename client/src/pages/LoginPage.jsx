@@ -346,7 +346,7 @@ export default function LoginPage() {
             type="text"
             inputMode="tel"
             autoComplete={mode === 'signin' ? 'username' : 'tel'}
-            placeholder={`e.g. ${dialCode}596651140 or 0596651140`}
+            placeholder={`e.g. ${dialCode}244612481 or 0244612481`}
             value={mode === 'signin' ? identifier : phone}
             onChange={(e) => {
               const raw = e.target.value;

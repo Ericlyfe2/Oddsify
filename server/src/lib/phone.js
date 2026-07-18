@@ -1,8 +1,8 @@
 const E164_RE = /^\+\d{8,15}$/;
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const E164_PLACEHOLDER = '0596651140';
-export const E164_HINT = 'Enter phone number. Examples: +233596651140 or 0596651140';
+export const E164_PLACEHOLDER = '0244612481';
+export const E164_HINT = 'Enter phone number. Examples: +233244612481 or 0244612481';
 
 const DIAL_TO_COUNTRY = {
   '233': 'GH', '234': 'NG', '254': 'KE', '27': 'ZA',
