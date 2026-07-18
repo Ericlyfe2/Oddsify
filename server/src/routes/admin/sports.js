@@ -368,8 +368,10 @@ function buildFixtureMarkets(b, home, away) {
         const a = Number(m[2]);
         // Scores past the grid would double-settle with the Any-Other buckets.
         if (h > CS_GRID_MAX || a > CS_GRID_MAX) continue;
-        // Cap-priced cells are folded into the Any-Other bucket above, not listed here.
-        if (pricer.scoreProb(h, a) <= CS_CAP_P) continue;
+        // The admin explicitly checked this scoreline in the picker, so it
+        // must show up as its own row — even long-shots that price at the
+        // ~250 cap. Silently folding a checked box into "Any Other Score"
+        // is surprising and looks like missing data, not a feature.
         csSelections.push({ key: `${h}-${a}`, label: `${h} - ${a}`, odds: pricer.price(pricer.scoreProb(h, a)) });
       }
       if (hasOther) {
