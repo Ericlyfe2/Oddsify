@@ -973,6 +973,22 @@ router.post('/bets/:id/ack', requireAuth, (req, res, next) => {
   res.json({ ok: true, bet });
 });
 
+/**
+ * Permanently erase a bet ticket the caller owns. Unlike DELETE /bets/:id
+ * (which means "cash out" — legacy naming), this really deletes the record:
+ * no restore, no audit trail beyond the activity log entry below. Allowed
+ * on a bet of any status; the user explicitly asked for a hard delete, not
+ * a hide-from-history toggle.
+ */
+router.delete('/bets/:id/record', requireAuth, (req, res, next) => {
+  const bet = betsStore.get(req.params.id);
+  if (!bet || bet.userId !== req.user.id) return next(notFound('Bet not found'));
+  betsStore.delete(bet.id);
+  cashOutEngine.unregisterBet(bet.id);
+  logActivity(req.user.id, { kind: 'bet_deleted', betId: bet.id, bookingCode: bet.bookingCode });
+  res.json({ ok: true });
+});
+
 router.get('/bets/:id', requireAuth, (req, res, next) => {
   const bet = betsStore.get(req.params.id);
   if (!bet || bet.userId !== req.user.id) return next(notFound('Bet not found'));

@@ -162,6 +162,7 @@ export const cashOutBet = (id, acceptedAmount, fraction) => {
   if (fraction != null && fraction > 0 && fraction < 1) body.fraction = fraction;
   return del(`/bet/bets/${encodeURIComponent(id)}`, body);
 };
+export const deleteBetTicket = (id) => del(`/bet/bets/${encodeURIComponent(id)}/record`);
 export const fetchUnacknowledgedWins = () => get('/bet/bets/unacknowledged');
 export const acknowledgeBet = (id) => post(`/bet/bets/${encodeURIComponent(id)}/ack`);
 export const fetchCashouts = () => get('/bet/bets/cashouts');

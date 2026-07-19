@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Home, Copy, Share2, RotateCcw, ChevronRight } from 'lucide-react';
-import { fetchBet } from '../api/betApi.js';
+import { ChevronLeft, Home, Copy, Share2, RotateCcw, ChevronRight, Trash2 } from 'lucide-react';
+import { fetchBet, deleteBetTicket } from '../api/betApi.js';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { useSlip } from '../providers/SlipProvider.jsx';
 import { onLive } from '../api/socketClient.js';
@@ -63,6 +63,8 @@ export default function BetDetailPage() {
   const [bet, setBet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const mountedRef = useRef(true);
 
   const load = useCallback(async () => {
@@ -170,6 +172,19 @@ export default function BetDetailPage() {
     if (loadFromSlip({ bookingCode: c, legs, mode: bet.mode })) {
       if (bet.bookingCode) rememberCode(bet.bookingCode, { kind: 'placed', legs: legs.length });
       navigate('/');
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteBetTicket(bet.id);
+      toast('Ticket deleted.', 'success');
+      navigate('/my-bets');
+    } catch (e) {
+      toast(e?.body?.error || e?.message || 'Failed to delete ticket.', 'error');
+      setDeleting(false);
+      setConfirmingDelete(false);
     }
   };
 
@@ -357,7 +372,42 @@ export default function BetDetailPage() {
         </span>
       </button>
 
-      <div style={{ height: 24, background: '#ffffff' }} />
+      {/* Delete ticket — permanent, requires confirmation */}
+      <div style={{ padding: '4px 16px 20px', background: '#ffffff' }}>
+        {confirmingDelete ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px',
+            borderRadius: 10, border: '1px solid rgba(192,57,43,0.3)', background: 'rgba(192,57,43,0.06)',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#c0392b' }}>
+              Delete this ticket permanently? This can't be undone.
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={() => setConfirmingDelete(false)} disabled={deleting} style={{
+                flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid var(--line)',
+                background: '#ffffff', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              }}>
+                Cancel
+              </button>
+              <button type="button" onClick={handleDelete} disabled={deleting} style={{
+                flex: 1, padding: '10px 0', borderRadius: 8, border: 0,
+                background: '#c0392b', color: '#ffffff', fontWeight: 700, fontSize: 13,
+                cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.7 : 1,
+              }}>
+                {deleting ? 'Deleting…' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmingDelete(true)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '12px 0', borderRadius: 9, fontWeight: 800, fontSize: 13, cursor: 'pointer',
+            background: '#ffffff', color: '#c0392b', border: '1px solid rgba(192,57,43,0.35)',
+          }}>
+            <Trash2 size={15} /> Delete Ticket
+          </button>
+        )}
+      </div>
     </Shell>
   );
 }
