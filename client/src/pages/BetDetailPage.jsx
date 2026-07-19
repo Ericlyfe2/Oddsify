@@ -436,7 +436,7 @@ function Shell({ onBack, children, tone = 'var(--bg)' }) {
   const navigate = useNavigate();
   return (
     <div style={{ background: '#ffffff', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 414, minHeight: '100vh', background: '#ffffff' }}>
+      <div style={{ width: '100%', maxWidth: 414, minHeight: '100vh', background: '#ffffff', paddingBottom: 120 }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '13px 14px', background: 'var(--bg-soft)',
