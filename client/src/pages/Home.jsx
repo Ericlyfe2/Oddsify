@@ -39,7 +39,7 @@ import { flattenLeagues } from '../components/odd/normalize.js';
 export default function Home() {
   const T = useTokens();
   const navigate = useNavigate();
-  const { account, openDeposit } = useAccount();
+  const { account } = useAccount();
   const { picks, togglePick } = useSlip();
 
   const [matches, setMatches] = useState([]);
@@ -178,7 +178,7 @@ export default function Home() {
         user={account}
         onAuth={onAuth}
         onSearch={() => navigate('/sports')}
-        onBalanceClick={() => openDeposit()}
+        onBalanceClick={() => navigate('/wallet/select')}
       />
       <OddPromoBanner onAction={() => navigate('/promos')} />
       <QuickBetStrip matches={matches} loading={loading} picks={picks} onPick={togglePick} onMore={setSheetMatch} />

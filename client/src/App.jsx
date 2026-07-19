@@ -13,6 +13,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import WalletPage from './pages/WalletPage.jsx';
+import WalletActionPage from './pages/WalletActionPage.jsx';
 import DepositPage from './pages/DepositPage.jsx';
 import BetHistoryPage from './pages/BetHistoryPage.jsx';
 import BetDetailPage from './pages/BetDetailPage.jsx';
@@ -234,6 +235,7 @@ export default function App() {
                     }
                   />
                   <Route path="/wallet" element={<WalletPage />} />
+                  <Route path="/wallet/select" element={<WalletActionPage />} />
                   <Route path="/deposit" element={<DepositPage />} />
                   <Route
                     path="/withdraw"

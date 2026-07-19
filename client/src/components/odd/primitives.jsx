@@ -7,7 +7,8 @@
  * screens-home.jsx + screens-other.jsx) with original visual rules intact.
  * Inline styles match the source so token churn touches one file.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLiveTimer } from '../../hooks/useLiveTimer.js';
 import { T, fmtCedi, useTokens } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
@@ -331,10 +332,60 @@ export function OddPageHeader({ title, subtitle, right }) {
   );
 }
 
+/* ─── Coin burst — a small money-flavoured flourish on the balance pill ── */
+function MoneyBurst({ active }) {
+  const coins = useMemo(
+    () =>
+      active
+        ? Array.from({ length: 7 }, (_, i) => ({
+            id: i,
+            dx: (Math.random() - 0.5) * 90,
+            dy: -45 - Math.random() * 35,
+            rot: (Math.random() - 0.5) * 90,
+            delay: i * 0.025,
+            glyph: i % 2 === 0 ? '🪙' : '💵',
+          }))
+        : [],
+    [active],
+  );
+  return (
+    <AnimatePresence>
+      {coins.map((c) => (
+        <motion.span
+          key={c.id}
+          initial={{ opacity: 1, x: 0, y: 0, scale: 0.5, rotate: 0 }}
+          animate={{ opacity: 0, x: c.dx, y: c.dy, scale: 1.1, rotate: c.rot }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.65, delay: c.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            fontSize: 15,
+            pointerEvents: 'none',
+            zIndex: 40,
+          }}
+        >
+          {c.glyph}
+        </motion.span>
+      ))}
+    </AnimatePresence>
+  );
+}
+
 /* ─── Home top header — wordmark + balance pill ────────────── */
 export function OddTopHeader({ user, onAuth, onSearch, onBalanceClick }) {
   const T = useTokens();
   const { theme, toggleTheme } = useTheme();
+  const [bursting, setBursting] = useState(false);
+
+  const handleBalanceClick = () => {
+    setBursting(true);
+    setTimeout(() => {
+      setBursting(false);
+      onBalanceClick?.();
+    }, 300);
+  };
   return (
     <div
       style={{
@@ -384,28 +435,31 @@ export function OddTopHeader({ user, onAuth, onSearch, onBalanceClick }) {
             >
               <OddIcon name="search" size={18} color="var(--text)" />
             </button>
-            <button
-              type="button"
-              onClick={onBalanceClick}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '7px 12px 7px 10px',
-                borderRadius: 999,
-                background: 'var(--green-bright)',
-                color: 'var(--gold-ink)',
-                fontWeight: 700,
-                fontSize: 13,
-                border: 0,
-                cursor: 'pointer',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-              aria-label="Open wallet"
-            >
-              <OddIcon name="coin" size={16} color="var(--gold-ink)" />
-              GHS {fmtCedi(user.balance)}
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={handleBalanceClick}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 12px 7px 10px',
+                  borderRadius: 999,
+                  background: 'var(--green-bright)',
+                  color: 'var(--gold-ink)',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  border: 0,
+                  cursor: 'pointer',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+                aria-label="Open wallet"
+              >
+                <OddIcon name="coin" size={16} color="var(--gold-ink)" />
+                GHS {fmtCedi(user.balance)}
+              </button>
+              <MoneyBurst active={bursting} />
+            </div>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
