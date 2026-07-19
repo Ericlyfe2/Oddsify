@@ -10,7 +10,7 @@ import {
   fetchUnacknowledgedWins,
   acknowledgeBet,
 } from '../api/betApi.js';
-import { onLive, refreshAuth, disconnectSocket } from '../api/socketClient.js';
+import { onLive, refreshAuth } from '../api/socketClient.js';
 import WinCelebrationOverlay from '../components/WinCelebrationOverlay.jsx';
 import DepositResultModal from '../components/DepositResultModal.jsx';
 import TxHeader from '../components/TxHeader.jsx';
@@ -200,7 +200,18 @@ export default function AppProviders({ children }) {
   useEffect(() => {
     if (!accountId) {
       setWins([]);
-      disconnectSocket();
+      // Deliberately NOT calling disconnectSocket() here. `accountId` is
+      // falsy both for a real guest AND on the very first render of an
+      // already-logged-in user (account hasn't loaded yet — see `refresh()`
+      // above, which runs in its own effect and resolves later). Either way,
+      // other components (e.g. Home's public live-scores subscription, which
+      // has no login gate) may have just opened the shared socket for that
+      // same first paint; disconnecting it here raced that still-connecting
+      // socket and produced a spurious "WebSocket is closed before the
+      // connection is established" console error on every page load. The
+      // socket is intentionally torn down only on an explicit sign-out (see
+      // signOut() below), not as a reactive side effect of accountId being
+      // momentarily or permanently absent.
       return;
     }
     let alive = true;
@@ -377,6 +388,11 @@ export default function AppProviders({ children }) {
     }
     clearTokens();
     setAccount(null);
+    // Re-handshake (not a full disconnect) so the server drops this socket's
+    // stale user association, while the transport itself stays up — public
+    // features like Home's live-score subscription have no login gate and
+    // shouldn't stop ticking just because the visitor signed out.
+    refreshAuth();
     toast('Logged out.');
     navigate('/', { replace: true });
   }, [toast, navigate]);
