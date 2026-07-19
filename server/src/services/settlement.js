@@ -14,11 +14,19 @@
  */
 import crypto from 'crypto';
 import { createStore } from '../db/store.js';
-import { getResult, setResult, adminLookupFixture, adminListFixtures } from '../db/sportsAdmin.js';
+import {
+  getResult,
+  setResult,
+  adminLookupFixture,
+  adminListFixtures,
+  setSuspension,
+  patchOverride,
+} from '../db/sportsAdmin.js';
 import { recordAudit } from '../db/audit.js';
 import { updateUser, getUserById, logActivity } from '../db/users.js';
 import { log } from '../utils/logger.js';
 import { emitToUser, emitAdmin, emitScoreUpdate } from './realtime.js';
+import * as cashOutEngine from './cashOutEngine.js';
 
 const betsStore = createStore('bets', {});
 const txStore = createStore('transactions', {});
@@ -262,8 +270,46 @@ function pushTx(userId, tx) {
   return entry;
 }
 
+/** Whether kickoff has actually happened for this fixture (compiled view). */
+function hasKickedOff(fx) {
+  if (fx.isLive) return true;
+  if (fx.finished) return false; // already settled/settling — not a kickoff-lock concern
+  const ko = kickoffTs(fx);
+  return ko > 0 && Date.now() >= ko;
+}
+
+/**
+ * The moment a fixture kicks off, freeze it: suspend the whole market (blocks
+ * new bets — see /bet/place's `fxView?.suspended` check) and zero out the
+ * cash-out offer for every open bet already riding on it (via the existing
+ * cashOutEngine.lockFixture → onOffer → bet.lastCashOutOffer plumbing).
+ *
+ * `kickoffLocked` is a one-way marker stamped on the override the first time
+ * this fires for a fixture. It is never cleared automatically — only an
+ * admin's explicit unsuspend (DELETE /admin/sports/fixtures/:id/suspend)
+ * lifts the lock — and once stamped, this sweep never touches the fixture
+ * again, so an admin who unlocks a still-live match doesn't get fought by
+ * the next tick re-locking it.
+ */
+function autoLockKickedOffFixtures(fixtures) {
+  for (const fx of fixtures) {
+    if (fx.kickoffLocked) continue;
+    if (!hasKickedOff(fx)) continue;
+    setSuspension(fx.id, { all: true });
+    patchOverride(fx.id, {
+      kickoffLocked: true,
+      kickoffLockedAt: new Date().toISOString(),
+      kickoffLockedReason: 'auto_kickoff',
+    });
+    cashOutEngine.lockFixture(fx.id, 'kickoff_auto_lock');
+    emitAdmin('sports:suspend', { fixtureId: fx.id, all: true, reason: 'auto_kickoff' });
+    log.info(`auto-lock: fixture ${fx.id} suspended at kickoff (odds, markets, cash-out)`);
+  }
+}
+
 export function settleNow() {
   const fixtures = adminListFixtures();
+  autoLockKickedOffFixtures(fixtures);
   // Pre-warm results for fixtures that are due
   for (const fx of fixtures) {
     ensureResult(fx, fx.sport);

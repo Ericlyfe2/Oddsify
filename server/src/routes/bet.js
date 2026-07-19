@@ -112,9 +112,20 @@ function attachBetDisplayFields(bet) {
   };
 }
 
+/**
+ * Whether any leg of this bet sits on a fixture that's currently suspended —
+ * including the automatic kickoff lock (see services/settlement.js). This is
+ * the authoritative, persisted check: it doesn't depend on the in-memory
+ * cashOutEngine cache, which starts empty on every server restart.
+ */
+function isBetCashoutLocked(bet) {
+  return (bet.legs || []).some((leg) => !!adminLookupFixture(leg.matchId)?.match?.suspended);
+}
+
 /** Attach the cash-out display value consistent with what the server would offer. */
 function attachCashoutOffer(bet) {
   if (bet.status !== 'open') return bet;
+  if (isBetCashoutLocked(bet)) return { ...bet, cashoutOffer: 0 };
   if (bet.lastCashOutOffer?.amount != null) return { ...bet, cashoutOffer: bet.lastCashOutOffer?.amount };
   const cashoutOffer =
     bet.mode === 'system'
@@ -1000,6 +1011,9 @@ router.get('/bets/:id/offer', requireAuth, (req, res, next) => {
   if (bet.status !== 'open') {
     return res.json({ eligible: false, reason: 'Bet is already settled.' });
   }
+  if (isBetCashoutLocked(bet)) {
+    return res.json({ eligible: false, reason: 'Match has started — cash-out is locked.' });
+  }
   const last = cashOutEngine.getLastOffer(bet.id);
   if (last && last.cashOut > 0) {
     return res.json({ eligible: true, cashOut: last.cashOut, ts: last.ts });
@@ -1020,6 +1034,11 @@ router.delete(
     if (!bet || bet.userId !== req.user.id) throw notFound('Bet not found');
     if (bet.status !== 'open')
       throw conflict('Bet is already settled and cannot be cashed out.', { code: 'ALREADY_SETTLED' });
+    if (isBetCashoutLocked(bet)) {
+      throw conflict('Match has started — cash-out is locked until an admin unlocks the market.', {
+        code: 'CASHOUT_LOCKED',
+      });
+    }
 
     let cashOut;
     if (bet.mode === 'system') {
