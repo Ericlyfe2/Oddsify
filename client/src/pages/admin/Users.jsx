@@ -748,6 +748,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingTx, setDeletingTx] = useState(false);
   const [deletingHistory, setDeletingHistory] = useState(false);
+  const [confirmKind, setConfirmKind] = useState(null); // 'tx' | 'history' | null
   const [credentials, setCredentials] = useState(null);
   const [openBet, setOpenBet] = useState(null);
 
@@ -864,14 +865,11 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       showToast(e.message, 'error');
     }
   }
-  async function deleteAllTx() {
+  function deleteAllTx() {
     if (tx.length === 0) return;
-    if (
-      !window.confirm(
-        `Permanently delete all ${tx.length} transaction(s) for this user? This does not change their balance and cannot be undone.`,
-      )
-    )
-      return;
+    setConfirmKind('tx');
+  }
+  async function performDeleteTx() {
     setDeletingTx(true);
     try {
       await adminDeleteUserTx(user.id);
@@ -881,16 +879,14 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       showToast(e.message || 'Failed to delete transactions.', 'error');
     } finally {
       setDeletingTx(false);
+      setConfirmKind(null);
     }
   }
-  async function deleteAllHistory() {
+  function deleteAllHistory() {
     if (bets.length === 0 && tx.length === 0) return;
-    if (
-      !window.confirm(
-        `Permanently erase ALL ${bets.length} bet(s) and ${tx.length} transaction(s) for this user — no trace left? Their balance and account stay untouched. This cannot be undone.`,
-      )
-    )
-      return;
+    setConfirmKind('history');
+  }
+  async function performDeleteHistory() {
     setDeletingHistory(true);
     try {
       const r = await adminDeleteUserHistory(user.id);
@@ -901,6 +897,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       showToast(e.message || 'Failed to clear history.', 'error');
     } finally {
       setDeletingHistory(false);
+      setConfirmKind(null);
     }
   }
   async function resetPassword() {
@@ -1184,6 +1181,31 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
         onConfirm={confirmDelete}
       />
       <CredentialsModal open={!!credentials} onClose={() => setCredentials(null)} data={credentials} />
+      <Modal
+        open={!!confirmKind}
+        onClose={() => setConfirmKind(null)}
+        title={confirmKind === 'tx' ? 'Delete all transactions' : 'Clear all history'}
+        description={
+          confirmKind === 'tx'
+            ? `Permanently delete all ${tx.length} transaction(s) for this user? This does not change their balance and cannot be undone.`
+            : `Permanently erase ALL ${bets.length} bet(s) and ${tx.length} transaction(s) for this user — no trace left? Their balance and account stay untouched. This cannot be undone.`
+        }
+        footer={
+          <>
+            <button type="button" className="adm-btn ghost" onClick={() => setConfirmKind(null)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="adm-btn danger"
+              onClick={confirmKind === 'tx' ? performDeleteTx : performDeleteHistory}
+              disabled={deletingTx || deletingHistory}
+            >
+              <IconTrash size={14} /> {(confirmKind === 'tx' ? deletingTx : deletingHistory) ? 'Working…' : 'Confirm'}
+            </button>
+          </>
+        }
+      />
     </Drawer>
   );
 }
