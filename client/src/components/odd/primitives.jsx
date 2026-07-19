@@ -854,8 +854,29 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
           <span style={{ fontSize: 10, color: T.inkDim }}>·</span>
           <span style={{ fontSize: 10, color: T.inkSoft }}>{(match.sport || 'SOCCER').toUpperCase()}</span>
         </div>
-        {live ? (
-          <OddStatusChip kind="live" label={`LIVE ${liveTime || match.minute || ''}`.trim()} />
+        {live || match.suspended ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {live && <OddStatusChip kind="live" label={`LIVE ${liveTime || match.minute || ''}`.trim()} />}
+            {match.suspended && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: T.inkDim,
+                  background: T.surfaceAlt,
+                  border: `1px solid ${T.line}`,
+                  borderRadius: 999,
+                  padding: '3px 8px',
+                }}
+              >
+                <OddIcon name="lock" size={10} color={T.inkDim} />
+                Locked
+              </span>
+            )}
+          </div>
         ) : (
           <span
             style={{
@@ -915,6 +936,7 @@ export function OddMatchCard({ match, picks, onPick, onMore }) {
               key={key}
               label={key === 'X' ? 'Draw' : key === '1' ? (match.home || 'Home') : (match.away || 'Away')}
               value={Number(value).toFixed(2)}
+              locked={!!match.suspended}
               selected={pickedKey === key}
               onClick={() => onPick?.(match, key, Number(value))}
             />
@@ -1286,9 +1308,16 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
         }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{match.home} vs {match.away}</div>
-            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
-              {entries.length} market{entries.length !== 1 ? 's' : ''} available
-            </div>
+            {match.suspended ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: T.inkDim, marginTop: 2 }}>
+                <OddIcon name="lock" size={11} color={T.inkDim} />
+                Markets locked — match has started
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+                {entries.length} market{entries.length !== 1 ? 's' : ''} available
+              </div>
+            )}
           </div>
           <button
             type="button" onClick={onClose}
@@ -1338,7 +1367,7 @@ export function MarketsSheet({ match, picks, onPick, onClose }) {
         <div style={{ overflowY: 'auto', padding: '8px 16px 24px', flex: 1 }}>
           {entries.map(([key, mkt]) => {
             const sels = ensure1X2Order(mkt.selections || []);
-            const suspended = mkt.suspended;
+            const suspended = mkt.suspended || match.suspended;
             return (
               <div key={key} style={{ marginBottom: 14 }}>
                 <div style={{

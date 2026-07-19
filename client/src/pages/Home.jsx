@@ -1430,6 +1430,15 @@ function LiveMatchCard({ match, picks, onPick, onMore }) {
           <span className="odd-live-dot" style={{ width: 6, height: 6, borderRadius: 999, background: T.danger }} />
           Live Match
         </span>
+        {match.suspended && (
+          <>
+            <span style={{ color: T.inkDim, fontSize: 11 }}>&middot;</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: T.inkDim }}>
+              <OddIcon name="lock" size={11} color={T.inkDim} />
+              Markets Locked
+            </span>
+          </>
+        )}
         <span style={{ color: T.inkDim, fontSize: 11 }}>&middot;</span>
         <button
           type="button"
@@ -1461,7 +1470,7 @@ function LiveMatchCard({ match, picks, onPick, onMore }) {
           { key: '2', label: 'Away' },
         ].map((c) => {
           const val = match.odds?.[c.key];
-          const locked = val === undefined || val === null;
+          const locked = val === undefined || val === null || !!match.suspended;
           const selected = pickedKey === c.key;
           return (
             <button

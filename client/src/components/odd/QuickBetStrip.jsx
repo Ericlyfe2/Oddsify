@@ -16,6 +16,7 @@
  */
 import { useTokens } from './tokens.jsx';
 import { TeamLogo } from './teamBranding.jsx';
+import { OddIcon } from './primitives.jsx';
 
 function relativeKickoff(timeStr, day) {
   // timeStr is "HH:MM", day is "Today" | "Tomorrow" | undefined
@@ -42,11 +43,12 @@ function get1X2(match) {
   return { 1: Number(o['1']), X: Number(o['X'] ?? 0), 2: Number(o['2']) };
 }
 
-function OddsBtn({ label, value, active, onClick }) {
+function OddsBtn({ label, value, active, locked, onClick }) {
   const T = useTokens();
   return (
     <button
       type="button"
+      disabled={locked}
       onClick={onClick}
       style={{
         flex: 1,
@@ -60,24 +62,33 @@ function OddsBtn({ label, value, active, onClick }) {
         alignItems: 'center',
         justifyContent: 'center',
         gap: 2,
-        cursor: 'pointer',
+        cursor: locked ? 'not-allowed' : 'pointer',
         padding: 0,
         transition: 'background 0.15s, border-color 0.15s',
       }}
-      aria-label={`${label} at odds ${value}`}
+      aria-label={locked ? `${label} — locked` : `${label} at odds ${value}`}
     >
-      <span style={{ fontSize: 10, color: T.inkSoft, fontWeight: 700 }}>{label}</span>
-      <span
-        style={{
-          fontSize: 14,
-          fontWeight: 700,
-          color: active ? T.greenBright : T.ink,
-          fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        {value > 0 ? Number(value).toFixed(2) : '—'}
-      </span>
+      {locked ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10.5, fontWeight: 700, color: T.inkDim }}>
+          <OddIcon name="lock" size={11} color={T.inkDim} />
+          Locked
+        </span>
+      ) : (
+        <>
+          <span style={{ fontSize: 10, color: T.inkSoft, fontWeight: 700 }}>{label}</span>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: active ? T.greenBright : T.ink,
+              fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {value > 0 ? Number(value).toFixed(2) : '—'}
+          </span>
+        </>
+      )}
     </button>
   );
 }
@@ -155,9 +166,9 @@ function MatchCard({ match, picks, onPick, onMore }) {
       </button>
 
       <div style={{ display: 'flex', gap: 6 }}>
-        <OddsBtn label={match.home || 'Home'} value={odds['1']} active={isActive('1')} onClick={() => pick('1')} />
-        <OddsBtn label="Draw" value={odds['X']} active={isActive('X')} onClick={() => pick('X')} />
-        <OddsBtn label={match.away || 'Away'} value={odds['2']} active={isActive('2')} onClick={() => pick('2')} />
+        <OddsBtn label={match.home || 'Home'} value={odds['1']} active={isActive('1')} locked={!!match.suspended} onClick={() => pick('1')} />
+        <OddsBtn label="Draw" value={odds['X']} active={isActive('X')} locked={!!match.suspended} onClick={() => pick('X')} />
+        <OddsBtn label={match.away || 'Away'} value={odds['2']} active={isActive('2')} locked={!!match.suspended} onClick={() => pick('2')} />
       </div>
     </article>
   );
