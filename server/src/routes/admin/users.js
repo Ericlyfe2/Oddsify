@@ -160,6 +160,40 @@ router.delete('/:id/transactions', requireAdmin, requireRole('finance_admin'), (
   res.json({ ok: true, deletedCount: existing.length });
 });
 
+/**
+ * Permanently wipe a user's entire betting AND transaction history in one
+ * shot — hard-deletes every bet row plus the whole tx ledger, leaving no
+ * trace of either. Balance and the account itself are untouched. Strictly
+ * broader than the tx-only wipe above, so it's gated one level up
+ * (super_admin only) rather than finance_admin.
+ */
+router.delete('/:id/history', requireAdmin, requireRole(), (req, res, next) => {
+  const id = req.params.id.toLowerCase();
+  const u = getUserById(id);
+  if (!u) return next(notFound('User not found'));
+
+  const existingTx = txStore.get(id) || [];
+  txStore.set(id, []);
+
+  const allBets = betsStore.all() || {};
+  let removedBets = 0;
+  for (const [betId, b] of Object.entries(allBets)) {
+    if (b.userId === id) {
+      betsStore.delete(betId);
+      removedBets++;
+    }
+  }
+
+  audit(req, {
+    action: 'user.history.delete_all',
+    target: id,
+    targetType: 'user',
+    severity: 'critical',
+    meta: { deletedTx: existingTx.length, deletedBets: removedBets },
+  });
+  res.json({ ok: true, deletedTx: existingTx.length, deletedBets: removedBets });
+});
+
 router.patch(
   '/:id/status',
   requireAdmin,

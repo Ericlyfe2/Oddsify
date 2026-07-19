@@ -144,6 +144,7 @@ export const adminGetUser = (id) => get(`/users/${encodeURIComponent(id)}`);
 export const adminUserBets = (id) => get(`/users/${encodeURIComponent(id)}/bets`);
 export const adminUserTx = (id) => get(`/users/${encodeURIComponent(id)}/transactions`);
 export const adminDeleteUserTx = (id) => del(`/users/${encodeURIComponent(id)}/transactions`);
+export const adminDeleteUserHistory = (id) => del(`/users/${encodeURIComponent(id)}/history`);
 export const adminUserLogins = (id) => get(`/users/${encodeURIComponent(id)}/login-history`);
 export const adminUserStatus = (id, action, reason) =>
   patch_(`/users/${encodeURIComponent(id)}/status`, { action, reason });

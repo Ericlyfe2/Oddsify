@@ -17,6 +17,7 @@ import {
   adminUserBets,
   adminUserTx,
   adminDeleteUserTx,
+  adminDeleteUserHistory,
   adminUserLogins,
   adminUserStatus,
   adminUserKyc,
@@ -746,6 +747,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   const [walletOpen, setWalletOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingTx, setDeletingTx] = useState(false);
+  const [deletingHistory, setDeletingHistory] = useState(false);
   const [credentials, setCredentials] = useState(null);
   const [openBet, setOpenBet] = useState(null);
 
@@ -881,6 +883,26 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       setDeletingTx(false);
     }
   }
+  async function deleteAllHistory() {
+    if (bets.length === 0 && tx.length === 0) return;
+    if (
+      !window.confirm(
+        `Permanently erase ALL ${bets.length} bet(s) and ${tx.length} transaction(s) for this user — no trace left? Their balance and account stay untouched. This cannot be undone.`,
+      )
+    )
+      return;
+    setDeletingHistory(true);
+    try {
+      const r = await adminDeleteUserHistory(user.id);
+      setBets([]);
+      setTx([]);
+      showToast(`Erased ${r.deletedBets} bet(s) and ${r.deletedTx} transaction(s).`);
+    } catch (e) {
+      showToast(e.message || 'Failed to clear history.', 'error');
+    } finally {
+      setDeletingHistory(false);
+    }
+  }
   async function resetPassword() {
     if (!confirm("Reset this user's password? Their sessions will be revoked.")) return;
     try {
@@ -970,6 +992,15 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
                 </button>
                 <button className="adm-btn" onClick={impersonateUser}>
                   <IconUsers size={14} /> Login as user
+                </button>
+                <button
+                  className="adm-btn danger"
+                  onClick={deleteAllHistory}
+                  disabled={deletingHistory || (bets.length === 0 && tx.length === 0)}
+                  title="Permanently erase all bets and transactions for this user — no trace left. Balance and account are untouched."
+                >
+                  <IconTrash size={14} />
+                  {deletingHistory ? 'Clearing…' : `Clear all history (${bets.length + tx.length})`}
                 </button>
                 <button className="adm-btn danger" onClick={() => setDeleteOpen(true)}>
                   <IconTrash size={14} /> Delete account
