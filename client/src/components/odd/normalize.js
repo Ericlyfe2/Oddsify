@@ -55,6 +55,7 @@ export function normalizeMatch(m, leagueName = '') {
     homeLogo: m.homeLogo || m.home_logo || null,
     awayLogo: m.awayLogo || m.away_logo || null,
     isLive: !!m.isLive,
+    suspended: !!m.suspended,
     minute: m.minute,
     scoreH: m.scoreHome ?? m.scoreH,
     scoreA: m.scoreAway ?? m.scoreA,
