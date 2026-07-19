@@ -16,6 +16,7 @@ import {
   adminGetUser,
   adminUserBets,
   adminUserTx,
+  adminDeleteUserTx,
   adminUserLogins,
   adminUserStatus,
   adminUserKyc,
@@ -744,6 +745,7 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
   const [logins, setLogins] = useState([]);
   const [walletOpen, setWalletOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletingTx, setDeletingTx] = useState(false);
   const [credentials, setCredentials] = useState(null);
   const [openBet, setOpenBet] = useState(null);
 
@@ -858,6 +860,25 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
       setWalletOpen(false);
     } catch (e) {
       showToast(e.message, 'error');
+    }
+  }
+  async function deleteAllTx() {
+    if (tx.length === 0) return;
+    if (
+      !window.confirm(
+        `Permanently delete all ${tx.length} transaction(s) for this user? This does not change their balance and cannot be undone.`,
+      )
+    )
+      return;
+    setDeletingTx(true);
+    try {
+      await adminDeleteUserTx(user.id);
+      setTx([]);
+      showToast('All transactions deleted.');
+    } catch (e) {
+      showToast(e.message || 'Failed to delete transactions.', 'error');
+    } finally {
+      setDeletingTx(false);
     }
   }
   async function resetPassword() {
@@ -1047,41 +1068,57 @@ function UserDrawer({ open, user, tab, setTab, onClose, onUpdate, onDeleted, has
           </table>
         ))}
 
-      {tab === 'transactions' &&
-        (tx.length === 0 ? (
-          <Empty title="No transactions" />
-        ) : (
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>Kind</th>
-                <th>Method</th>
-                <th className="num">Amount</th>
-                <th>Status</th>
-                <th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tx.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.kind?.replace(/_/g, ' ')}</td>
-                  <td>{t.method || '—'}</td>
-                  <td className="num">
-                    <strong style={{ color: t.amount > 0 ? 'var(--accent)' : 'var(--danger)' }}>
-                      {moneyFmt(t.amount)}
-                    </strong>
-                  </td>
-                  <td>
-                    <Badge tone={t.status === 'completed' ? 'success' : t.status === 'pending' ? 'warn' : 'default'}>
-                      {t.status}
-                    </Badge>
-                  </td>
-                  <td>{ago(t.at)}</td>
+      {tab === 'transactions' && (
+        <>
+          {tx.length > 0 && hasRole('finance_admin') && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+              <button
+                type="button"
+                className="adm-btn"
+                style={{ background: 'var(--danger, #ef4444)', color: '#fff', border: 'none' }}
+                onClick={deleteAllTx}
+                disabled={deletingTx}
+              >
+                {deletingTx ? 'Deleting…' : `Delete all transactions (${tx.length})`}
+              </button>
+            </div>
+          )}
+          {tx.length === 0 ? (
+            <Empty title="No transactions" />
+          ) : (
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Kind</th>
+                  <th>Method</th>
+                  <th className="num">Amount</th>
+                  <th>Status</th>
+                  <th>When</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
+              </thead>
+              <tbody>
+                {tx.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.kind?.replace(/_/g, ' ')}</td>
+                    <td>{t.method || '—'}</td>
+                    <td className="num">
+                      <strong style={{ color: t.amount > 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                        {moneyFmt(t.amount)}
+                      </strong>
+                    </td>
+                    <td>
+                      <Badge tone={t.status === 'completed' ? 'success' : t.status === 'pending' ? 'warn' : 'default'}>
+                        {t.status}
+                      </Badge>
+                    </td>
+                    <td>{ago(t.at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
 
       {tab === 'activity' &&
         (logins.length === 0 ? (

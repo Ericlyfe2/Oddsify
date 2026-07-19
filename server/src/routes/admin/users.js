@@ -138,6 +138,28 @@ router.get('/:id/transactions', requireAdmin, (req, res) => {
   res.json({ transactions: tx });
 });
 
+/**
+ * Permanently wipe a user's entire transaction ledger. Does NOT touch their
+ * balance or bets — this is purely erasing the history rows (deposits,
+ * withdrawals, stakes, payouts, cash-outs, admin adjustments, ...), same
+ * gate as the wallet-adjust mutation since it's financial record-keeping.
+ */
+router.delete('/:id/transactions', requireAdmin, requireRole('finance_admin'), (req, res, next) => {
+  const id = req.params.id.toLowerCase();
+  const u = getUserById(id);
+  if (!u) return next(notFound('User not found'));
+  const existing = txStore.get(id) || [];
+  txStore.set(id, []);
+  audit(req, {
+    action: 'user.transactions.delete_all',
+    target: id,
+    targetType: 'user',
+    severity: 'critical',
+    meta: { deletedCount: existing.length },
+  });
+  res.json({ ok: true, deletedCount: existing.length });
+});
+
 router.patch(
   '/:id/status',
   requireAdmin,
