@@ -104,7 +104,13 @@ export default function FundsPage() {
         </Badge>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: 16 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: selected ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr',
+          gap: 16,
+        }}
+      >
         <Card title="Find a user" subtitle="Search by phone, email, name, or user id">
           <div className="adm-field" style={{ marginBottom: 12 }}>
             <div style={{ position: 'relative' }}>

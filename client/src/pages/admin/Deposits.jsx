@@ -201,54 +201,56 @@ export default function DepositsPage() {
         ) : pending.length === 0 ? (
           <Empty title="No pending deposits" subtitle="All deposits have been processed." />
         ) : (
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Submitted</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pending.map((tx) => (
-                <tr key={tx.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{tx.user?.displayName || tx.user?.email || 'Unknown'}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{tx.user?.email || ''}</div>
-                  </td>
-                  <td style={{ fontWeight: 700 }}>{moneyFmt(tx.amount)}</td>
-                  <td style={{ fontSize: 13, color: 'var(--text-dim)' }}>{(tx.method || 'momo').toUpperCase()}</td>
-                  <td style={{ fontSize: 13, color: 'var(--text-dim)' }}>{ago(tx.at)}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleApprove(tx.id)}
-                        disabled={busyId === tx.id}
-                        className="adm-btn adm-btn-sm"
-                        style={{ background: '#22c55e', color: '#fff', border: 'none' }}
-                        title="Approve"
-                      >
-                        <IconCheck />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleReject(tx.id)}
-                        disabled={busyId === tx.id}
-                        className="adm-btn adm-btn-sm"
-                        style={{ background: '#ef4444', color: '#fff', border: 'none' }}
-                        title="Reject"
-                      >
-                        <IconClose />
-                      </button>
-                    </div>
-                  </td>
+          <div className="adm-table-scroll">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Submitted</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pending.map((tx) => (
+                  <tr key={tx.id}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{tx.user?.displayName || tx.user?.email || 'Unknown'}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{tx.user?.email || ''}</div>
+                    </td>
+                    <td style={{ fontWeight: 700 }}>{moneyFmt(tx.amount)}</td>
+                    <td style={{ fontSize: 13, color: 'var(--text-dim)' }}>{(tx.method || 'momo').toUpperCase()}</td>
+                    <td style={{ fontSize: 13, color: 'var(--text-dim)' }}>{ago(tx.at)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleApprove(tx.id)}
+                          disabled={busyId === tx.id}
+                          className="adm-btn adm-btn-sm"
+                          style={{ background: '#22c55e', color: '#fff', border: 'none' }}
+                          title="Approve"
+                        >
+                          <IconCheck />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReject(tx.id)}
+                          disabled={busyId === tx.id}
+                          className="adm-btn adm-btn-sm"
+                          style={{ background: '#ef4444', color: '#fff', border: 'none' }}
+                          title="Reject"
+                        >
+                          <IconClose />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
 
