@@ -107,7 +107,7 @@ export function OddBetSlip() {
   const { account } = useAccount();
   const balance = account?.balance ?? 0;
   const entries = Object.values(picks);
-  const MIN_STAKE = 400;
+  const MIN_STAKE = 300;
   const [stake, setStake] = useState(MIN_STAKE);
   const [acceptChanges, setAcceptChanges] = useState(true);
   const [codeInput, setCodeInput] = useState('');
