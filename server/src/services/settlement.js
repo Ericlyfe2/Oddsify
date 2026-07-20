@@ -231,7 +231,13 @@ export function legWon(leg, scoreHome, scoreAway, htHome = null, htAway = null, 
     if (o === 'OTHER_HOME') return !isListed && homeWin;
     if (o === 'OTHER_AWAY') return !isListed && awayWin;
     if (o === 'OTHER_DRAW') return !isListed && draw;
-    if (o === 'OTHER') return !isListed;
+    // Legacy catch-all bucket — predates the OTHER_HOME/AWAY/DRAW split and
+    // has no per-selection context of its own, so it grades off the fixed
+    // grid boundary rather than isListed (which needs csSelections to be
+    // passed and would silently default to "not listed" — i.e. an always-
+    // winning bet — whenever that argument is omitted or doesn't happen to
+    // enumerate the exact score).
+    if (o === 'OTHER') return !inGrid;
   }
 
   const ahMatch = m.match(/^AH(\d)$/);
