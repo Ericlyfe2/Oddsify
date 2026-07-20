@@ -43,6 +43,7 @@ import adminMgmtLeaguesRouter from './routes/admin/management-leagues.js';
 import adminMgmtMatchesRouter from './routes/admin/management-matches.js';
 import adminMgmtMarketsRouter from './routes/admin/management-markets.js';
 import adminMgmtResultsRouter from './routes/admin/management-results.js';
+import adminMaintenanceRouter from './routes/admin/maintenance.js';
 import { seedAdmins } from './db/seedAdmins.js';
 import { seedTemplates } from './db/marketTemplates.js';
 import { backfillVerification } from './db/backfillVerification.js';
@@ -172,6 +173,7 @@ app.use('/api/admin/management/leagues', adminMgmtLeaguesRouter);
 app.use('/api/admin/management/matches', adminMgmtMatchesRouter);
 app.use('/api/admin/management/markets', adminMgmtMarketsRouter);
 app.use('/api/admin/management/results', adminMgmtResultsRouter);
+app.use('/api/admin/maintenance', adminMaintenanceRouter);
 
 app.use('/api', notFoundHandler);
 

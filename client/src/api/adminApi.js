@@ -176,6 +176,9 @@ export const adminCancelBet = (id, reason) => post(`/bets/${encodeURIComponent(i
 export const adminNoteBet = (id, note) => post(`/bets/${encodeURIComponent(id)}/note`, { note });
 export const adminDeleteBet = (id, reason) => post(`/bets/${encodeURIComponent(id)}/delete`, { reason });
 export const adminRestoreBet = (id) => post(`/bets/${encodeURIComponent(id)}/restore`);
+export const adminPhantomBets = () => get('/maintenance/phantom-bets');
+export const adminReopenPhantomBet = (id) => post(`/maintenance/phantom-bets/${encodeURIComponent(id)}/reopen`);
+export const adminReopenAllPhantomBets = () => post('/maintenance/phantom-bets/reopen-all');
 
 /* sports & odds */
 export const adminFixtures = (params) => get(`/sports/fixtures${qs(params)}`);
