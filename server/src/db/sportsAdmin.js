@@ -148,6 +148,13 @@ export function setResult(matchId, scoreHome, scoreAway, source = 'manual') {
 export function getResult(matchId) {
   return (store.get('results') || {})[matchId] || null;
 }
+export function clearResult(matchId) {
+  const cur = store.get('results') || {};
+  if (!cur[matchId]) return false;
+  const { [matchId]: _, ...rest } = cur;
+  store.set('results', rest);
+  return true;
+}
 export function addCustomFixture(fx) {
   const cur = store.get('custom') || {};
   store.set('custom', { ...cur, [fx.id]: fx });

@@ -62,6 +62,10 @@ function buildFixtureFromCatalog(match) {
     away: awayTeam?.name || match.awayTeamName || 'Away',
     kickoff: `${hours}:${minutes}`,
     day: dayLabel,
+    // Real ISO kickoff. The day label above is computed once at bridge time
+    // and goes stale as days pass — settlement's kickoff parser uses this
+    // instead so scheduling never depends on a frozen human label.
+    kickoffIso: match.startsAt || null,
     sport: sportKey,
     leagueId: league?.id || match.leagueId,
     leagueName: league?.name || '',

@@ -132,6 +132,11 @@ export async function fetchProviderSnapshot(sportId) {
       away_logo: fx.awayLogo || undefined,
       kickoff,
       day,
+      // Raw ISO kickoff from the provider. The settlement engine's kickoff
+      // parser prefers this over the human `kickoff`/`day` labels — labels
+      // like "Tue 21 Jul" used to be unparseable and made fixtures days away
+      // look like they kicked off today (phantom locks + simulated scores).
+      kickoffIso: fx.kickoff || null,
       isLive,
       finished: fx.status === 'finished',
       scoreHome: fx.scoreHome ?? undefined,

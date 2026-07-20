@@ -17,9 +17,11 @@ import { createStore } from '../db/store.js';
 import {
   getResult,
   setResult,
+  clearResult,
   adminLookupFixture,
   adminListFixtures,
   setSuspension,
+  clearSuspension,
   patchOverride,
 } from '../db/sportsAdmin.js';
 import { recordAudit } from '../db/audit.js';
@@ -79,6 +81,61 @@ function simulateScore(sport, match) {
   return Math.random() < 0.5 ? pick : [pick[1], pick[0]];
 }
 
+/**
+ * Parse the fixture's *scheduled* kickoff into a timestamp. Returns 0 when
+ * the schedule can't be determined — callers must treat 0 as "unknown: do
+ * not lock, do not simulate". Never guesses "today" for an unrecognized day
+ * label: that guess is exactly what used to mark fixtures kicking off days
+ * later as already finished (phantom "FINISHED 1-1" on tomorrow's matches).
+ */
+export function scheduledKickoffTs(match, now = Date.now()) {
+  // 1) Authoritative ISO timestamp when the fixture carries one
+  //    (provider snapshot / catalog bridge) — no label parsing involved.
+  const iso = match.kickoffIso || match.startsAt || match.commenceTime;
+  if (iso) {
+    const t = new Date(iso).getTime();
+    if (Number.isFinite(t)) return t;
+  }
+  const [hh = '0', mm = '0'] = String(match.kickoff || '').split(':');
+  const timeMs = Number(hh) * 3600_000 + Number(mm) * 60_000;
+  // 2) Provider fixture ids embed the kickoff date: "...|YYYY-MM-DD".
+  const idDate = String(match.id || '').match(/\|(\d{4}-\d{2}-\d{2})$/);
+  if (idDate) {
+    const dayStart = new Date(`${idDate[1]}T00:00:00`).getTime();
+    if (Number.isFinite(dayStart)) return dayStart + (match.kickoff ? timeMs : 0);
+  }
+  if (!match.kickoff) return 0;
+  // 3) Human day labels relative to the current date.
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const base = today.getTime() + timeMs;
+  const dayLow = String(match.day || '').toLowerCase();
+  if (!match.day || dayLow === 'today') return base;
+  if (dayLow === 'tomorrow') return base + 86_400_000;
+  if (dayLow.startsWith('in ')) {
+    const n = parseInt(dayLow.replace(/[^0-9]/g, ''), 10) || 0;
+    return base + n * 86_400_000;
+  }
+  // Weekday-date labels like "Tue 21 Jul" (commenceToHumanTime emits these
+  // for fixtures beyond tomorrow). Strict shape check first — V8's
+  // Date.parse is lax enough to turn arbitrary junk into a real (and
+  // possibly past) date, which would reintroduce phantom settles.
+  if (/^[a-z]{3},?\s+\d{1,2}\s+[a-z]{3,}$/i.test(String(match.day).trim())) {
+    // Parse with the current year; if that lands way in the past we crossed
+    // a year boundary — use next year.
+    const year = new Date(now).getFullYear();
+    const parsed = Date.parse(`${match.day} ${year} ${match.kickoff}`);
+    if (Number.isFinite(parsed)) {
+      if (parsed < now - 183 * 86_400_000) {
+        const wrapped = Date.parse(`${match.day} ${year + 1} ${match.kickoff}`);
+        if (Number.isFinite(wrapped)) return wrapped;
+      }
+      return parsed;
+    }
+  }
+  return 0; // unrecognized label — unknown beats a wrong "today" guess
+}
+
 /** Parse a fixture's kickoff into a timestamp; falls back to "in the past" for fixtures already marked live. */
 function kickoffTs(match) {
   if (match.finishedAt) return new Date(match.finishedAt).getTime();
@@ -91,18 +148,7 @@ function kickoffTs(match) {
     const elapsedMs = Number.isFinite(minNum) && minNum > 0 ? minNum * 60_000 : 0;
     return Date.now() - elapsedMs;
   }
-  if (!match.kickoff) return 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [hh = '0', mm = '0'] = String(match.kickoff).split(':');
-  let base = new Date(today.getTime() + Number(hh) * 3600_000 + Number(mm) * 60_000);
-  const dayLow = String(match.day || '').toLowerCase();
-  if (dayLow === 'tomorrow') base = new Date(base.getTime() + 86_400_000);
-  else if (dayLow.startsWith('in ')) {
-    const n = parseInt(dayLow.replace(/[^0-9]/g, ''), 10) || 0;
-    base = new Date(base.getTime() + n * 86_400_000);
-  }
-  return base.getTime();
+  return scheduledKickoffTs(match);
 }
 
 /** Ensure a final score exists for a fixture; returns the result row or null. */
@@ -307,8 +353,44 @@ function autoLockKickedOffFixtures(fixtures) {
   }
 }
 
+/**
+ * Undo phantom results. A *simulated* score on a fixture whose scheduled
+ * kickoff is still in the future can only have come from the old kickoff
+ * parser mis-reading day labels like "Tue 21 Jul" as "today" — no genuine
+ * simulated score can predate its own kickoff. Clear the score, the auto
+ * suspension, and the kickoff lock so the fixture goes back to bettable.
+ * Returns how many fixtures were repaired.
+ */
+function repairPhantomResults(fixtures) {
+  let repaired = 0;
+  for (const fx of fixtures) {
+    const res = getResult(fx.id);
+    if (!res || res.source !== 'simulated') continue;
+    const ko = scheduledKickoffTs(fx);
+    if (!ko || ko <= Date.now()) continue; // unknown or genuinely past — leave it
+    clearResult(fx.id);
+    clearSuspension(fx.id);
+    patchOverride(fx.id, { kickoffLocked: false, kickoffLockedAt: null, kickoffLockedReason: null });
+    emitScoreUpdate({ fixtureId: fx.id, scoreHome: null, scoreAway: null, finished: false });
+    recordAudit({
+      action: 'fixture.phantom_result.cleared',
+      target: fx.id,
+      targetType: 'fixture',
+      severity: 'warning',
+      meta: { scoreHome: res.scoreHome, scoreAway: res.scoreAway, kickoffAt: new Date(ko).toISOString() },
+    });
+    log.info(`repair: cleared phantom simulated result on future fixture ${fx.id}`);
+    repaired++;
+  }
+  return repaired;
+}
+
 export function settleNow() {
-  const fixtures = adminListFixtures();
+  let fixtures = adminListFixtures();
+  // Re-list after a repair: the compiled views were built with the phantom
+  // result applied (finished:true, finishedAt set), and feeding those stale
+  // views to ensureResult would immediately re-simulate a score.
+  if (repairPhantomResults(fixtures) > 0) fixtures = adminListFixtures();
   autoLockKickedOffFixtures(fixtures);
   // Pre-warm results for fixtures that are due
   for (const fx of fixtures) {
