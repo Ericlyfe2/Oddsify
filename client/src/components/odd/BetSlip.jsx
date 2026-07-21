@@ -1003,7 +1003,12 @@ export function OddBetSlip() {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => placeBet({ stake, acceptOddsChanges: acceptChanges })}
+                    onClick={() =>
+                      placeBet({
+                        stake: betMode === 'single' ? totalSingleStake : stake,
+                        acceptOddsChanges: acceptChanges,
+                      })
+                    }
                     style={{
                       flex: 1,
                       padding: '14px 0',
