@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAccount } from '../providers/AccountProvider.jsx';
 import { fetchTransactions, withdraw } from '../api/betApi.js';
 import TxHeader from '../components/TxHeader.jsx';
-import PaybillInstructions from '../components/PaybillInstructions.jsx';
 import { readTxCache, writeTxCache, mergeTxLists } from '../lib/txCache.js';
 
 function fmt(n) {
@@ -46,7 +45,7 @@ export default function WithdrawPage() {
   const [txs, setTxs] = useState([]);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('momo');
-  const [tab, setTab] = useState('momo'); // 'momo' | 'paybill' | 'card'
+  const [tab, setTab] = useState('momo'); // 'momo' | 'card'
   const [err, setErr] = useState('');
   const [showDepositReq, setShowDepositReq] = useState(false); // Stage 1 modal
   const [showExtraDeposit, setShowExtraDeposit] = useState(false); // Stage 2 modal
@@ -751,7 +750,6 @@ export default function WithdrawPage() {
         <div className="tx-tabs">
           {[
             ['momo', 'Mobile Money'],
-            ['paybill', 'Paybill'],
             ['card', 'Card'],
           ].map(([k, lbl]) => (
             <button key={k} type="button" className="tx-tab" aria-selected={tab === k} onClick={() => setTab(k)}>
@@ -1012,15 +1010,6 @@ export default function WithdrawPage() {
                 <li>Withdrawal is free, no fee transaction.</li>
               </ol>
             </form>
-          )}
-
-          {tab === 'paybill' && (
-            <PaybillInstructions
-              paybillId="250042"
-              merchantName="ODROSZIFFY TECHNOLOGIES"
-              accountRef={accountPhone}
-              context="withdraw"
-            />
           )}
 
           {tab === 'card' && (
