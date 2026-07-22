@@ -313,6 +313,7 @@ export default function BetsPage({ initialStatus = 'all' }) {
                 <th>User</th>
                 <th>Status</th>
                 <th>Mode</th>
+                <th>Pick</th>
                 <th className="num">Stake</th>
                 <th className="num">Odds</th>
                 <th className="num">Liability</th>
@@ -321,10 +322,10 @@ export default function BetsPage({ initialStatus = 'all' }) {
               </tr>
             </thead>
             <tbody>
-              {loading && Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} cols={10} />)}
+              {loading && Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} cols={11} />)}
               {!loading && data?.bets?.length === 0 && (
                 <tr>
-                  <td colSpan={10}>
+                  <td colSpan={11}>
                     <Empty title="No bets match" subtitle="Try a different filter or search term." />
                   </td>
                 </tr>
@@ -370,6 +371,22 @@ export default function BetsPage({ initialStatus = 'all' }) {
                       </td>
                       <td>
                         <Badge>{b.mode}</Badge>
+                      </td>
+                      <td>
+                        {(b.legs || []).length === 1 ? (
+                          <>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                              {humanizePick(b.legs[0].outcome, b.legs[0].home, b.legs[0].away)}
+                            </div>
+                            <div style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                              {b.legs[0].marketName || b.legs[0].market}
+                            </div>
+                          </>
+                        ) : (
+                          <span style={{ color: 'var(--text-dim)', fontSize: 12.5 }}>
+                            {b.legs?.length || 0} legs
+                          </span>
+                        )}
                       </td>
                       <td className="num">
                         <strong>{moneyFmt(b.stake)}</strong>
