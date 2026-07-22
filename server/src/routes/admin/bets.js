@@ -174,6 +174,79 @@ router.post(
   }),
 );
 
+/**
+ * Reopen an already-settled bet (won/lost/void) back to 'open', clawing back
+ * any credit that was paid out (floored at the user's current balance, same
+ * as the phantom-bet reversal in phantomBets.js). For manual corrections —
+ * e.g. a fixture's real score was recorded wrong and the bet needs to be
+ * re-graded via POST /:id/settle afterwards.
+ */
+router.post(
+  '/:id/reopen',
+  requireAdmin,
+  requireRole('odds_manager', 'finance_admin'),
+  validate(z.object({ reason: z.string().max(500).optional() })),
+  asyncHandler(async (req, res) => {
+    const bet = betsStore.get(req.params.id);
+    if (!bet) throw notFound('Bet not found');
+    if (!['won', 'lost', 'void'].includes(bet.status)) {
+      throw conflict(`Cannot reopen a bet with status "${bet.status}".`);
+    }
+
+    const user = getUserById(bet.userId);
+    const creditPaid = Number(bet.settledReturn ?? bet.settledPayout ?? 0) || 0;
+    let clawback = 0;
+    let shortfall = 0;
+    let balanceAfter = user?.balance ?? null;
+
+    if (user && creditPaid > 0) {
+      clawback = Number(Math.min(creditPaid, user.balance).toFixed(2));
+      shortfall = Number((creditPaid - clawback).toFixed(2));
+      if (clawback > 0) {
+        const updated = updateUser(user.id, { balance: Number((user.balance - clawback).toFixed(2)) });
+        balanceAfter = updated.balance;
+        pushTx(user.id, {
+          kind: 'bet_reopen_reversal',
+          amount: -clawback,
+          status: 'completed',
+          balanceAfter,
+          ref: bet.id,
+          reason: req.body.reason || 'Manual admin reopen',
+        });
+      }
+    }
+
+    const previousStatus = bet.status;
+    const {
+      status: _status,
+      settledAt: _settledAt,
+      settledBy: _settledBy,
+      settleReason: _settleReason,
+      settledPayout: _settledPayout,
+      settledReturn: _settledReturn,
+      settledProfit: _settledProfit,
+      legsResolved: _legsResolved,
+      wonNotAcknowledged: _wonNotAcknowledged,
+      ...rest
+    } = bet;
+    const reopened = { ...rest, status: 'open' };
+    betsStore.set(bet.id, reopened);
+
+    if (user) {
+      logActivity(user.id, { kind: 'bet_reopened', betId: bet.id, previousStatus, clawback, shortfall });
+    }
+    audit(req, {
+      action: 'bet.reopen',
+      target: bet.id,
+      targetType: 'bet',
+      severity: 'warning',
+      meta: { previousStatus, creditPaid, clawback, shortfall, reason: req.body.reason },
+    });
+
+    res.json({ bet: enrich(reopened), previousStatus, creditPaid, clawback, shortfall, balanceAfter });
+  }),
+);
+
 router.post(
   '/:id/cancel',
   requireAdmin,

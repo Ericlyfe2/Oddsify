@@ -14,6 +14,7 @@ import {
   adminListBets,
   adminGetBet,
   adminSettleBet,
+  adminReopenBet,
   adminCancelBet,
   adminNoteBet,
   adminBulkBets,
@@ -479,6 +480,7 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
   const [busy, setBusy] = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
 
   useEffect(() => {
@@ -489,10 +491,10 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
       .catch((e) => showToast(e.message, 'error'));
   }, [open, betId, showToast]);
 
-  async function doSettle(result, reason) {
+  async function doSettle(result, reason, payoutOverride) {
     setBusy(true);
     try {
-      const { bet: updated } = await adminSettleBet(betId, { result, reason });
+      const { bet: updated } = await adminSettleBet(betId, { result, reason, payoutOverride });
       setBet(updated);
       onUpdate(updated);
       showToast(`Bet settled as ${result}.`);
@@ -511,6 +513,20 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
       onUpdate(updated);
       showToast('Bet cancelled & refunded.');
       setCancelOpen(false);
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function doReopen(reason) {
+    setBusy(true);
+    try {
+      const { bet: updated } = await adminReopenBet(betId, reason);
+      setBet(updated);
+      onUpdate(updated);
+      showToast('Bet reopened. You can now re-settle it.');
+      setReopenOpen(false);
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -549,6 +565,12 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
               <IconBan size={14} /> Cancel + refund
             </button>
           </>
+        ) : bet &&
+          ['won', 'lost', 'void'].includes(bet.status) &&
+          hasRole('odds_manager', 'finance_admin') ? (
+          <button className="adm-btn ghost" onClick={() => setReopenOpen(true)} disabled={busy}>
+            Reopen for correction
+          </button>
         ) : null
       }
     >
@@ -662,6 +684,7 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
 
       <SettleModal open={settleOpen} onClose={() => setSettleOpen(false)} onSubmit={doSettle} busy={busy} bet={bet} />
       <CancelModal open={cancelOpen} onClose={() => setCancelOpen(false)} onSubmit={doCancel} busy={busy} bet={bet} />
+      <ReopenModal open={reopenOpen} onClose={() => setReopenOpen(false)} onSubmit={doReopen} busy={busy} bet={bet} />
     </Drawer>
   );
 }
@@ -669,13 +692,16 @@ function BetDrawer({ open, betId, onClose, onUpdate, hasRole, showToast }) {
 function SettleModal({ open, onClose, onSubmit, busy, bet }) {
   const [result, setResult] = useState('won');
   const [reason, setReason] = useState('');
+  const [payoutOverride, setPayoutOverride] = useState('');
   useEffect(() => {
     if (open) {
       setResult('won');
       setReason('');
+      setPayoutOverride('');
     }
   }, [open]);
   if (!bet) return null;
+  const effectivePayout = payoutOverride !== '' ? Number(payoutOverride) : bet.potentialWin;
   return (
     <Modal
       open={open}
@@ -699,6 +725,19 @@ function SettleModal({ open, onClose, onSubmit, busy, bet }) {
           </button>
         ))}
       </div>
+      {result === 'won' && (
+        <div className="adm-field" style={{ marginBottom: 12 }}>
+          <label>Payout override (optional — defaults to {moneyFmt(bet.potentialWin)})</label>
+          <input
+            className="adm-input"
+            type="number"
+            step="0.01"
+            value={payoutOverride}
+            onChange={(e) => setPayoutOverride(e.target.value)}
+            placeholder={String(bet.potentialWin)}
+          />
+        </div>
+      )}
       <div className="adm-field" style={{ marginBottom: 12 }}>
         <label>Reason (optional, audited)</label>
         <input
@@ -719,7 +758,7 @@ function SettleModal({ open, onClose, onSubmit, busy, bet }) {
       >
         Settling as <strong>{result}</strong> will{' '}
         {result === 'won'
-          ? `credit ${moneyFmt(bet.potentialWin)} to the player.`
+          ? `credit ${moneyFmt(effectivePayout)} to the player.`
           : result === 'void'
             ? `refund ${moneyFmt(bet.stake)} stake.`
             : 'finalise the bet with no payout.'}
@@ -728,8 +767,63 @@ function SettleModal({ open, onClose, onSubmit, busy, bet }) {
         <button className="adm-btn ghost" type="button" onClick={onClose}>
           Cancel
         </button>
-        <button className="adm-btn primary" type="button" onClick={() => onSubmit(result, reason)} disabled={busy}>
+        <button
+          className="adm-btn primary"
+          type="button"
+          onClick={() => onSubmit(result, reason, result === 'won' && payoutOverride !== '' ? effectivePayout : undefined)}
+          disabled={busy}
+        >
           {busy ? 'Working…' : `Confirm ${result}`}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ReopenModal({ open, onClose, onSubmit, busy, bet }) {
+  const [reason, setReason] = useState('');
+  useEffect(() => {
+    if (open) setReason('');
+  }, [open]);
+  if (!bet) return null;
+  const creditPaid = Number(bet.settledReturn ?? bet.settledPayout ?? 0) || 0;
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Reopen bet for correction"
+      description={`Bet ${bet.id.slice(0, 16)}…  ·  currently ${bet.status}`}
+    >
+      <div
+        style={{
+          background: 'var(--surface-soft)',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          padding: 12,
+          fontSize: 13,
+          marginBottom: 12,
+        }}
+      >
+        This sets the bet back to <strong>open</strong> so it can be re-settled with the correct result.
+        {creditPaid > 0
+          ? ` It will claw back the ${moneyFmt(creditPaid)} already credited to the player (floored at their current balance).`
+          : ' No credit was previously paid out, so nothing will be clawed back.'}
+      </div>
+      <div className="adm-field" style={{ marginBottom: 12 }}>
+        <label>Reason (audited)</label>
+        <input
+          className="adm-input"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. fixture FT score was recorded incorrectly"
+        />
+      </div>
+      <div className="adm-modal-actions">
+        <button className="adm-btn ghost" type="button" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="adm-btn primary" type="button" onClick={() => onSubmit(reason)} disabled={busy}>
+          {busy ? 'Working…' : 'Reopen bet'}
         </button>
       </div>
     </Modal>
