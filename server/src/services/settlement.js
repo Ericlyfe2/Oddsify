@@ -1,16 +1,17 @@
 /**
  * Auto-settlement engine.
  *  - Runs every SETTLE_INTERVAL_MS.
- *  - For every fixture, ensures a final score exists (manual or simulated).
+ *  - For every fixture, checks whether a final score has been entered
+ *    (manually by an admin, or reported by a results feed).
  *  - For every open bet whose ALL legs reference fixtures with final scores,
  *    resolves each leg, marks the bet won/lost/void, credits the wallet,
  *    pushes a transaction, fires an audit event, and (on win) sets
  *    wonNotAcknowledged so the storefront trophy modal can fire.
  *
- *  Simulated scores are only generated when the fixture's kickoff has
- *  elapsed by more than SIM_AFTER_MS. This lets admins set a manual score
- *  first if they want to. Real sportsbooks would replace this with a live
- *  results feed.
+ *  Fixtures with no result yet are left open indefinitely — scores are
+ *  never guessed/simulated. An admin must enter the real result via
+ *  POST /admin/sports/fixtures/:id/result (or the results-management
+ *  enter/confirm flow) before a fixture's bets can settle.
  */
 import crypto from 'crypto';
 import { createStore } from '../db/store.js';
@@ -34,52 +35,10 @@ const betsStore = createStore('bets', {});
 const txStore = createStore('transactions', {});
 
 const SETTLE_INTERVAL_MS = 10_000;
-const SIM_AFTER_MS = 110 * 60 * 1000; // ~110 minutes after kickoff
 const MATCH_DURATION_MS = 105 * 60 * 1000;
-const SIM_SETTLE_WAIT_MS = 2 * 60 * 1000; // 2 minutes after simulated result, settle automatically
+const SIM_SETTLE_WAIT_MS = 2 * 60 * 1000; // grace period for any pre-existing simulated result to settle
 
 let timer = null;
-
-/* ------------ score simulation ------------ */
-
-const FOOTBALL_SCORES = [
-  [1, 0],
-  [0, 1],
-  [1, 1],
-  [2, 1],
-  [1, 2],
-  [2, 0],
-  [0, 2],
-  [2, 2],
-  [3, 1],
-  [1, 3],
-  [3, 0],
-  [0, 0],
-  [3, 2],
-  [2, 3],
-  [0, 3],
-  [4, 0],
-];
-const BASKET_TOTALS = [210, 218, 222, 226, 230, 234];
-
-function rand(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function simulateScore(sport, match) {
-  if (sport === 'basketball' || sport === 'ml') {
-    const total = rand(BASKET_TOTALS);
-    const home = Math.round(total * (0.45 + Math.random() * 0.1));
-    return [home, total - home];
-  }
-  if (sport === 'tennis') {
-    // 0–2 sets totals
-    return Math.random() < 0.55 ? [2, Math.random() < 0.5 ? 0 : 1] : [Math.random() < 0.5 ? 0 : 1, 2];
-  }
-  // football default — bias to lower scores by sorting
-  const pick = rand(FOOTBALL_SCORES);
-  return Math.random() < 0.5 ? pick : [pick[1], pick[0]];
-}
 
 /**
  * Parse the fixture's *scheduled* kickoff into a timestamp. Returns 0 when
@@ -141,9 +100,9 @@ function kickoffTs(match) {
   if (match.finishedAt) return new Date(match.finishedAt).getTime();
   if (match.isLive) {
     // Estimate elapsed time from match.minute (e.g., "56'", "45+2'", "HT").
-    // Without this, an isLive match would be SIM_AFTER_MS old on first sweep
-    // and auto-settle instantly — closing the market and breaking /bet/place
-    // for every live fixture (returns 409 MARKET_CLOSED).
+    // Without this, an isLive match would look like it kicked off long ago
+    // on first sweep and get auto-suspended instantly — closing the market
+    // and breaking /bet/place for every live fixture (409 MARKET_CLOSED).
     const minNum = parseInt(String(match.minute || '').replace(/[^\d]/g, ''), 10);
     const elapsedMs = Number.isFinite(minNum) && minNum > 0 ? minNum * 60_000 : 0;
     return Date.now() - elapsedMs;
@@ -151,29 +110,19 @@ function kickoffTs(match) {
   return scheduledKickoffTs(match);
 }
 
-/** Ensure a final score exists for a fixture; returns the result row or null. */
-const resultsStore = createStore('sports_admin', {});
-
-function ensureResult(match, sport) {
+/**
+ * Look up whether a fixture already has a final score — never invents one.
+ * Returns the result row (source 'manual' or 'feed') or null if an admin
+ * hasn't entered it yet.
+ */
+function ensureResult(match) {
   const existing = getResult(match.id);
   if (existing) return existing;
   if (match.finished) {
     setResult(match.id, match.scoreHome ?? 0, match.scoreAway ?? 0, 'feed');
     return getResult(match.id);
   }
-  const ko = kickoffTs(match);
-  if (!ko) return null;
-  if (Date.now() - ko < SIM_AFTER_MS) return null;
-  const [h, a] = simulateScore(sport, match);
-  setResult(match.id, h, a, 'simulated');
-  // Tag the simulated result with a creation timestamp so settleNow can
-  // apply the SIM_SETTLE_WAIT_MS grace period before auto-settling.
-  const cur = resultsStore.get('results') || {};
-  if (cur[match.id]) {
-    cur[match.id].settledAt = new Date().toISOString();
-    resultsStore.set('results', cur);
-  }
-  return getResult(match.id);
+  return null;
 }
 
 /* ------------ leg resolvers ------------ */
@@ -394,13 +343,12 @@ function repairPhantomResults(fixtures) {
 export function settleNow() {
   let fixtures = adminListFixtures();
   // Re-list after a repair: the compiled views were built with the phantom
-  // result applied (finished:true, finishedAt set), and feeding those stale
-  // views to ensureResult would immediately re-simulate a score.
+  // result applied (finished:true, finishedAt set).
   if (repairPhantomResults(fixtures) > 0) fixtures = adminListFixtures();
   autoLockKickedOffFixtures(fixtures);
   // Pre-warm results for fixtures that are due
   for (const fx of fixtures) {
-    ensureResult(fx, fx.sport);
+    ensureResult(fx);
   }
 
   const open = Object.values(betsStore.all() || {}).filter((b) => b.status === 'open');
@@ -412,10 +360,10 @@ export function settleNow() {
     const legResults = [];
     for (const leg of bet.legs || []) {
       const view = adminLookupFixture(leg.matchId);
-      const sport = view?.sport?.id || view?.sport || 'football';
-      const res = view ? ensureResult(view.match, sport) : null;
-      // Auto-simulated results settle after a grace period so admins have
-      // time to override them. Manual or feed results settle immediately.
+      const res = view ? ensureResult(view.match) : null;
+      // Any pre-existing simulated result (from before this change) still
+      // gets a grace period before auto-settling. Manual/feed results
+      // settle immediately; fixtures with no result yet stay open.
       if (res && res.source === 'simulated') {
         const simulatedAt = res.settledAt ? new Date(res.settledAt).getTime() : Date.now();
         // A bet can be placed on a fixture that already has a simulated
