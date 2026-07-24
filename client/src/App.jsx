@@ -42,6 +42,7 @@ const JackpotPage = lazy(() => import('./pages/JackpotPage.jsx'));
 const PromosPage = lazy(() => import('./pages/PromosPage.jsx'));
 const InfoPage = lazy(() => import('./pages/InfoPage.jsx'));
 const HelpPage = lazy(() => import('./pages/HelpPage.jsx'));
+const ContactPage = lazy(() => import('./pages/ContactPage.jsx'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin.jsx'));
 const AdminSignup = lazy(() => import('./pages/admin/AdminSignup.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard.jsx'));
@@ -269,7 +270,14 @@ export default function App() {
                       </Suspense>
                     }
                   />
-                  <Route path="/contact" element={<Navigate to="/help" replace />} />
+                  <Route
+                    path="/contact"
+                    element={
+                      <Suspense fallback={PAGE_FALLBACK}>
+                        <ContactPage />
+                      </Suspense>
+                    }
+                  />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
