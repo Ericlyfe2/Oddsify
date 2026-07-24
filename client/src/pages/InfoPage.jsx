@@ -87,7 +87,6 @@ export default function InfoPage() {
           <li>All wagers are final once the relevant event has commenced.</li>
           <li>Settled bets are final. Disputes must be raised within 14 days of settlement.</li>
           <li>Bonus funds carry a wagering requirement and may be voided if abused.</li>
-          <li>Withdrawal eligibility requires lifetime deposits of at least 10% of the requested amount.</li>
           <li>
             Oddsify reserves the right to verify identity and source of funds before processing withdrawals (KYC/AML).
           </li>
