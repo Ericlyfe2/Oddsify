@@ -3,6 +3,12 @@ import { useToast, useAccount } from '../providers/AccountProvider.jsx';
 import { submitTicket } from '../api/betApi.js';
 import PageBack from '../components/PageBack.jsx';
 
+// Phone-registered accounts store their phone number in `account.email`
+// (see server resolveIdentifier) — only forward it to the ticket API when
+// it actually looks like an email, otherwise the server's email validation
+// rejects the request with a 400.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const FAQ = [
   {
     q: 'How long do deposits take to reflect in my account?',
@@ -40,7 +46,8 @@ export default function HelpPage() {
     if (!name.trim() || !msg.trim()) return;
     setBusy(true);
     try {
-      await submitTicket({ name: name.trim(), email: account?.email || '', topic, body: msg.trim() });
+      const email = EMAIL_RE.test(account?.email || '') ? account.email : '';
+      await submitTicket({ name: name.trim(), email, topic, body: msg.trim() });
       toast(`Thanks, ${name}. A support agent will reply within 30 minutes.`);
       setMsg('');
     } catch (err) {
