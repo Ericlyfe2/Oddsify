@@ -73,7 +73,7 @@ const NAV_SECTIONS = [
       { to: '/admin/fraud', label: 'Fraud & AI', icon: <IconActivity />, roles: ['moderator'] },
       { to: '/admin/audit', label: 'Audit logs', icon: <IconShield /> },
       { to: '/admin/notifications', label: 'Notifications', icon: <IconBell /> },
-      { to: '/admin/support', label: 'Support', icon: <IconLifebuoy />, roles: ['support'] },
+      { to: '/admin/support', label: 'Support', icon: <IconLifebuoy />, roles: ['support', 'moderator'] },
     ],
   },
   {
