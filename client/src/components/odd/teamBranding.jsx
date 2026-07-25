@@ -227,11 +227,32 @@ import { useState } from 'react';
 
 // Provider-supplied crest URLs (e.g. live-score-api's cdn.live-score-api.com)
 // 404 for a lot of lower-profile teams that never had a badge uploaded.
-// Once any <img> on the page proves a URL dead, remember it for the rest of
-// the session so every other instance of the same team (fixtures list,
-// standings, match detail, ...) skips the network request instead of
-// re-triggering the same failed fetch.
-const knownBadUrls = new Set();
+// Once any <img> proves a URL dead, remember it in localStorage (not just
+// this session) so it's never requested again on this device — otherwise
+// every fresh page load re-triggers the same failed fetch indefinitely.
+const BAD_URL_KEY = 'oddsify_bad_crest_urls';
+const MAX_BAD_URLS = 300;
+
+function loadBadUrls() {
+  try {
+    const raw = localStorage.getItem(BAD_URL_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function persistBadUrls(set) {
+  try {
+    const arr = Array.from(set).slice(-MAX_BAD_URLS);
+    localStorage.setItem(BAD_URL_KEY, JSON.stringify(arr));
+  } catch {
+    // localStorage unavailable (private mode / quota) — falls back to
+    // in-session-only de-dup, same as before this change.
+  }
+}
+
+const knownBadUrls = loadBadUrls();
 
 /**
  * Internal: round chip that prefers a real image (Wikimedia / public CDN)
@@ -266,6 +287,7 @@ function BadgeWithFallback({ url, brand, size, style, alt, fontScale = 0.45, min
           loading="lazy"
           onError={() => {
             knownBadUrls.add(url);
+            persistBadUrls(knownBadUrls);
             setFailed(true);
           }}
         />
