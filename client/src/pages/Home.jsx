@@ -10,7 +10,7 @@
  * football sport room over the socket and patch matches in place as
  * score:update events arrive (same feed the cash-out engine ticks off).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchMatches, fetchRecentWins, fetchMajorLeagues } from '../api/betApi.js';
@@ -264,6 +264,43 @@ const PAY_METHODS = [
   { key: 'bank', label: 'Bank Transfer', bg: '#23272f', fg: '#fff' },
 ];
 
+/** Fades + lifts a section in the first time it scrolls into view. */
+function FooterReveal({ children, delay = 0, style }) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="ft-reveal"
+      style={{
+        ...style,
+        opacity: inView ? 1 : 0,
+        transform: inView ? 'translateY(0)' : 'translateY(16px)',
+        transitionDelay: `${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function OddsifyFooter() {
   const T = useTokens();
   const navigate = useNavigate();
@@ -271,77 +308,120 @@ function OddsifyFooter() {
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
-    <footer style={{ background: T.surface, borderTop: `1px solid ${T.line}`, paddingBottom: 100 }}>
+    <footer style={{ background: T.surface, borderTop: `1px solid ${T.line}`, paddingBottom: 100, overflow: 'hidden' }}>
+      <style>{`
+        .ft-reveal { transition: opacity .6s ease, transform .6s ease; }
+        .ft-pay-chip { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .ft-pay-chip:hover, .ft-pay-chip:active { transform: translateY(-3px) scale(1.03); box-shadow: 0 8px 18px rgba(0,0,0,.12); }
+        .ft-pay-chip .ft-pay-icon { transition: transform .18s ease; }
+        .ft-pay-chip:hover .ft-pay-icon { transform: scale(1.08); }
+        .ft-region-btn, .ft-legal-link { transition: color .15s ease, transform .15s ease; }
+        .ft-region-btn:hover, .ft-legal-link:hover { transform: translateY(-1px); }
+        @keyframes ft-18-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(230,60,60,.35); }
+          50% { box-shadow: 0 0 0 4px rgba(230,60,60,0); }
+        }
+        .ft-18-badge { animation: ft-18-pulse 2.6s ease-in-out infinite; }
+        @keyframes ft-brand-shine {
+          0% { background-position: -120% 0; }
+          100% { background-position: 220% 0; }
+        }
+        .ft-brand-text {
+          background: linear-gradient(90deg, ${T.greenBright} 40%, #fff 50%, ${T.greenBright} 60%);
+          background-size: 250% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: ft-brand-shine 3.5s ease-in-out infinite;
+        }
+        .ft-top-btn { transition: background .15s ease; }
+        .ft-top-btn:hover { background: ${T.line}; }
+        .ft-top-arrow { display: inline-block; transition: transform .18s ease; animation: ft-arrow-float 2s ease-in-out infinite; }
+        .ft-top-btn:hover .ft-top-arrow { transform: translateY(-3px); }
+        @keyframes ft-arrow-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ft-reveal { transition: none !important; opacity: 1 !important; transform: none !important; }
+          .ft-18-badge, .ft-brand-text, .ft-top-arrow { animation: none !important; }
+        }
+      `}</style>
+
       {/* 18+ badge + copyright */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 0' }}>
-        <span style={{ border: `1.5px solid ${T.inkDim}`, borderRadius: 6, color: T.ink, fontSize: 13, fontWeight: 800, padding: '2px 7px', letterSpacing: 0.5 }}>
+      <FooterReveal style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 0' }}>
+        <span className="ft-18-badge" style={{ border: `1.5px solid ${T.inkDim}`, borderRadius: 6, color: T.ink, fontSize: 13, fontWeight: 800, padding: '2px 7px', letterSpacing: 0.5 }}>
           18+
         </span>
         <span style={{ fontSize: 11, color: T.inkDim }}>
           © {new Date().getFullYear()} Oddsify. All rights reserved.
         </span>
-      </div>
+      </FooterReveal>
 
       {/* Partner row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '20px 16px 4px' }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: T.greenBright }}>Oddsify</span>
+      <FooterReveal delay={60} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '20px 16px 4px' }}>
+        <span className="ft-brand-text" style={{ fontSize: 16, fontWeight: 800 }}>Oddsify</span>
         <span style={{ width: 1, height: 28, background: T.line }} />
         <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600, lineHeight: 1.3 }}>
           Official Sports<br />Betting Partner
         </span>
-      </div>
+      </FooterReveal>
 
       {/* Tagline */}
-      <div style={{ textAlign: 'center', padding: '12px 16px 0', fontSize: 15, fontWeight: 700, color: T.ink }}>
+      <FooterReveal delay={120} style={{ textAlign: 'center', padding: '12px 16px 0', fontSize: 15, fontWeight: 700, color: T.ink }}>
         The world&rsquo;s fastest-growing betting platform
-      </div>
+      </FooterReveal>
 
       {/* Payment methods */}
-      <div style={{ padding: '20px 16px 0' }}>
+      <FooterReveal delay={160} style={{ padding: '20px 16px 0' }}>
         <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: T.inkDim, marginBottom: 10 }}>
           Available Payment Methods
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-          {PAY_METHODS.map((m) => (
-            <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: T.surfaceAlt, border: `1px solid ${T.line}`, borderRadius: 8, padding: '10px 6px' }}>
-              <span style={{ width: 26, height: 18, borderRadius: 3, background: m.bg, color: m.fg, fontSize: 8, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {PAY_METHODS.map((m, i) => (
+            <div
+              key={m.key}
+              className="ft-pay-chip"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: T.surfaceAlt, border: `1px solid ${T.line}`, borderRadius: 8, padding: '10px 6px', transitionDelay: `${i * 30}ms` }}
+            >
+              <span className="ft-pay-icon" style={{ width: 26, height: 18, borderRadius: 3, background: m.bg, color: m.fg, fontSize: 8, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {m.label.slice(0, 3).toUpperCase()}
               </span>
               <span style={{ fontSize: 11, fontWeight: 600, color: T.inkSoft }}>{m.label}</span>
             </div>
           ))}
         </div>
-      </div>
+      </FooterReveal>
 
       {/* Region links */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '18px 16px 0', fontSize: 13 }}>
-        <button type="button" onClick={() => navigate('/info#licence')} style={{ background: 'none', border: 0, color: T.greenBright, fontWeight: 700, cursor: 'pointer' }}>
+      <FooterReveal delay={200} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '18px 16px 0', fontSize: 13 }}>
+        <button type="button" className="ft-region-btn" onClick={() => navigate('/info#licence')} style={{ background: 'none', border: 0, color: T.greenBright, fontWeight: 700, cursor: 'pointer' }}>
           Oddsify GH
         </button>
         <span style={{ color: T.inkDim }}>|</span>
-        <button type="button" onClick={() => navigate('/info#responsible-gaming')} style={{ background: 'none', border: 0, color: T.inkSoft, fontWeight: 600, cursor: 'pointer' }}>
+        <button type="button" className="ft-region-btn" onClick={() => navigate('/info#responsible-gaming')} style={{ background: 'none', border: 0, color: T.inkSoft, fontWeight: 600, cursor: 'pointer' }}>
           Oddsify NG
         </button>
-      </div>
+      </FooterReveal>
 
       {/* Legal links */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 16px 0', fontSize: 13, fontWeight: 600 }}>
-        <a href="/info#terms" onClick={(e) => { e.preventDefault(); navigate('/info#terms'); }} style={{ color: T.inkSoft, textDecoration: 'none' }}>Terms &amp; Conditions</a>
+      <FooterReveal delay={240} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '14px 16px 0', fontSize: 13, fontWeight: 600 }}>
+        <a href="/info#terms" className="ft-legal-link" onClick={(e) => { e.preventDefault(); navigate('/info#terms'); }} style={{ color: T.inkSoft, textDecoration: 'none' }}>Terms &amp; Conditions</a>
         <span style={{ color: T.inkDim }}>|</span>
-        <a href="/help" onClick={(e) => { e.preventDefault(); navigate('/help'); }} style={{ color: T.inkSoft, textDecoration: 'none' }}>About Us</a>
-      </div>
+        <a href="/help" className="ft-legal-link" onClick={(e) => { e.preventDefault(); navigate('/help'); }} style={{ color: T.inkSoft, textDecoration: 'none' }}>About Us</a>
+      </FooterReveal>
 
       {/* Disclaimer */}
-      <div style={{ padding: '16px 20px 0', textAlign: 'center', fontSize: 11, lineHeight: 1.6, color: T.inkDim, maxWidth: 340, margin: '0 auto' }}>
+      <FooterReveal delay={280} style={{ padding: '16px 20px 0', textAlign: 'center', fontSize: 11, lineHeight: 1.6, color: T.inkDim, maxWidth: 340, margin: '0 auto' }}>
         Oddsify is a registered company in Ghana, Nigeria, and Other Countries.
         <br /><br />
         <strong style={{ color: T.inkSoft }}>Age 18 and above only.</strong> Bet smart, enjoy the thrill,
         and keep it within your limits. Oddsify is licensed by the Gaming Commission of Ghana.
-      </div>
+      </FooterReveal>
 
       {/* Back to Top */}
-      <button type="button" onClick={scrollTop} style={{ marginTop: 18, width: '100%', background: T.surfaceAlt, border: 0, borderTop: `1px solid ${T.line}`, color: T.ink, fontSize: 14, fontWeight: 600, padding: '16px 0', cursor: 'pointer' }}>
-        Back to Top
+      <button type="button" className="ft-top-btn" onClick={scrollTop} style={{ marginTop: 18, width: '100%', background: T.surfaceAlt, border: 0, borderTop: `1px solid ${T.line}`, color: T.ink, fontSize: 14, fontWeight: 600, padding: '16px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <span className="ft-top-arrow">↑</span> Back to Top
       </button>
     </footer>
   );
