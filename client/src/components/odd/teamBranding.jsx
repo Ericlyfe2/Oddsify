@@ -225,6 +225,14 @@ export function getLeagueBranding(name) {
 
 import { useState } from 'react';
 
+// Provider-supplied crest URLs (e.g. live-score-api's cdn.live-score-api.com)
+// 404 for a lot of lower-profile teams that never had a badge uploaded.
+// Once any <img> on the page proves a URL dead, remember it for the rest of
+// the session so every other instance of the same team (fixtures list,
+// standings, match detail, ...) skips the network request instead of
+// re-triggering the same failed fetch.
+const knownBadUrls = new Set();
+
 /**
  * Internal: round chip that prefers a real image (Wikimedia / public CDN)
  * and falls back to a colored-monogram chip if the URL is missing or the
@@ -232,7 +240,7 @@ import { useState } from 'react';
  */
 function BadgeWithFallback({ url, brand, size, style, alt, fontScale = 0.45, minFont = 9 }) {
   const [failed, setFailed] = useState(false);
-  const showImg = url && !failed;
+  const showImg = url && !failed && !knownBadUrls.has(url);
   return (
     <div
       style={{
@@ -256,7 +264,10 @@ function BadgeWithFallback({ url, brand, size, style, alt, fontScale = 0.45, min
           height={Math.round(size * 0.78)}
           style={{ objectFit: 'contain' }}
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => {
+            knownBadUrls.add(url);
+            setFailed(true);
+          }}
         />
       ) : (
         <span
