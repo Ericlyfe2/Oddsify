@@ -207,3 +207,5 @@ export const updateProfile = (patch_) => patch('/profile', patch_);
 
 /* support */
 export const submitTicket = (body) => post('/support/tickets', body);
+export const fetchMyTickets = () => get('/support/tickets/mine');
+export const replyToTicket = (id, body) => post(`/support/tickets/${id}/reply`, { body });

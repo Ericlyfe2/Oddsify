@@ -26,6 +26,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { fetchTransactions, fetchBetHistory, updateProfile, changePassword } from '../api/betApi.js';
 import { fmtCedi, useTokens, OddPageHeader, OddIcon } from '../components/odd/primitives.jsx';
+import NotificationBell from '../components/NotificationBell.jsx';
 import { validatePhone, autoFormatPhoneInput, E164_PLACEHOLDER } from '../lib/phone.js';
 
 const buildQuickActions = (T, handlers) => [
@@ -200,7 +201,7 @@ function Toggle({ label, on, onChange, helper, disabled }) {
 export default function ProfilePage() {
   const T = useTokens();
   const navigate = useNavigate();
-  const { account, signOut, openDeposit, openWithdraw, unreadCount, refresh } = useAccount();
+  const { account, signOut, openDeposit, openWithdraw, refresh } = useAccount();
   const { toast } = useToast();
 
   const [counts, setCounts] = useState({ openBets: 0, tx: 0, winRate: 0, biggestWin: 0, streak: 0 });
@@ -377,41 +378,7 @@ export default function ProfilePage() {
       <OddPageHeader
         title="Account"
         subtitle={`Hello, ${firstName}`}
-        right={
-          <button
-            type="button"
-            onClick={() => navigate('/profile#notifications')}
-            aria-label="Notifications"
-            style={{
-              position: 'relative',
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              background: 'color-mix(in srgb, var(--text) 10%, transparent)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: 0,
-              cursor: 'pointer',
-              color: 'var(--text)',
-            }}
-          >
-            <OddIcon name="bell" size={18} color="var(--text)" />
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -2,
-                  right: -2,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 999,
-                  background: T.danger,
-                }}
-              />
-            )}
-          </button>
-        }
+        right={<NotificationBell />}
       />
 
       {/* Awaiting-verification banner — shown while the account is in review (Stage 0) */}

@@ -10,7 +10,7 @@ import { validate } from '../../middleware/validate.js';
 import { createStore } from '../../db/store.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { notFound } from '../../utils/httpError.js';
-import { emitAdmin } from '../../services/realtime.js';
+import { emitAdmin, emitToUser } from '../../services/realtime.js';
 
 const store = createStore('support_tickets', {});
 const router = Router();
@@ -58,6 +58,15 @@ router.post(
     }));
     audit(req, { action: 'admin.support.replied', target: t.id, targetType: 'ticket' });
     emitAdmin('support:reply', { ticketId: t.id, status: updated.status });
+    if (t.userId) {
+      emitToUser(t.userId, 'support:reply', {
+        ticketId: t.id,
+        topic: t.topic,
+        body: reply.body,
+        by: reply.by,
+        at: reply.at,
+      });
+    }
     res.json({ ok: true, ticket: updated });
   }),
 );

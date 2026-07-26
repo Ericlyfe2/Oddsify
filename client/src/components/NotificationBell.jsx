@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAccount } from '../providers/AccountProvider.jsx';
+
+const KIND_LINKS = {
+  deposit_approved: '/wallet',
+  deposit_rejected: '/wallet',
+  withdrawal_approved: '/wallet',
+  withdrawal_rejected: '/wallet',
+  support_reply: '/contact',
+};
 
 function ago(iso) {
   if (!iso) return '';
@@ -23,6 +32,16 @@ export default function NotificationBell() {
   const { notifications, unreadCount, clearNotifications, markNotificationRead } = useAccount();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
+
+  const openNotification = (n) => {
+    markNotificationRead(n.id);
+    const link = n.link || KIND_LINKS[n.kind];
+    if (link) {
+      setOpen(false);
+      navigate(link);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -172,7 +191,7 @@ export default function NotificationBell() {
                 <button
                   key={n.id}
                   type="button"
-                  onClick={() => markNotificationRead(n.id)}
+                  onClick={() => openNotification(n)}
                   style={{
                     display: 'block',
                     width: '100%',

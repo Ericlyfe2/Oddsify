@@ -40,6 +40,7 @@ export default function DepositResultModal({ result, onClose }) {
   }, [isOpen]);
 
   const approved = result?.kind === 'approved';
+  const isWithdrawal = result?.type === 'withdrawal';
   const amt = Number(result?.amount || 0).toLocaleString('en-GH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -88,11 +89,23 @@ export default function DepositResultModal({ result, onClose }) {
           </div>
 
           <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800 }}>
-            {approved ? 'Deposit approved' : 'Deposit rejected'}
+            {isWithdrawal
+              ? approved
+                ? 'Withdrawal approved'
+                : 'Withdrawal rejected'
+              : approved
+                ? 'Deposit approved'
+                : 'Deposit rejected'}
           </h2>
 
           <p style={{ margin: '0 0 4px', fontSize: 15, color: 'var(--text-soft, #b8c5be)' }}>
-            {approved ? `GHS ${amt} has been credited to your wallet.` : `Your GHS ${amt} deposit was not approved.`}
+            {isWithdrawal
+              ? approved
+                ? `GHS ${amt} has been sent to your registered mobile number.`
+                : `Your GHS ${amt} withdrawal was not approved. The amount has been refunded to your wallet.`
+              : approved
+                ? `GHS ${amt} has been credited to your wallet.`
+                : `Your GHS ${amt} deposit was not approved.`}
           </p>
 
           {!approved && result.reason && (

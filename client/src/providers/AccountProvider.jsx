@@ -297,6 +297,59 @@ export default function AppProviders({ children }) {
         return [...prev, { kind: 'rejected', amount: amt, reason, txId, at: Date.now() }];
       });
     });
+    const offWithdrawApproved = onLive('withdrawal:approved', ({ transaction }) => {
+      const txId = transaction?.id;
+      const amt = transaction?.amount;
+      const title = 'Withdrawal approved';
+      const body = `GHS ${formatAmt(amt)} has been sent to your registered mobile number.`;
+      toast(`Withdrawal approved! GHS ${formatAmt(amt)} sent.`, 'success');
+      addNotification({
+        id: `withdrawal-approved-${txId || Date.now()}`,
+        title,
+        body,
+        severity: 'info',
+        kind: 'withdrawal_approved',
+      });
+      osNotify({ title, body, tag: `withdrawal-${txId || 'approved'}` });
+      setDepositResults((prev) => {
+        if (txId && prev.some((r) => r.txId === txId)) return prev;
+        return [...prev, { kind: 'approved', type: 'withdrawal', amount: amt, txId, at: Date.now() }];
+      });
+    });
+    const offWithdrawRejected = onLive('withdrawal:rejected', ({ transaction, reason }) => {
+      const txId = transaction?.id;
+      const amt = transaction?.amount;
+      const title = 'Withdrawal rejected';
+      const body = `Your GHS ${formatAmt(amt)} withdrawal was rejected${reason ? ': ' + reason : '.'}`;
+      toast(`Withdrawal of GHS ${formatAmt(amt)} rejected${reason ? ': ' + reason : ''}.`, 'warn');
+      addNotification({
+        id: `withdrawal-rejected-${txId || Date.now()}`,
+        title,
+        body,
+        severity: 'critical',
+        kind: 'withdrawal_rejected',
+      });
+      osNotify({ title, body, tag: `withdrawal-${txId || 'rejected'}` });
+      setDepositResults((prev) => {
+        if (txId && prev.some((r) => r.txId === txId)) return prev;
+        return [...prev, { kind: 'rejected', type: 'withdrawal', amount: amt, reason, txId, at: Date.now() }];
+      });
+    });
+    const offSupportReply = onLive('support:reply', (payload) => {
+      if (!payload?.ticketId) return;
+      const title = 'Support replied';
+      const body = payload.body || 'You have a new reply from support.';
+      addNotification({
+        id: `support-reply-${payload.ticketId}-${payload.at || Date.now()}`,
+        title,
+        body,
+        severity: 'info',
+        kind: 'support_reply',
+        link: '/contact',
+      });
+      toast(`Support: ${body}`, 'info', { ttl: 6000 });
+      osNotify({ title, body, tag: `support-${payload.ticketId}` });
+    });
     const offWin = onLive('bet:won', async () => {
       try {
         await tick();
@@ -339,6 +392,9 @@ export default function AppProviders({ children }) {
       offPending?.();
       offApproved?.();
       offRejected?.();
+      offWithdrawApproved?.();
+      offWithdrawRejected?.();
+      offSupportReply?.();
       offNotif?.();
       offWin?.();
       offSettled?.();

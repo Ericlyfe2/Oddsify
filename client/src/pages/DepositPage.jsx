@@ -681,7 +681,7 @@ export default function DepositPage() {
               approved: { label: 'Approved', bg: 'rgba(34,197,94,0.15)', fg: '#22c55e' },
               rejected: { label: 'Rejected', bg: 'rgba(239,68,68,0.15)', fg: '#ef4444' },
             }[paybillTx.status] || { label: 'Pending', bg: 'rgba(240,160,64,0.15)', fg: T.warn || '#f0a040' };
-            const refNum = numericFromId(paybillTx.id, 9);
+            const refNum = accountIdentifier || numericFromId(paybillTx.id, 9);
             const depId = numericFromId(paybillTx.id, 4);
             return (
               <div>
