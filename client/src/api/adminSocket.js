@@ -25,7 +25,7 @@ export function getAdminSocket() {
   if (socket) return socket;
   socket = io(`${URL}/admin`, {
     path: '/socket.io',
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     auth: { token: getAdminAccess() || undefined },
     reconnection: true,
     reconnectionAttempts: Infinity,

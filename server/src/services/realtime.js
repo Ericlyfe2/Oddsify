@@ -78,7 +78,7 @@ export function attachRealtime(httpServer) {
     },
     pingInterval: 25_000,
     pingTimeout: 60_000,
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
   });
 
   liveNs = io.of('/live');

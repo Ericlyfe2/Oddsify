@@ -30,7 +30,7 @@ export function getSocket() {
   connectAttempted = true;
   socket = io(`${URL}/live`, {
     path: '/socket.io',
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     auth: { token: getAccess() || undefined },
     reconnection: true,
     reconnectionAttempts: Infinity,
