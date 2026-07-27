@@ -211,10 +211,15 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
         </header>
 
         <div className="wco-emblem" aria-hidden>
-          <GiantTrophy />
+          <img src="/images/trophy-win.png" className="wco-trophy-img" alt="" />
         </div>
 
         <div className="wco-glow" aria-hidden />
+
+        <div className="wco-wordmark" aria-hidden>
+          <img src="/images/trophy-o.png" className="wco-wordmark-o" alt="" />
+          <span className="wco-wordmark-text">ddsify</span>
+        </div>
 
         <h2 id="wco-title" className="wco-title">
           CONGRATULATIONS!
@@ -295,69 +300,6 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
       </div>
 
       <style>{WCO_CSS}</style>
-    </div>
-  );
-}
-
-function GiantTrophy() {
-  return (
-    <div className="wco-trophy-disc">
-      <svg viewBox="0 0 120 120" width="80" height="80" aria-hidden>
-        <defs>
-          <linearGradient id="wtCupBody" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#fff3b8" />
-            <stop offset=".45" stopColor="#f3a01a" />
-            <stop offset=".8" stopColor="#d48700" />
-            <stop offset="1" stopColor="#a86200" />
-          </linearGradient>
-          <linearGradient id="wtCupBase" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#994d00" />
-            <stop offset="1" stopColor="#4d2600" />
-          </linearGradient>
-          <linearGradient id="wtCupShine" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="rgba(255,255,255,0.4)" />
-            <stop offset=".3" stopColor="rgba(255,255,255,0)" />
-          </linearGradient>
-          <radialGradient id="wtGlow" cx="50%" cy="30%" r="55%">
-            <stop offset="0%" stopColor="#ffd76d" stopOpacity=".35" />
-            <stop offset="100%" stopColor="#ffd76d" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <circle cx="60" cy="60" r="55" fill="url(#wtGlow)" opacity="0.7">
-          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
-        </circle>
-        <path d="M26 22 H94 V60 C94 78 80 88 60 88 C40 88 26 78 26 60 Z" fill="url(#wtCupBody)">
-          <animateTransform
-            attributeName="transform"
-            type="scale"
-            values="1;1.03;1"
-            dur="1.8s"
-            repeatCount="indefinite"
-            additive="sum"
-          />
-        </path>
-        <ellipse cx="60" cy="22" rx="34" ry="7" fill="#ffe28a" />
-        <rect x="28" y="20" width="64" height="6" rx="2" fill="url(#wtCupShine)" />
-        <path
-          d="M26 34 Q12 34 13 44 Q14 54 28 54"
-          fill="none"
-          stroke="#cc7a00"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M94 34 Q108 34 107 44 Q106 54 92 54"
-          fill="none"
-          stroke="#cc7a00"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-        />
-        <path d="M52 88 H68 V96 H52 Z" fill="url(#wtCupBase)" />
-        <path d="M40 96 H80 V100 H40 Z" fill="url(#wtCupBase)" />
-        <circle cx="60" cy="48" r="12" fill="#fff3b8" opacity=".65" />
-        <path d="M60 38 l2.8 5.6 6.2 1 -4.5 4.2 1 6.2 -5.5 -3 -5.5 3 1 -6.2 -4.5 -4.2 6.2 -1 z" fill="#a86200" />
-        <path d="M46 24 Q46 18 60 16 Q74 18 74 24" fill="none" stroke="#ffe28a" strokeWidth="2" opacity=".6" />
-      </svg>
     </div>
   );
 }
@@ -460,16 +402,31 @@ const WCO_CSS = `
 .wco-glow {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: 160px; height: 160px;
+  width: 320px; height: 320px;
   background: radial-gradient(circle, rgba(255,200,80,.2) 0%, transparent 70%);
   pointer-events: none;
   animation: wcoGlow 2.2s ease-in-out infinite;
 }
-.wco-trophy-disc {
-  width: 96px; height: 96px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffd76d 0%, #f3a01a 60%, #b06700 100%);
-  display: grid; place-items: center;
-  box-shadow: 0 16px 48px rgba(255,180,50,.4), 0 0 0 4px rgba(255,200,80,.2), 0 0 80px rgba(255,180,50,.15);
+.wco-trophy-img {
+  width: auto; height: 240px;
+  filter: drop-shadow(0 16px 40px rgba(255,180,50,.45));
+}
+
+.wco-wordmark {
+  display: flex; align-items: center; justify-content: center;
+  margin: 2px 0 6px;
+  animation: wcoSubIn .4s ease .25s both;
+}
+.wco-wordmark-o {
+  height: 1.4em; width: auto;
+  margin-right: -0.05em;
+  filter: drop-shadow(0 3px 8px rgba(255,180,50,.5));
+}
+.wco-wordmark-text {
+  font-size: 22px; font-weight: 900;
+  letter-spacing: -.02em;
+  color: #ffd76d;
+  text-shadow: 0 2px 12px rgba(255,180,50,.3);
 }
 
 .wco-title {
@@ -581,8 +538,8 @@ const WCO_CSS = `
   .wco-card { padding: 22px 16px 18px; }
   .wco-title { font-size: 24px; }
   .wco-amount .wco-amt { font-size: 36px; }
-  .wco-trophy-disc { width: 76px; height: 76px; }
-  .wco-trophy-disc svg { width: 64px; height: 64px; }
+  .wco-trophy-img { height: 190px; }
+  .wco-wordmark-text { font-size: 19px; }
   .wco-grid { gap: 6px; }
   .wco-stat { padding: 8px 10px; }
   .wco-stat .wco-val { font-size: 13px; }
@@ -591,7 +548,7 @@ const WCO_CSS = `
   .wco-card { width: min(500px, 90vw); padding: 36px 32px 28px; }
   .wco-title { font-size: 34px; }
   .wco-amount .wco-amt { font-size: 52px; }
-  .wco-trophy-disc { width: 110px; height: 110px; }
-  .wco-trophy-disc svg { width: 90px; height: 90px; }
+  .wco-trophy-img { height: 320px; }
+  .wco-wordmark-text { font-size: 26px; }
 }
 `;
