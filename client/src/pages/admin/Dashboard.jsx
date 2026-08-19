@@ -9,8 +9,9 @@
  *  - System health + alerts feed
  * Auto-refreshes every 30 seconds.
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { adminOverview } from '../../api/adminApi.js';
+import { useVisibilityInterval } from '../../hooks/useVisibilityPolling.js';
 import { Card, Stat, Badge, Empty, Spinner, moneyFmt, numFmt, ago } from '../../components/admin/primitives.jsx';
 import { LineChart, BarChart, PieChart, Heatmap } from '../../components/admin/charts.jsx';
 import {
@@ -47,11 +48,11 @@ export default function Dashboard() {
     }
   }
 
-  useEffect(() => {
-    load();
-    const i = setInterval(() => load(true), 30_000);
-    return () => clearInterval(i);
-  }, []);
+  const firstLoad = useRef(true);
+  useVisibilityInterval(() => {
+    load(!firstLoad.current);
+    firstLoad.current = false;
+  }, 30_000);
 
   const charts = data?.charts;
 

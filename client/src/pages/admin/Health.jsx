@@ -7,9 +7,10 @@
  * Charts are vanilla SVG sparklines so the page has zero chart-lib
  * dependency cost. Refreshes every 30 seconds.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, Badge, Spinner, Empty } from '../../components/admin/primitives.jsx';
 import { adminHealthMetrics } from '../../api/adminApi.js';
+import { useVisibilityInterval } from '../../hooks/useVisibilityPolling.js';
 import { IconActivity, IconAlert, IconLive, IconBot } from '../../components/admin/Icons.jsx';
 
 const REFRESH_MS = 30_000;
@@ -57,26 +58,20 @@ export default function HealthPage() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
 
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
+  useVisibilityInterval(
+    (isLive) =>
       adminHealthMetrics()
         .then((r) => {
-          if (alive) {
+          if (isLive()) {
             setData(r);
             setErr('');
           }
         })
         .catch((e) => {
-          if (alive) setErr(e.message || 'Could not load metrics.');
-        });
-    load();
-    const id = setInterval(load, REFRESH_MS);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+          if (isLive()) setErr(e.message || 'Could not load metrics.');
+        }),
+    REFRESH_MS,
+  );
 
   const series = useMemo(() => {
     if (!data?.buckets) return null;

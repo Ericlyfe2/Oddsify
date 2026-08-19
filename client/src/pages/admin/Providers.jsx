@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { adminProviders, adminProviderLogs, adminProviderRefresh, adminProviderTest } from '../../api/adminApi.js';
 import { onAdmin } from '../../api/adminSocket.js';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
+import { useVisibilityInterval } from '../../hooks/useVisibilityPolling.js';
 import { Card, Badge, Empty, Spinner, ago, dateShort, numFmt } from '../../components/admin/primitives.jsx';
 import {
   IconRefresh,
@@ -41,11 +42,9 @@ export default function ProvidersPage() {
       showToast(e.message, 'error');
     }
   }
-  useEffect(() => {
+  useVisibilityInterval(() => {
     load();
-    const i = setInterval(load, 15_000);
-    return () => clearInterval(i);
-  }, []);
+  }, 15_000);
 
   useEffect(() => {
     const offHealth = onAdmin('provider:health', (snap) => {

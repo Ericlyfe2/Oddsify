@@ -32,6 +32,7 @@ import {
   adminPatchTicket,
 } from '../../api/adminApi.js';
 import { useAdmin } from '../../providers/AdminProvider.jsx';
+import { useVisibilityInterval } from '../../hooks/useVisibilityPolling.js';
 import {
   IconBook,
   IconCash,
@@ -116,21 +117,15 @@ function ComingSoon({ title, intro, items, icon }) {
 /* ---------- Live betting (uses real endpoint) ---------- */
 export function LiveBettingPage() {
   const [bets, setBets] = useState(null);
-  useEffect(() => {
-    let live = true;
-    const tick = () =>
+  useVisibilityInterval(
+    (isLive) =>
       adminLiveBets()
         .then((r) => {
-          if (live) setBets(r.bets);
+          if (isLive()) setBets(r.bets);
         })
-        .catch(() => {});
-    tick();
-    const i = setInterval(tick, 8000);
-    return () => {
-      live = false;
-      clearInterval(i);
-    };
-  }, []);
+        .catch(() => {}),
+    8000,
+  );
   return (
     <>
       <header className="adm-page-head">
@@ -672,21 +667,17 @@ export function FinancePage() {
   const [filter, setFilter] = useState('all');
   const [err, setErr] = useState('');
 
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
+  useVisibilityInterval(
+    (isLive) =>
       adminFinance()
         .then((r) => {
-          if (alive) setData(r);
+          if (isLive()) setData(r);
         })
-        .catch((e) => setErr(e.message));
-    load();
-    const id = setInterval(load, 15_000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+        .catch((e) => {
+          if (isLive()) setErr(e.message);
+        }),
+    15_000,
+  );
 
   const filtered = useMemo(() => {
     if (!data?.transactions) return [];
@@ -1151,21 +1142,15 @@ export function SupportPage() {
 export function FraudPage() {
   const [data, setData] = useState(null);
   const [minScore, setMinScore] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
+  useVisibilityInterval(
+    (isLive) =>
       adminFraud()
         .then((r) => {
-          if (alive) setData(r);
+          if (isLive()) setData(r);
         })
-        .catch(() => {});
-    load();
-    const id = setInterval(load, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
+        .catch(() => {}),
+    30_000,
+  );
 
   const signals = useMemo(() => (data?.signals || []).filter((s) => s.score >= minScore), [data, minScore]);
 
