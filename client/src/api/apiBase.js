@@ -7,7 +7,7 @@
  * value here is what makes a mis-set VITE_API_BASE fail as a confusing 405 on
  * login rather than an obvious connection error.
  */
-const BACKEND_ORIGIN = 'https://oddsify.onrender.com';
+const BACKEND_ORIGIN = 'https://oddsify-api-production.up.railway.app';
 const DEV_ORIGIN = 'http://127.0.0.1:4000';
 
 const isLocalHost =
