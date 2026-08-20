@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+client/dist
+server/data
+.git
+.github
+.vercel
+.claude
+docs
+scripts
+.env
+.env.*
+*.log

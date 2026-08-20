@@ -4,10 +4,10 @@
  * in side-by-side in the same browser without stepping on each other.
  */
 
-// See betApi.js — set VITE_API_BASE in production to point at the backend host.
-// If unset in production, falls back to the Render backend automatically.
-const DEFAULT_PROD_API = import.meta.env.PROD ? 'https://oddsify.onrender.com' : '';
-const API_BASE = (import.meta.env.VITE_API_BASE || DEFAULT_PROD_API) + '/api/admin';
+import { API_ORIGIN } from './apiBase.js';
+
+// See apiBase.js — set VITE_API_BASE in production to point at the backend host.
+const API_BASE = API_ORIGIN + '/api/admin';
 const ACCESS = 'sp_admin_access';
 const REFRESH = 'sp_admin_refresh';
 
