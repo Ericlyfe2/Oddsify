@@ -213,13 +213,13 @@ async function boot() {
   // synchronous get/set in route handlers is safe.
   await initStores();
 
-  // Production safety: refuse to boot on Render's free-tier ephemeral disk
-  // when no DATABASE_URL is set. Without persistence, every user account
-  // gets wiped on each restart and the operator cannot understand why
-  // logins keep failing. Surface the misconfiguration loudly instead.
+  // Production safety: refuse to boot on an ephemeral container disk when no
+  // DATABASE_URL is set. Without persistence, every user account gets wiped
+  // on each restart and the operator cannot understand why logins keep
+  // failing. Surface the misconfiguration loudly instead.
   if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
     log.error(
-      'DATABASE_URL is not set in production. Refusing to boot — set the Neon connection string in the Render dashboard or remove NODE_ENV=production for local testing.',
+      'DATABASE_URL is not set in production. Refusing to boot - set the Neon pooled connection string (including ?sslmode=require) in the host environment variables, or remove NODE_ENV=production for local testing.',
     );
     process.exit(1);
   }
