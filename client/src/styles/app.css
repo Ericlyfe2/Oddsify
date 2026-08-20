@@ -4625,3 +4625,50 @@ nav a:active {
     transform: scale(0.6);
   }
 }
+
+/* ---- Maintenance screen ------------------------------------------------ */
+/* Shown in place of the whole storefront while maintenance mode is on.
+   Uses the existing tokens so it follows light/dark like everything else. */
+.maint-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--fg, inherit);
+}
+.maint-card {
+  max-width: 460px;
+  text-align: center;
+  background: var(--bg-soft);
+  border: 1px solid var(--gold-soft);
+  border-radius: 16px;
+  padding: 40px 28px;
+}
+.maint-mark {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+  margin-bottom: 20px;
+}
+.maint-card h1 {
+  margin: 0 0 10px;
+  font-size: 1.5rem;
+}
+.maint-card p {
+  margin: 0 0 24px;
+  opacity: 0.8;
+  line-height: 1.55;
+}
+.maint-card button {
+  background: var(--gold);
+  color: var(--gold-ink);
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.maint-card button:hover {
+  filter: brightness(1.06);
+}

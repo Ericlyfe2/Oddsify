@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppProviders from './providers/AccountProvider.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import MaintenanceGate from './components/MaintenanceGate.jsx';
 import ScrollRestoration from './components/ScrollRestoration.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import AppShell from './layout/AppShell.jsx';
@@ -139,7 +140,8 @@ export default function App() {
         <Route
           path="/*"
           element={
-            <AppProviders>
+            <MaintenanceGate>
+              <AppProviders>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterRedirect />} />
@@ -281,7 +283,8 @@ export default function App() {
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>
-            </AppProviders>
+              </AppProviders>
+            </MaintenanceGate>
           }
         />
       </Routes>

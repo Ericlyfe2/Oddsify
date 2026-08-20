@@ -44,6 +44,7 @@ import adminMgmtMatchesRouter from './routes/admin/management-matches.js';
 import adminMgmtMarketsRouter from './routes/admin/management-markets.js';
 import adminMgmtResultsRouter from './routes/admin/management-results.js';
 import adminMaintenanceRouter from './routes/admin/maintenance.js';
+import { maintenanceGate } from './middleware/maintenance.js';
 import { seedAdmins } from './db/seedAdmins.js';
 import { seedTemplates } from './db/marketTemplates.js';
 import { backfillVerification } from './db/backfillVerification.js';
@@ -108,6 +109,10 @@ app.use(
 app.use(express.json({ limit: '256kb' }));
 app.use(metricsMiddleware);
 app.use('/api', apiLimiter);
+
+// Blocks player traffic with 503 while maintenance mode is on. Read per
+// request, so the admin toggle takes effect immediately.
+app.use(maintenanceGate);
 
 // Render exposes the commit SHA of the current deploy as RENDER_GIT_COMMIT.
 // Surface it on /api/health so we can confirm which build is live without
