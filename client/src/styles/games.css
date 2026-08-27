@@ -6,8 +6,8 @@
   --cv-bg: #000000;
   --cv-felt: #0c4a2a;
   --cv-felt-2: #093d22;
-  --cv-gold: #ffd166;
-  --cv-gold-2: #d4a72c;
+  --cv-gold: #7ed957;
+  --cv-gold-2: #15803d;
   --cv-red: #ef3b3b;
   --cv-red-2: #c81e1e;
   --cv-line: rgba(255, 255, 255, 0.08);
@@ -45,10 +45,10 @@ html[data-theme='light'] .cv2 {
   z-index: 0;
   background:
     radial-gradient(2px 2px at 12% 22%, #fff7, transparent 60%),
-    radial-gradient(2px 2px at 28% 65%, #ffd16677, transparent 60%),
+    radial-gradient(2px 2px at 28% 65%, #7ed95777, transparent 60%),
     radial-gradient(2px 2px at 55% 35%, #fff5, transparent 60%),
     radial-gradient(2px 2px at 76% 70%, #fff6, transparent 60%),
-    radial-gradient(2px 2px at 88% 28%, #ffd16688, transparent 60%);
+    radial-gradient(2px 2px at 88% 28%, #7ed95788, transparent 60%);
   opacity: 0.8;
   animation: cv-twinkle 4.5s ease-in-out infinite alternate;
 }
