@@ -403,13 +403,13 @@ const WCO_CSS = `
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 320px; height: 320px;
-  background: radial-gradient(circle, rgba(255,200,80,.2) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(126,217,87,.2) 0%, transparent 70%);
   pointer-events: none;
   animation: wcoGlow 2.2s ease-in-out infinite;
 }
 .wco-trophy-img {
   width: auto; height: 240px;
-  filter: drop-shadow(0 16px 40px rgba(255,180,50,.45));
+  filter: drop-shadow(0 16px 40px rgba(126,217,87,.45));
 }
 
 .wco-wordmark {
@@ -420,13 +420,13 @@ const WCO_CSS = `
 .wco-wordmark-o {
   height: 1.4em; width: auto;
   margin-right: -0.05em;
-  filter: drop-shadow(0 3px 8px rgba(255,180,50,.5));
+  filter: drop-shadow(0 3px 8px rgba(126,217,87,.5));
 }
 .wco-wordmark-text {
   font-size: 22px; font-weight: 900;
   letter-spacing: -.02em;
   color: #ffd76d;
-  text-shadow: 0 2px 12px rgba(255,180,50,.3);
+  text-shadow: 0 2px 12px rgba(126,217,87,.3);
 }
 
 .wco-title {
@@ -454,7 +454,7 @@ const WCO_CSS = `
   font-size: 46px; font-weight: 900;
   letter-spacing: -.025em;
   color: #ffd76d;
-  text-shadow: 0 6px 28px rgba(255,180,50,.35);
+  text-shadow: 0 6px 28px rgba(126,217,87,.35);
 }
 .wco-meta {
   font-size: 12px;

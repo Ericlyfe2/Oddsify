@@ -243,7 +243,7 @@ const JP_CSS = `
 .jp-hero-bg {
   position: absolute; inset: -10%;
   background:
-    radial-gradient(540px 320px at 90% -20%, rgba(255, 181, 71, .22), transparent 60%),
+    radial-gradient(540px 320px at 90% -20%, rgba(126, 217, 87, .22), transparent 60%),
     radial-gradient(420px 280px at -10% 110%, rgba(34, 197, 94, .12), transparent 60%);
   pointer-events: none;
 }
@@ -254,8 +254,8 @@ const JP_CSS = `
 .jp-badge {
   font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
   padding: 4px 10px; border-radius: 999px;
-  background: rgba(255, 181, 71, .14);
-  color: var(--accent-warm);
+  background: rgba(126, 217, 87, .14);
+  color: var(--accent);
 }
 .jp-badge.jp-badge-cool { background: rgba(106, 208, 255, .12); color: var(--accent-cool); }
 .jp-badge.jp-badge-warm { background: rgba(34, 197, 94, .14); color: var(--accent); }
@@ -278,7 +278,7 @@ const JP_CSS = `
   font-size: 48px; font-weight: 900; letter-spacing: -.02em;
   background: linear-gradient(120deg, #ffd76d, #ffb547 50%, #ff9f1c);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 8px 30px rgba(255, 181, 71, .35);
+  text-shadow: 0 8px 30px rgba(126, 217, 87, .35);
 }
 
 .jp-countdown {

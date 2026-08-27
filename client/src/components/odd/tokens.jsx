@@ -45,7 +45,7 @@ const T_LIGHT = {
   surfaceAlt: '#f3fbf1',
   ink: '#172117',
   inkSoft: '#657365',
-  inkDim: '#93a693',
+  inkDim: '#5f7560',
   line: 'rgba(23, 33, 23, 0.08)',
   lineStrong: 'rgba(23, 33, 23, 0.16)',
   headerBg: 'rgba(255, 255, 255, 0.86)',
