@@ -21,7 +21,7 @@
   color: var(--cv-text);
   font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(255, 209, 102, 0.1), transparent 60%),
+    radial-gradient(1200px 600px at 20% -10%, rgba(126, 217, 87, 0.1), transparent 60%),
     radial-gradient(900px 600px at 110% 20%, rgba(239, 59, 59, 0.1), transparent 65%),
     radial-gradient(700px 500px at 50% 110%, rgba(20, 184, 122, 0.12), transparent 70%),
     linear-gradient(180deg, #000000 0%, #0c1411 60%, #08120d 100%);
@@ -31,7 +31,7 @@ html[data-theme='light'] .cv2 {
   --cv-text: #0f1413;
   --cv-muted: rgba(15, 20, 19, 0.62);
   background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(255, 209, 102, 0.18), transparent 60%),
+    radial-gradient(1200px 600px at 20% -10%, rgba(126, 217, 87, 0.18), transparent 60%),
     radial-gradient(900px 600px at 110% 20%, rgba(239, 59, 59, 0.1), transparent 65%),
     linear-gradient(180deg, #f6f7f5 0%, #eef3f0 100%);
 }
@@ -85,8 +85,8 @@ html[data-theme='light'] .cv2 {
   width: fit-content;
   padding: 5px 12px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 209, 102, 0.18), rgba(255, 209, 102, 0.06));
-  border: 1px solid rgba(255, 209, 102, 0.35);
+  background: linear-gradient(135deg, rgba(126, 217, 87, 0.18), rgba(126, 217, 87, 0.06));
+  border: 1px solid rgba(126, 217, 87, 0.35);
   color: var(--cv-gold);
   font-size: 11px;
   font-weight: 800;
@@ -126,7 +126,7 @@ html[data-theme='light'] .cv2 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 32px rgba(255, 209, 102, 0.4);
+  text-shadow: 0 0 32px rgba(126, 217, 87, 0.4);
 }
 .cv-lede {
   font-size: 15px;
@@ -182,12 +182,12 @@ html[data-theme='light'] .cv-stats {
   padding: 20px 22px;
   margin-bottom: 28px;
   background:
-    radial-gradient(120% 80% at 100% 0%, rgba(255, 209, 102, 0.3), transparent 55%),
+    radial-gradient(120% 80% at 100% 0%, rgba(126, 217, 87, 0.3), transparent 55%),
     linear-gradient(135deg, #0c4a2a 0%, #06301a 100%);
-  border: 1px solid rgba(255, 209, 102, 0.25);
+  border: 1px solid rgba(126, 217, 87, 0.25);
   box-shadow:
     0 18px 50px rgba(0, 0, 0, 0.4),
-    inset 0 0 80px rgba(255, 209, 102, 0.05);
+    inset 0 0 80px rgba(126, 217, 87, 0.05);
   overflow: hidden;
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -321,7 +321,7 @@ html[data-theme='light'] .cv-card {
 }
 .cv-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(255, 209, 102, 0.45);
+  border-color: rgba(126, 217, 87, 0.45);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.45);
 }
 /* zentrixbet casinoShine — diagonal light sweep across game cards */
@@ -609,7 +609,7 @@ html[data-theme='light'] .cv-winner-row {
   --gp-felt: #0f5132;
   --gp-felt-dark: #093a23;
   --gp-felt-edge: #062a17;
-  --gp-gold: #ffd166;
+  --gp-gold: #7ed957;
   --gp-red: #c81e1e;
   --gp-black: #1a1a1a;
   --gp-text: #f3f4f6;
@@ -866,7 +866,7 @@ html[data-theme='light'] .cv-winner-row {
   text-transform: uppercase;
 }
 .gp-result.win {
-  color: #ffd166;
+  color: #7ed957;
 }
 .gp-result.lose {
   color: #ff9a9a;
@@ -903,7 +903,7 @@ html[data-theme='light'] .cv-winner-row {
   background: linear-gradient(135deg, #2a2a2a, #0a0a0a);
 }
 .gp-action.gold {
-  background: linear-gradient(135deg, #ffd166, #c08a00);
+  background: linear-gradient(135deg, #7ed957, #15803d);
   color: #1a1a1a;
 }
 .gp-action:hover:not(:disabled) {
@@ -1016,7 +1016,7 @@ html[data-theme='light'] .cv-winner-row {
 .s2w-cell.has-bet {
   box-shadow:
     0 0 0 2px var(--gp-gold),
-    0 0 12px rgba(255, 209, 102, 0.5);
+    0 0 12px rgba(126, 217, 87, 0.5);
 }
 .s2w-cell.winning {
   animation: s2w-pulse 0.8s ease-in-out 3;
