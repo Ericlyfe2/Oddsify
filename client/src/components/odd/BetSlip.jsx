@@ -12,6 +12,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTokens, fmtCedi } from './tokens.jsx';
 import OddIcon from './Icon.jsx';
 import { TeamLogo } from './teamBranding.jsx';
@@ -685,9 +686,15 @@ export function OddBetSlip() {
                   <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 4 }}>Tap any odds to add selections.</div>
                 </div>
               ) : (
-                entries.map((e) => (
-                  <div
+                <AnimatePresence initial={false}>
+                {entries.map((e) => (
+                  <motion.div
                     key={e.match.id}
+                    layout
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 40 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
                     style={{
                       padding: '12px 0',
                       borderBottom: `1px solid ${T.line}`,
@@ -783,8 +790,9 @@ export function OddBetSlip() {
                         </div>
                       </div>
                     )}
-                  </div>
-                ))
+                  </motion.div>
+                ))}
+                </AnimatePresence>
               )}
             </div>
 
