@@ -27,7 +27,7 @@ function fmtPct(n) {
   return `${(n * 100).toFixed(2)}%`;
 }
 
-function Sparkline({ data, height = 56, stroke = '#7c5cff', fill = 'rgba(124,92,255,0.18)' }) {
+function Sparkline({ data, height = 56, stroke = '#16a34a', fill = 'rgba(22, 163, 74,0.18)' }) {
   if (!data || data.length === 0) return <div style={{ height, color: 'var(--text-dim)', fontSize: 12 }}>No data</div>;
   const max = Math.max(1, ...data);
   const w = 600;
@@ -143,7 +143,7 @@ export default function HealthPage() {
               }
             >
               {series && series.reqs.some((v) => v > 0) ? (
-                <Sparkline data={series.reqs} stroke="#7c5cff" fill="rgba(124,92,255,0.18)" />
+                <Sparkline data={series.reqs} stroke="#16a34a" fill="rgba(22, 163, 74,0.18)" />
               ) : (
                 <Empty title="No traffic yet" subtitle="Charts populate once requests are recorded." />
               )}

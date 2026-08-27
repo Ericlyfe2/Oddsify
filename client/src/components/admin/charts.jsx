@@ -28,7 +28,7 @@ function niceMax(v) {
   return nice * Math.pow(10, exp);
 }
 
-export function Sparkline({ data = [], width = 120, height = 36, stroke = '#7c5cff', fill = 'rgba(124,92,255,.18)' }) {
+export function Sparkline({ data = [], width = 120, height = 36, stroke = '#16a34a', fill = 'rgba(22, 163, 74,.18)' }) {
   if (!data.length)
     return <svg className="adm-spark" viewBox={`0 0 ${width} ${height}`} width="100%" height={height} />;
   const max = Math.max(...data, 1);
@@ -134,8 +134,8 @@ export function LineChart({ series = [], height = 220, area = true, yFormat = (v
         {/* series */}
         {seriesGeom.map((s, idx) => (
           <g key={s.key || idx}>
-            {area && <path d={s.areaPath} fill={s.color || '#7c5cff'} opacity=".14" />}
-            <path d={s.linePath} fill="none" stroke={s.color || '#7c5cff'} strokeWidth="2.2" strokeLinecap="round" />
+            {area && <path d={s.areaPath} fill={s.color || '#16a34a'} opacity=".14" />}
+            <path d={s.linePath} fill="none" stroke={s.color || '#16a34a'} strokeWidth="2.2" strokeLinecap="round" />
             {hover &&
               (() => {
                 const idx2 = uniqXs.indexOf(hover.label);
@@ -145,7 +145,7 @@ export function LineChart({ series = [], height = 220, area = true, yFormat = (v
                     cx={pt.x}
                     cy={pt.y}
                     r="4"
-                    fill={s.color || '#7c5cff'}
+                    fill={s.color || '#16a34a'}
                     stroke="rgba(0,0,0,.5)"
                     strokeWidth="1.5"
                   />
@@ -178,7 +178,7 @@ export function LineChart({ series = [], height = 220, area = true, yFormat = (v
                   width: 8,
                   height: 8,
                   borderRadius: 2,
-                  background: s.color || '#7c5cff',
+                  background: s.color || '#16a34a',
                   display: 'inline-block',
                 }}
               />
@@ -195,7 +195,7 @@ export function LineChart({ series = [], height = 220, area = true, yFormat = (v
 export function BarChart({
   data = [],
   height = 220,
-  color = '#22d3ee',
+  color = '#7ed957',
   yFormat = (v) => v,
   labelKey = 'date',
   valueKey = 'value',
@@ -271,7 +271,7 @@ export function PieChart({
   data = [],
   size = 200,
   donut = 0.62,
-  palette = ['#7c5cff', '#22d3ee', '#18f0a1', '#ffb547', '#ff5d6c', '#ff5fb1', '#4f8bff'],
+  palette = ['#16a34a', '#7ed957', '#18f0a1', '#ffb547', '#ff5d6c', '#ff5fb1', '#22c55e'],
 }) {
   const total = data.reduce((s, d) => s + (Number(d.value) || 0), 0) || 1;
   let a = -Math.PI / 2;

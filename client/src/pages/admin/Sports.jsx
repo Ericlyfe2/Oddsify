@@ -458,7 +458,7 @@ export default function SportsAdmin() {
 
 function StatTile({ label, value }) {
   return (
-    <div className="adm-stat" style={{ '--accentGrad': 'linear-gradient(135deg,#7c5cff,#22d3ee)' }}>
+    <div className="adm-stat" style={{ '--accentGrad': 'linear-gradient(135deg,#16a34a,#7ed957)' }}>
       <div className="lbl">{label}</div>
       <div className="val">{value ?? '—'}</div>
     </div>

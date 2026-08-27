@@ -94,7 +94,7 @@ export default function StatsAdmin() {
           label="GGR"
           value={moneyFmt(summary?.ggr)}
           icon={<IconCash size={16} />}
-          accent="linear-gradient(135deg,#7c5cff,#22d3ee)"
+          accent="linear-gradient(135deg,#16a34a,#7ed957)"
           delta={
             summary?.ggr >= 0
               ? { direction: 'up', label: `${summary?.hold || 0}% hold` }
@@ -105,7 +105,7 @@ export default function StatsAdmin() {
           label="Stake"
           value={moneyFmt(summary?.stake)}
           icon={<IconActivity size={16} />}
-          accent="linear-gradient(135deg,#22d3ee,#18f0a1)"
+          accent="linear-gradient(135deg,#7ed957,#18f0a1)"
         />
         <Stat label="ARPU" value={moneyFmt(summary?.arpu)} icon={<IconArrowUp size={16} />} />
         <Stat label="Active players" value={numFmt(summary?.playerCount)} icon={<IconUsers size={16} />} />
@@ -121,7 +121,7 @@ export default function StatsAdmin() {
           subtitle="Daily active bettors against new registrations"
         >
           <div className="adm-legend" style={{ marginBottom: 8 }}>
-            <span className="lg" style={{ '--c': '#7c5cff' }}>
+            <span className="lg" style={{ '--c': '#16a34a' }}>
               DAU
             </span>
             <span className="lg" style={{ '--c': '#18f0a1' }}>
@@ -132,7 +132,7 @@ export default function StatsAdmin() {
             height={260}
             yFormat={(v) => v}
             series={[
-              { key: 'dau', label: 'DAU', color: '#7c5cff', data: daily.map((d) => ({ date: d.date, y: d.dau })) },
+              { key: 'dau', label: 'DAU', color: '#16a34a', data: daily.map((d) => ({ date: d.date, y: d.dau })) },
               {
                 key: 'sgn',
                 label: 'Signups',
@@ -210,7 +210,7 @@ export default function StatsAdmin() {
                     <td className="num">{c.size}</td>
                     {c.retention.map((r, i) => {
                       const pct = r.pct;
-                      const bg = pct === 0 ? 'transparent' : `rgba(124,92,255,${0.1 + Math.min(pct / 100, 0.9)})`;
+                      const bg = pct === 0 ? 'transparent' : `rgba(22, 163, 74,${0.1 + Math.min(pct / 100, 0.9)})`;
                       return (
                         <td key={i} className="num" style={{ background: bg, fontWeight: pct > 0 ? 600 : 400 }}>
                           {pct > 0 ? `${pct}%` : '·'}

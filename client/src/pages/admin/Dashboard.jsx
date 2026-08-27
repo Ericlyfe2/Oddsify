@@ -92,14 +92,14 @@ export default function Dashboard() {
           label="GGR · 24h"
           value={moneyFmt(data?.kpis?.ggr24h)}
           icon={<IconCash size={16} />}
-          accent="linear-gradient(135deg,#7c5cff,#22d3ee)"
+          accent="linear-gradient(135deg,#16a34a,#7ed957)"
           delta={{ direction: 'up', label: '12.4%' }}
         />
         <Stat
           label="Stake · 24h"
           value={moneyFmt(data?.kpis?.stake24h)}
           icon={<IconReceipt size={16} />}
-          accent="linear-gradient(135deg,#22d3ee,#18f0a1)"
+          accent="linear-gradient(135deg,#7ed957,#18f0a1)"
           delta={{ direction: 'up', label: '8.1%' }}
         />
         <Stat
@@ -107,7 +107,7 @@ export default function Dashboard() {
           prefix=""
           value={numFmt(data?.kpis?.onlineUsers)}
           icon={<IconUsers size={16} />}
-          accent="linear-gradient(135deg,#18f0a1,#7c5cff)"
+          accent="linear-gradient(135deg,#18f0a1,#16a34a)"
         />
         <Stat
           label="Bets · 24h"
@@ -155,10 +155,10 @@ export default function Dashboard() {
           ) : (
             <>
               <div className="adm-legend" style={{ marginBottom: 8 }}>
-                <span className="lg" style={{ '--c': '#7c5cff' }}>
+                <span className="lg" style={{ '--c': '#16a34a' }}>
                   GGR
                 </span>
-                <span className="lg" style={{ '--c': '#22d3ee' }}>
+                <span className="lg" style={{ '--c': '#7ed957' }}>
                   Stake
                 </span>
               </div>
@@ -169,13 +169,13 @@ export default function Dashboard() {
                   {
                     key: 'ggr',
                     label: 'GGR',
-                    color: '#7c5cff',
+                    color: '#16a34a',
                     data: (charts?.revenueByDay || []).map((d) => ({ date: d.date, y: d.revenue })),
                   },
                   {
                     key: 'stake',
                     label: 'Stake',
-                    color: '#22d3ee',
+                    color: '#7ed957',
                     data: (charts?.betsByDay || []).map((d) => ({ date: d.date, y: d.stake })),
                   },
                 ]}
@@ -227,7 +227,7 @@ export default function Dashboard() {
           ) : (
             <BarChart
               height={220}
-              color="#22d3ee"
+              color="#7ed957"
               data={(charts?.betsByDay || []).map((d) => ({ date: d.date, value: d.bets }))}
             />
           )}

@@ -48,7 +48,7 @@ function toBookingCode(id = '') {
 const STAGE_LABELS = { 0: 'In review', 1: 'Verified', 2: 'Trusted', 3: 'Approved', 4: 'VIP' };
 const STAGE_GRADIENTS = {
   0: 'linear-gradient(135deg, #475569 0%, #94a3b8 100%)',
-  1: 'linear-gradient(135deg, #7c5cff 0%, #22d3ee 100%)',
+  1: 'linear-gradient(135deg, #16a34a 0%, #7ed957 100%)',
   2: 'linear-gradient(135deg, #f5a623 0%, #ff6b1a 100%)',
   3: 'linear-gradient(135deg, #18f0a1 0%, #1aa46a 100%)',
   4: 'linear-gradient(135deg, #ffd166 0%, #ff8a3d 100%)',
@@ -730,7 +730,7 @@ function BulkDeleteModal({ open, count, onClose, onConfirm }) {
 
 function StatTile({ label, value }) {
   return (
-    <div className="adm-stat" style={{ '--accentGrad': 'linear-gradient(135deg,#7c5cff,#22d3ee)' }}>
+    <div className="adm-stat" style={{ '--accentGrad': 'linear-gradient(135deg,#16a34a,#7ed957)' }}>
       <div className="lbl">{label}</div>
       <div className="val">{value}</div>
     </div>

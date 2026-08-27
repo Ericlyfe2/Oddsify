@@ -423,7 +423,7 @@ function AdminInvitesCard() {
             style={{
               padding: 12,
               marginBottom: 14,
-              background: 'linear-gradient(135deg, rgba(24,240,161,.08), rgba(124,92,255,.08))',
+              background: 'linear-gradient(135deg, rgba(24,240,161,.08), rgba(22, 163, 74,.08))',
               border: '1px solid rgba(24,240,161,.25)',
               borderRadius: 12,
             }}
@@ -1100,7 +1100,7 @@ export function SupportPage() {
                   key={i}
                   style={{
                     background:
-                      'var(--grad-brand, linear-gradient(135deg, rgba(124,92,255,.08), rgba(24,240,161,.08)))',
+                      'var(--grad-brand, linear-gradient(135deg, rgba(22, 163, 74,.08), rgba(24,240,161,.08)))',
                     borderRadius: 10,
                     padding: 14,
                   }}

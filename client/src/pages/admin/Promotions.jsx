@@ -132,7 +132,7 @@ function PromoCard({ p, onEdit, onToggle, onDelete, canMutate }) {
           position: 'relative',
           background: p.image
             ? `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.7) 100%), url(${p.image}) center/cover`
-            : `linear-gradient(135deg, ${p.accent || '#7c5cff'} 0%, #22d3ee 100%)`,
+            : `linear-gradient(135deg, ${p.accent || '#16a34a'} 0%, #7ed957 100%)`,
           color: '#fff',
           padding: 16,
           display: 'flex',
@@ -191,7 +191,7 @@ function PromoEditor({ open, promo, onClose, onSaved, showToast }) {
     body: '',
     badge: 'OFFER',
     cta: 'Opt in',
-    accent: '#7c5cff',
+    accent: '#16a34a',
     image: '',
     eligibility: 'all',
     minDeposit: 0,
@@ -209,7 +209,7 @@ function PromoEditor({ open, promo, onClose, onSaved, showToast }) {
         body: '',
         badge: 'OFFER',
         cta: 'Opt in',
-        accent: '#7c5cff',
+        accent: '#16a34a',
         image: '',
         eligibility: 'all',
         minDeposit: 0,
@@ -392,7 +392,7 @@ function PromoEditor({ open, promo, onClose, onSaved, showToast }) {
                 border: '1px solid var(--border)',
                 background: form.image
                   ? `url(${form.image}) center/cover`
-                  : `linear-gradient(135deg, ${form.accent || '#7c5cff'} 0%, #22d3ee 100%)`,
+                  : `linear-gradient(135deg, ${form.accent || '#16a34a'} 0%, #7ed957 100%)`,
                 minHeight: 340,
                 padding: 18,
                 color: '#fff',

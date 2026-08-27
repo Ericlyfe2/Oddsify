@@ -1,5 +1,5 @@
 /* =========================================================================
-   ODDSIFY — Admin theme
+   BETNEXA — Admin theme
    Glassmorphism + dark/light + premium enterprise tokens.
    Tokens live on [data-admin-root] so the storefront styles are untouched.
    ========================================================================= */
@@ -14,34 +14,34 @@
   --surface-soft: rgba(255, 255, 255, 0.03);
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --ring: rgba(124, 92, 255, 0.55);
+  --ring: rgba(22, 163, 74, 0.55);
 
   --text: #f1f3f9;
   --text-soft: #c7cad6;
   --text-dim: #8c91a3;
   --text-mute: #5d6275;
 
-  --brand: #7c5cff;
-  --brand-2: #4f8bff;
-  --brand-3: #22d3ee;
+  --brand: #16a34a;
+  --brand-2: #22c55e;
+  --brand-3: #7ed957;
   --accent: #18f0a1;
   --warn: #ffb547;
   --danger: #ff5d6c;
-  --info: #4f8bff;
+  --info: #2563eb;
   --magenta: #ff5fb1;
 
   --grad-aurora:
-    radial-gradient(1200px 600px at 5% -10%, rgba(124, 92, 255, 0.32), transparent 60%),
-    radial-gradient(900px 700px at 100% 0%, rgba(34, 211, 238, 0.18), transparent 55%),
+    radial-gradient(1200px 600px at 5% -10%, rgba(22, 163, 74, 0.32), transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, rgba(126, 217, 87, 0.18), transparent 55%),
     radial-gradient(700px 700px at 50% 100%, rgba(24, 240, 161, 0.12), transparent 60%);
-  --grad-brand: linear-gradient(135deg, #7c5cff 0%, #4f8bff 60%, #22d3ee 100%);
-  --grad-success: linear-gradient(135deg, #18f0a1 0%, #22d3ee 100%);
+  --grad-brand: linear-gradient(135deg, #16a34a 0%, #22c55e 60%, #7ed957 100%);
+  --grad-success: linear-gradient(135deg, #18f0a1 0%, #7ed957 100%);
   --grad-warn: linear-gradient(135deg, #ffb547 0%, #ff7e6b 100%);
   --grad-danger: linear-gradient(135deg, #ff5d6c 0%, #ff5fb1 100%);
 
   --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.32);
   --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 48px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 0 1px rgba(124, 92, 255, 0.4), 0 18px 60px rgba(124, 92, 255, 0.28);
+  --shadow-glow: 0 0 0 1px rgba(22, 163, 74, 0.4), 0 18px 60px rgba(22, 163, 74, 0.28);
 
   --radius-sm: 8px;
   --radius: 14px;
@@ -66,7 +66,7 @@
   --surface-soft: rgba(0, 12, 64, 0.03);
   --border: rgba(11, 22, 64, 0.08);
   --border-strong: rgba(11, 22, 64, 0.18);
-  --ring: rgba(124, 92, 255, 0.45);
+  --ring: rgba(22, 163, 74, 0.45);
 
   --text: #0e1330;
   --text-soft: #2e3559;
@@ -75,11 +75,11 @@
 
   --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 24px rgba(28, 34, 87, 0.08);
   --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 18px 48px rgba(28, 34, 87, 0.14);
-  --shadow-glow: 0 0 0 1px rgba(124, 92, 255, 0.35), 0 18px 60px rgba(124, 92, 255, 0.18);
+  --shadow-glow: 0 0 0 1px rgba(22, 163, 74, 0.35), 0 18px 60px rgba(22, 163, 74, 0.18);
 
   --grad-aurora:
-    radial-gradient(1200px 600px at 5% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
-    radial-gradient(900px 700px at 100% 0%, rgba(34, 211, 238, 0.12), transparent 55%);
+    radial-gradient(1200px 600px at 5% -10%, rgba(22, 163, 74, 0.18), transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, rgba(126, 217, 87, 0.12), transparent 55%);
 }
 
 /* ============== root layout ============== */
@@ -213,9 +213,9 @@
   color: var(--text);
 }
 .adm-nav a.active {
-  background: linear-gradient(135deg, rgba(124, 92, 255, 0.18), rgba(34, 211, 238, 0.08));
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.18), rgba(126, 217, 87, 0.08));
   color: var(--text);
-  box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.35);
 }
 .adm-nav a.active::before {
   content: '';
@@ -374,7 +374,7 @@
   color: var(--text-mute);
 }
 .adm-search input:focus {
-  border-color: rgba(124, 92, 255, 0.7);
+  border-color: rgba(22, 163, 74, 0.7);
   box-shadow: 0 0 0 4px var(--ring);
 }
 .adm-search .icn {
@@ -659,11 +659,11 @@
   background: var(--grad-brand);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 8px 22px rgba(124, 92, 255, 0.32);
+  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.32);
 }
 .adm-btn.primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(124, 92, 255, 0.46);
+  box-shadow: 0 12px 28px rgba(22, 163, 74, 0.46);
 }
 .adm-btn.success {
   background: var(--grad-success);
@@ -720,14 +720,14 @@
   border-color: rgba(255, 93, 108, 0.24);
 }
 .adm-badge.info {
-  background: rgba(79, 139, 255, 0.12);
+  background: rgba(34, 197, 94, 0.12);
   color: var(--info);
-  border-color: rgba(79, 139, 255, 0.22);
+  border-color: rgba(34, 197, 94, 0.22);
 }
 .adm-badge.brand {
-  background: rgba(124, 92, 255, 0.14);
+  background: rgba(22, 163, 74, 0.14);
   color: var(--brand);
-  border-color: rgba(124, 92, 255, 0.24);
+  border-color: rgba(22, 163, 74, 0.24);
 }
 .adm-badge.dot::before {
   content: '';
@@ -774,7 +774,7 @@
 }
 .adm-table-toolbar input:focus,
 .adm-table-toolbar select:focus {
-  border-color: rgba(124, 92, 255, 0.7);
+  border-color: rgba(22, 163, 74, 0.7);
   box-shadow: 0 0 0 3px var(--ring);
 }
 .adm-table-scroll {
@@ -813,7 +813,7 @@
   cursor: pointer;
 }
 .adm-table tbody tr.selected {
-  background: rgba(124, 92, 255, 0.08);
+  background: rgba(22, 163, 74, 0.08);
 }
 .adm-table td {
   padding: 12px 14px;
@@ -1013,7 +1013,7 @@
 .adm-input:focus,
 .adm-select:focus,
 .adm-textarea:focus {
-  border-color: rgba(124, 92, 255, 0.7);
+  border-color: rgba(22, 163, 74, 0.7);
   box-shadow: 0 0 0 3px var(--ring);
 }
 .adm-input.err {
@@ -1072,7 +1072,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--brand);
-  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
 }
 .adm-list-feed .row .dot.warn {
   background: var(--warn);
@@ -1128,17 +1128,17 @@
   background: var(--surface-soft);
 }
 .adm-heatmap .cell[data-int='1'] {
-  background: rgba(124, 92, 255, 0.22);
+  background: rgba(22, 163, 74, 0.22);
 }
 .adm-heatmap .cell[data-int='2'] {
-  background: rgba(124, 92, 255, 0.45);
+  background: rgba(22, 163, 74, 0.45);
 }
 .adm-heatmap .cell[data-int='3'] {
-  background: rgba(124, 92, 255, 0.68);
+  background: rgba(22, 163, 74, 0.68);
 }
 .adm-heatmap .cell[data-int='4'] {
-  background: rgba(124, 92, 255, 0.9);
-  box-shadow: 0 0 14px rgba(124, 92, 255, 0.5);
+  background: rgba(22, 163, 74, 0.9);
+  box-shadow: 0 0 14px rgba(22, 163, 74, 0.5);
 }
 
 /* ============== auth ============== */
@@ -1160,8 +1160,8 @@
 .adm-auth-art {
   position: relative;
   background:
-    radial-gradient(700px 600px at 20% 30%, rgba(124, 92, 255, 0.45), transparent 60%),
-    radial-gradient(900px 700px at 80% 90%, rgba(34, 211, 238, 0.35), transparent 55%),
+    radial-gradient(700px 600px at 20% 30%, rgba(22, 163, 74, 0.45), transparent 60%),
+    radial-gradient(900px 700px at 80% 90%, rgba(126, 217, 87, 0.35), transparent 55%),
     linear-gradient(135deg, #0b0d15, #11142a);
   overflow: hidden;
   padding: 60px 56px;
@@ -1374,7 +1374,7 @@
   gap: 5px;
 }
 .bet-status.open {
-  background: rgba(79, 139, 255, 0.14);
+  background: rgba(34, 197, 94, 0.14);
   color: var(--info);
 }
 .bet-status.won {
@@ -1390,7 +1390,7 @@
   color: var(--warn);
 }
 .bet-status.cashed_out {
-  background: rgba(124, 92, 255, 0.14);
+  background: rgba(22, 163, 74, 0.14);
   color: var(--brand);
 }
 .bet-status.cancelled {
@@ -1562,7 +1562,7 @@
 .stage-progress .line {
   flex: 1;
   height: 2px;
-  background: linear-gradient(90deg, rgba(124, 92, 255, 0.4), rgba(245, 166, 35, 0.4), rgba(24, 240, 161, 0.4));
+  background: linear-gradient(90deg, rgba(22, 163, 74, 0.4), rgba(245, 166, 35, 0.4), rgba(24, 240, 161, 0.4));
   border-radius: 2px;
 }
 .stage-progress-label {
@@ -2208,12 +2208,12 @@
 
 .adm-cs-chip:hover {
   border-color: var(--brand);
-  background: rgba(124, 92, 255, 0.08);
+  background: rgba(22, 163, 74, 0.08);
 }
 
 .adm-cs-chip.active {
   border-color: var(--brand);
-  background: rgba(124, 92, 255, 0.15);
+  background: rgba(22, 163, 74, 0.15);
   color: var(--text);
 }
 
