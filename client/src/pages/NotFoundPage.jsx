@@ -36,7 +36,7 @@ export default function NotFoundPage() {
             fontWeight: 900,
             letterSpacing: '-0.04em',
             lineHeight: 1,
-            color: 'var(--accent, #ffb800)',
+            color: 'var(--accent, #16a34a)',
             margin: '12px 0 4px',
           }}
         >
@@ -59,7 +59,7 @@ export default function NotFoundPage() {
               padding: '12px 22px',
               borderRadius: 10,
               border: 'none',
-              background: 'var(--accent, #ffb800)',
+              background: 'var(--accent, #16a34a)',
               color: 'var(--bg, #0b0b0b)',
               font: 'inherit',
               fontSize: 13.5,

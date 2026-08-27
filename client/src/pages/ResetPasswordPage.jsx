@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
       <div className="lp">
         <div className="lp-glow" />
         <div className="lp-brand">
-          <span className="lp-brand-text">ODDSIFY</span>
+          <span className="lp-brand-text">BETNEXA</span>
         </div>
         <h1 className="lp-title">Password Reset</h1>
         <div className="lp-form">
@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
     <div className="lp">
       <div className="lp-glow" />
       <div className="lp-brand">
-        <span className="lp-brand-text">ODDSIFY</span>
+        <span className="lp-brand-text">BETNEXA</span>
       </div>
       <h1 className="lp-title">Enter Reset Code</h1>
       <form className="lp-form" onSubmit={submit} noValidate>

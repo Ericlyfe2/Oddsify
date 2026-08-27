@@ -25,7 +25,7 @@ import {
   OddCategoryGrid,
   OddLeagueRow,
   OddMatchCard,
-  OddsifyWordmark,
+  BetNexaWordmark,
   OddIcon,
   OddStatusChip,
   MarketsSheet,
@@ -232,7 +232,7 @@ export default function Home() {
 
       <StatsStrip />
 
-      <OddsifyFooter />
+      <BetNexaFooter />
 
       {sheetMatch && (
         <MarketsSheet
@@ -301,7 +301,7 @@ function FooterReveal({ children, delay = 0, style }) {
   );
 }
 
-function OddsifyFooter() {
+function BetNexaFooter() {
   const T = useTokens();
   const navigate = useNavigate();
 
@@ -354,13 +354,13 @@ function OddsifyFooter() {
           18+
         </span>
         <span style={{ fontSize: 11, color: T.inkDim }}>
-          © {new Date().getFullYear()} Oddsify. All rights reserved.
+          © {new Date().getFullYear()} BetNexa. All rights reserved.
         </span>
       </FooterReveal>
 
       {/* Partner row */}
       <FooterReveal delay={60} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '20px 16px 4px' }}>
-        <span className="ft-brand-text" style={{ fontSize: 16, fontWeight: 800 }}>Oddsify</span>
+        <span className="ft-brand-text" style={{ fontSize: 16, fontWeight: 800 }}>BetNexa</span>
         <span style={{ width: 1, height: 28, background: T.line }} />
         <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600, lineHeight: 1.3 }}>
           Official Sports<br />Betting Partner
@@ -396,11 +396,11 @@ function OddsifyFooter() {
       {/* Region links */}
       <FooterReveal delay={200} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '18px 16px 0', fontSize: 13 }}>
         <button type="button" className="ft-region-btn" onClick={() => navigate('/info#licence')} style={{ background: 'none', border: 0, color: T.greenBright, fontWeight: 700, cursor: 'pointer' }}>
-          Oddsify GH
+          BetNexa GH
         </button>
         <span style={{ color: T.inkDim }}>|</span>
         <button type="button" className="ft-region-btn" onClick={() => navigate('/info#responsible-gaming')} style={{ background: 'none', border: 0, color: T.inkSoft, fontWeight: 600, cursor: 'pointer' }}>
-          Oddsify NG
+          BetNexa NG
         </button>
       </FooterReveal>
 
@@ -413,10 +413,10 @@ function OddsifyFooter() {
 
       {/* Disclaimer */}
       <FooterReveal delay={280} style={{ padding: '16px 20px 0', textAlign: 'center', fontSize: 11, lineHeight: 1.6, color: T.inkDim, maxWidth: 340, margin: '0 auto' }}>
-        Oddsify is a registered company in Ghana, Nigeria, and Other Countries.
+        BetNexa is a registered company in Ghana, Nigeria, and Other Countries.
         <br /><br />
         <strong style={{ color: T.inkSoft }}>Age 18 and above only.</strong> Bet smart, enjoy the thrill,
-        and keep it within your limits. Oddsify is licensed by the Gaming Commission of Ghana.
+        and keep it within your limits. BetNexa is licensed by the Gaming Commission of Ghana.
       </FooterReveal>
 
       {/* Back to Top */}

@@ -74,8 +74,8 @@ export default function InfoPage() {
       <section id="terms" style={sectionStyle}>
         <h2 style={h2Style}>Terms &amp; Conditions</h2>
         <p style={pStyle}>
-          By creating a Oddsify account and placing wagers you agree to the following terms. You must be 18 years or
-          older and physically located in a jurisdiction where online sports wagering is lawful. Oddsify operates under
+          By creating a BetNexa account and placing wagers you agree to the following terms. You must be 18 years or
+          older and physically located in a jurisdiction where online sports wagering is lawful. BetNexa operates under
           Ghana Gaming Commission licence
           <strong> #ODSGH-2026</strong>. Last updated <strong>20 May 2026</strong>.
         </p>
@@ -88,7 +88,7 @@ export default function InfoPage() {
           <li>Settled bets are final. Disputes must be raised within 14 days of settlement.</li>
           <li>Bonus funds carry a wagering requirement and may be voided if abused.</li>
           <li>
-            Oddsify reserves the right to verify identity and source of funds before processing withdrawals (KYC/AML).
+            BetNexa reserves the right to verify identity and source of funds before processing withdrawals (KYC/AML).
           </li>
           <li>
             Multiple accounts, automated betting, odds-arbitrage rings, and collusion are grounds for suspension and
@@ -104,7 +104,7 @@ export default function InfoPage() {
       <section id="privacy" style={sectionStyle}>
         <h2 style={h2Style}>Privacy Policy</h2>
         <p style={pStyle}>
-          Oddsify collects only the information needed to operate your account: the identifier used at sign-up (email or
+          BetNexa collects only the information needed to operate your account: the identifier used at sign-up (email or
           phone number), identity details for KYC, payment method metadata for deposits and withdrawals, and gameplay
           records for fairness and compliance. Passwords are stored only as one-way bcrypt hashes — we never see your
           plaintext password. We do not sell personal data.
@@ -122,7 +122,7 @@ export default function InfoPage() {
       <section id="responsible-gaming" style={sectionStyle}>
         <h2 style={h2Style}>Responsible Gaming</h2>
         <p style={pStyle}>
-          Wagering should be entertainment, not income. Oddsify provides tools to keep you in control:
+          Wagering should be entertainment, not income. BetNexa provides tools to keep you in control:
         </p>
         <ul style={ulStyle}>
           <li>
@@ -147,13 +147,13 @@ export default function InfoPage() {
         <h2 style={h2Style}>Self-Exclusion</h2>
         <p style={pStyle}>
           If you decide to stop wagering, you can request a self-exclusion of 6, 12 or 24 months — or indefinitely.
-          During this period your account is frozen, marketing communications stop, and Oddsify will refuse
+          During this period your account is frozen, marketing communications stop, and BetNexa will refuse
           re-registration attempts.
         </p>
         <p style={pStyle}>
           To self-exclude, sign in and email{' '}
-          <a href="mailto:safe@oddsify.gh" style={linkStyle}>
-            safe@oddsify.gh
+          <a href="mailto:safe@betnexa.gh" style={linkStyle}>
+            safe@betnexa.gh
           </a>{' '}
           from your registered address with the subject &ldquo;Self-exclusion&rdquo; and the duration you want.
         </p>
@@ -162,7 +162,7 @@ export default function InfoPage() {
       <section id="licence" style={sectionStyle}>
         <h2 style={h2Style}>Licence Information</h2>
         <p style={pStyle}>
-          Oddsify is operated by Oddsify Gaming Limited and licensed by the Gaming Commission of Ghana under reference{' '}
+          BetNexa is operated by BetNexa Gaming Limited and licensed by the Gaming Commission of Ghana under reference{' '}
           <strong>#ODSGH-2026</strong>. All wagering is governed by Ghanaian law. Operator compliance reports are
           published quarterly and audited by an independent third party.
         </p>

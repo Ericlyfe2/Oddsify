@@ -17,7 +17,7 @@ const DEFAULTS = {
   referralMinDeposit: 100,
   referralWelcomeBonus: 0,
   referralMaxPerDay: 20,
-  contactEmail: 'support@oddsify.gh',
+  contactEmail: 'support@betnexa.gh',
   featureJackpot: true,
   featureCasino: true,
   featureVirtuals: true,

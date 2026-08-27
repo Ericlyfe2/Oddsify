@@ -728,7 +728,7 @@ function OpenBetCard({ bet, liveOffer, liveScores, cashingOut, onCashOut, onDeta
             border: 0,
             cursor: cashingOut ? 'wait' : 'pointer',
             opacity: cashingOut ? 0.7 : 1,
-            boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(232,185,74,0.3))',
+            boxShadow: 'var(--shadow-cta, 0 4px 14px rgba(126, 217, 87,0.3))',
             transition: 'transform 100ms',
           }}
         >
@@ -949,7 +949,7 @@ function HistoryRow({ bet, onOpen, onRebook }) {
 // ─── Helpers ─────────────────────────────────────────────────────
 function STATUS_CONFIG(T) {
   return {
-    won: { bg: 'rgba(var(--accent-rgb, 232, 185, 74), 0.2)', text: 'var(--accent)', icon: CheckCircle2, label: 'Won' },
+    won: { bg: 'rgba(var(--accent-rgb, 126, 217, 87), 0.2)', text: 'var(--accent)', icon: CheckCircle2, label: 'Won' },
     lost: { bg: 'rgba(var(--danger-rgb, 255, 91, 120), 0.2)', text: 'var(--danger)', icon: XCircle, label: 'Lost' },
     cashed_out: {
       bg: 'rgba(var(--accent-cool-rgb, 106, 208, 255), 0.2)',
@@ -1093,7 +1093,7 @@ function EmptyState({ icon: Icon, title, hint, actionLabel, onAction }) {
             fontWeight: 700,
             fontSize: 14,
             cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(232,185,74,0.3)',
+            boxShadow: '0 4px 14px rgba(126, 217, 87,0.3)',
           }}
         >
           {actionLabel}
@@ -1211,7 +1211,7 @@ function SignedOutState({ navigate }) {
               fontWeight: 700,
               fontSize: 14,
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(232,185,74,0.3)',
+              boxShadow: '0 4px 14px rgba(126, 217, 87,0.3)',
             }}
           >
             Sign in

@@ -270,7 +270,7 @@ export default function CasinoPage() {
 
         {/* Hero */}
         <header className="cv-hero">
-          <span className="cv-eyebrow">Oddsify Originals · Instant Play</span>
+          <span className="cv-eyebrow">BetNexa Originals · Instant Play</span>
           <h1 className="cv-title">
             The <em>Casino</em> floor,
             <br />

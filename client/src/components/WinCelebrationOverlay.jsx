@@ -104,7 +104,7 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
                 className="wco-burst-particle"
                 style={{
                   '--a': `${p * 45}deg`,
-                  '--c': ['#ffd76d', '#ffb800', '#ff9f1c', '#ffe28a', '#ffcc33', '#f7c948', '#d4a857', '#fff3b8'][p],
+                  '--c': ['#ffd76d', '#16a34a', '#ff9f1c', '#ffe28a', '#ffcc33', '#a8e6a3', '#d4a857', '#fff3b8'][p],
                 }}
               />
             ))}
@@ -123,12 +123,12 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
               '--r': `${Math.random() * 360}deg`,
               '--c': [
                 '#ffd76d',
-                '#ffb800',
+                '#16a34a',
                 '#ffd54f',
                 '#d4a857',
                 '#ffcc33',
                 '#ff9f1c',
-                '#f7c948',
+                '#a8e6a3',
                 '#ffe28a',
                 '#ff5b78',
                 '#ffb347',

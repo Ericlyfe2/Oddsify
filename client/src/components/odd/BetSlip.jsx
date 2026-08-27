@@ -45,7 +45,7 @@ export function OddBetSlipFAB() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 12px 24px -8px rgba(232, 185, 74, 0.6), 0 6px 12px rgba(0,0,0,0.25)',
+        boxShadow: '0 12px 24px -8px rgba(126, 217, 87, 0.6), 0 6px 12px rgba(0,0,0,0.25)',
         border: `2px solid ${T.goldDark}`,
         cursor: 'pointer',
       }}
@@ -322,7 +322,7 @@ export function OddBetSlip() {
                     width: 64,
                     height: 64,
                     borderRadius: 999,
-                    background: 'rgba(232,185,74,0.16)',
+                    background: 'rgba(126, 217, 87,0.16)',
                     margin: '0 auto 12px',
                     display: 'flex',
                     alignItems: 'center',
@@ -821,8 +821,8 @@ export function OddBetSlip() {
                           marginTop: 8,
                           padding: '8px 12px',
                           borderRadius: 8,
-                          background: 'rgba(232,185,74,0.1)',
-                          border: `1px solid rgba(232,185,74,0.2)`,
+                          background: 'rgba(126, 217, 87,0.1)',
+                          border: `1px solid rgba(126, 217, 87,0.2)`,
                           fontSize: 11,
                           fontWeight: 600,
                           color: T.greenBright,
@@ -1043,7 +1043,7 @@ export function OddBetSlip() {
                   generatedAt={lastBooking?.createdAt || new Date().toISOString()}
                   loadCodeLink={lastBooking ? `${window.location.origin}/code/${lastBooking.bookingCode}` : ''}
                   shareUrl={lastBooking ? `${window.location.origin}/code/${lastBooking.bookingCode}` : ''}
-                  externalWebsite="oddsify.com"
+                  externalWebsite="betnexa.com"
                 />
               </div>
             )}

@@ -122,7 +122,7 @@ const BOOT_AT = new Date().toISOString();
 app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
-    service: 'oddsify-api',
+    service: 'betnexa-api',
     version: '1.0.0',
     commit: DEPLOYED_COMMIT,
     bootAt: BOOT_AT,
@@ -203,7 +203,7 @@ if (isProd) {
   } else {
     log.info(`SPA bundle not present (${indexHtml}) — running as API-only.`);
     app.get('/', (_req, res) => {
-      res.json({ ok: true, service: 'oddsify-api', mode: 'api-only' });
+      res.json({ ok: true, service: 'betnexa-api', mode: 'api-only' });
     });
   }
 }
@@ -243,7 +243,7 @@ async function boot() {
   backfillVerification();
 
   await new Promise((resolve) => server.listen(PORT, resolve));
-  log.info(`Oddsify API listening on http://127.0.0.1:${PORT}`);
+  log.info(`BetNexa API listening on http://127.0.0.1:${PORT}`);
 
   try {
     startSettlementLoop();

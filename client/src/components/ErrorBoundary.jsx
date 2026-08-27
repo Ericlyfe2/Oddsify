@@ -13,7 +13,7 @@ function isStaleChunkError(error) {
 }
 
 function reloadOnceForStaleChunk() {
-  const key = 'oddsify:chunk-reload-at';
+  const key = 'betnexa:chunk-reload-at';
   const last = Number(sessionStorage.getItem(key) || 0);
   if (Date.now() - last > 10_000) {
     sessionStorage.setItem(key, String(Date.now()));
@@ -39,7 +39,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     if (typeof console !== 'undefined') {
-      console.error('[oddsify] uncaught render error:', error, info?.componentStack);
+      console.error('[betnexa] uncaught render error:', error, info?.componentStack);
     }
     if (isStaleChunkError(error)) reloadOnceForStaleChunk();
   }
@@ -130,7 +130,7 @@ export default class ErrorBoundary extends Component {
                 padding: '11px 18px',
                 borderRadius: 10,
                 border: 'none',
-                background: 'var(--accent, #ffb800)',
+                background: 'var(--accent, #16a34a)',
                 color: 'var(--bg, #0b0b0b)',
                 font: 'inherit',
                 fontSize: 13.5,

@@ -426,7 +426,7 @@ function maskName(name = '') {
 }
 
 /** Everything the user's Refer & Earn dashboard needs. */
-export function referralSummary(userId, origin = 'https://oddsify.com') {
+export function referralSummary(userId, origin = 'https://betnexa.com') {
   const code = ensureReferralCode(userId);
   const mine = referrals.list().filter((r) => r.referrerId === userId);
   const rewarded = mine.filter((r) => r.status === 'rewarded');

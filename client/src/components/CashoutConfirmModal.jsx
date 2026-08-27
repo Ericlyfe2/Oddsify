@@ -56,10 +56,10 @@ export default function CashoutConfirmModal({ bet, cashoutValue, open, onClose, 
             <defs>
               <linearGradient id="ccoGrad" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0" stopColor="#fff3b8" />
-                <stop offset="1" stopColor="#e8b94a" />
+                <stop offset="1" stopColor="#7ed957" />
               </linearGradient>
             </defs>
-            <circle cx="24" cy="24" r="20" fill="rgba(232,185,74,.12)" />
+            <circle cx="24" cy="24" r="20" fill="rgba(126, 217, 87,.12)" />
             <path
               d="M14 28 L24 18 L34 28"
               fill="none"
@@ -68,7 +68,7 @@ export default function CashoutConfirmModal({ bet, cashoutValue, open, onClose, 
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            <rect x="14" y="30" width="20" height="3" rx="1.5" fill="rgba(232,185,74,.3)" />
+            <rect x="14" y="30" width="20" height="3" rx="1.5" fill="rgba(126, 217, 87,.3)" />
           </svg>
         </div>
 
@@ -92,7 +92,7 @@ export default function CashoutConfirmModal({ bet, cashoutValue, open, onClose, 
           </div>
           <div className="bv-cashout-confirm-row">
             <span className="lbl">Profit / Loss</span>
-            <span className="val" style={{ color: isProfit ? '#f7c948' : '#ff5b78' }}>
+            <span className="val" style={{ color: isProfit ? '#a8e6a3' : '#ff5b78' }}>
               {isProfit ? '+' : ''}GHS {fmtCedi(profit)}
             </span>
           </div>
@@ -128,11 +128,11 @@ const CASHOUT_CONFIRM_CSS = `
 .bv-cashout-confirm-card {
   position: relative; z-index: 2;
   background:
-    radial-gradient(360px 140px at 80% -10%, rgba(232,185,74,.1), transparent 60%),
+    radial-gradient(360px 140px at 80% -10%, rgba(126, 217, 87,.1), transparent 60%),
     linear-gradient(180deg, #161513 0%, #0a0a0a 100%);
   border-radius: 22px;
   padding: 22px 22px 20px;
-  box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(232,185,74,.2) inset;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(126, 217, 87,.2) inset;
   font-family: 'Inter','Segoe UI',system-ui,sans-serif;
   animation: ccoPop .45s cubic-bezier(.18,.88,.36,1.2) both, ccoBorderGlow 3s ease-in-out .8s infinite;
   text-align: center;
@@ -143,14 +143,14 @@ const CASHOUT_CONFIRM_CSS = `
   100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 @keyframes ccoBorderGlow {
-  0%, 100% { box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(232,185,74,.2) inset, 0 0 20px rgba(232,185,74,.05); }
-  50% { box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(247,201,72,.45) inset, 0 0 40px rgba(232,185,74,.12); }
+  0%, 100% { box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(126, 217, 87,.2) inset, 0 0 20px rgba(126, 217, 87,.05); }
+  50% { box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(168, 230, 163,.45) inset, 0 0 40px rgba(126, 217, 87,.12); }
 }
 @keyframes ccoUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ccoBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes ccoIconPop { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 70% { transform: scale(1.15) rotate(4deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
 @keyframes ccoShimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-@keyframes ccoBtnGlow { 0%, 100% { box-shadow: 0 10px 24px rgba(232,185,74,.3); } 50% { box-shadow: 0 12px 34px rgba(247,201,72,.55); } }
+@keyframes ccoBtnGlow { 0%, 100% { box-shadow: 0 10px 24px rgba(126, 217, 87,.3); } 50% { box-shadow: 0 12px 34px rgba(168, 230, 163,.55); } }
 
 .bv-cashout-confirm-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -158,9 +158,9 @@ const CASHOUT_CONFIRM_CSS = `
 }
 .bv-cashout-confirm-badge {
   font-size: 10px; letter-spacing: .18em; font-weight: 800;
-  color: #f7c948;
-  background: rgba(232,185,74,.1);
-  border: 1px solid rgba(232,185,74,.35);
+  color: #a8e6a3;
+  background: rgba(126, 217, 87,.1);
+  border: 1px solid rgba(126, 217, 87,.35);
   padding: 5px 10px; border-radius: 999px;
   animation: ccoUp .35s ease .1s both;
 }
@@ -204,8 +204,8 @@ const CASHOUT_CONFIRM_CSS = `
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 14px;
   border-radius: 10px;
-  background: rgba(232,185,74,.05);
-  border: 1px solid rgba(232,185,74,.1);
+  background: rgba(126, 217, 87,.05);
+  border: 1px solid rgba(126, 217, 87,.1);
   animation: ccoUp .35s ease both;
 }
 .bv-cashout-confirm-row:nth-child(1) { animation-delay: .4s; }
@@ -213,8 +213,8 @@ const CASHOUT_CONFIRM_CSS = `
 .bv-cashout-confirm-row:nth-child(3) { animation-delay: .54s; }
 .bv-cashout-confirm-row:nth-child(4) { animation-delay: .61s; }
 .bv-cashout-confirm-row.highlight {
-  background: rgba(232,185,74,.1);
-  border-color: rgba(232,185,74,.3);
+  background: rgba(126, 217, 87,.1);
+  border-color: rgba(126, 217, 87,.3);
 }
 .bv-cashout-confirm-row .lbl {
   font-size: 12px; font-weight: 600;
@@ -227,7 +227,7 @@ const CASHOUT_CONFIRM_CSS = `
 }
 .bv-cashout-confirm-row.highlight .val {
   font-size: 16px; font-weight: 800;
-  background: linear-gradient(110deg, #e8b94a 25%, #fff7d6 50%, #e8b94a 75%);
+  background: linear-gradient(110deg, #7ed957 25%, #fff7d6 50%, #7ed957 75%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -252,15 +252,15 @@ const CASHOUT_CONFIRM_CSS = `
 .bv-cashout-btn:active { transform: scale(.97); }
 .bv-cashout-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .bv-cashout-btn-cancel {
-  background: rgba(232,185,74,.06);
+  background: rgba(126, 217, 87,.06);
   color: #f3e9cf;
-  border: 1px solid rgba(232,185,74,.2);
+  border: 1px solid rgba(126, 217, 87,.2);
 }
-.bv-cashout-btn-cancel:hover { background: rgba(232,185,74,.12); border-color: rgba(232,185,74,.4); }
+.bv-cashout-btn-cancel:hover { background: rgba(126, 217, 87,.12); border-color: rgba(126, 217, 87,.4); }
 .bv-cashout-btn-confirm {
-  background: linear-gradient(135deg, #f7c948 0%, #d4a72c 100%);
+  background: linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%);
   color: #1a1300;
-  box-shadow: 0 10px 24px rgba(232,185,74,.3);
+  box-shadow: 0 10px 24px rgba(126, 217, 87,.3);
   animation: ccoBtnGlow 2.4s ease-in-out 1.2s infinite;
 }
 .bv-cashout-btn-confirm:hover {

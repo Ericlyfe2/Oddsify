@@ -15,7 +15,7 @@ const router = Router();
 
 /** Refer & Earn dashboard payload (code is lazily minted here for legacy users). */
 router.get('/me', requireAuth, (req, res) => {
-  const origin = req.get('origin') || req.get('referer')?.replace(/\/[^/]*$/, '') || 'https://oddsify.com';
+  const origin = req.get('origin') || req.get('referer')?.replace(/\/[^/]*$/, '') || 'https://betnexa.com';
   res.json(referralSummary(req.user.id, origin.replace(/\/$/, '')));
 });
 
@@ -36,7 +36,7 @@ router.get('/validate/:code', (req, res) => {
   const ownerId = lookupCodeOwner(code);
   if (!ownerId) return res.json({ valid: false });
   const owner = getUserById(ownerId);
-  const name = owner?.displayName || 'an Oddsify member';
+  const name = owner?.displayName || 'a BetNexa member';
   res.json({ valid: true, referrerName: name.split(' ')[0] });
 });
 

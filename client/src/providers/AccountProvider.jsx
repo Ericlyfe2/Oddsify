@@ -864,7 +864,7 @@ function ReferralCelebration({ amount, name, onClose }) {
               position: 'absolute', top: -16,
               left: `${Math.random() * 100}%`,
               width: 8, height: 12, borderRadius: 2,
-              background: ['#f7c948','#e8b94a','#fff3b8','#d4a72c','#f3e9cf'][i % 5],
+              background: ['#a8e6a3','#7ed957','#fff3b8','#d4a72c','#f3e9cf'][i % 5],
               animation: `rfpFall 2.6s linear ${Math.random() * 1.4}s both`,
             }}
           />
@@ -876,20 +876,20 @@ function ReferralCelebration({ amount, name, onClose }) {
           position: 'relative', width: 'min(340px, 100%)', textAlign: 'center',
           background: 'linear-gradient(180deg, #161513 0%, #0a0a0a 100%)',
           borderRadius: 20, padding: '26px 22px',
-          boxShadow: '0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(232,185,74,.25) inset',
+          boxShadow: '0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(126, 217, 87,.25) inset',
           animation: 'rfpPop .45s cubic-bezier(.18,.88,.36,1.2) both',
         }}
       >
         <svg viewBox="0 0 120 120" style={{ width: 84, height: 84, margin: '0 auto' }}>
           <circle
             cx="60" cy="60" r="52"
-            fill="none" stroke="#f7c948" strokeWidth="4" strokeLinecap="round"
+            fill="none" stroke="#a8e6a3" strokeWidth="4" strokeLinecap="round"
             strokeDasharray="340" transform="rotate(-90)" transformOrigin="center"
             style={{ animation: 'rfpRing .7s ease-out .1s both' }}
           />
           <path
             d="M38 62l14 14 30-32"
-            fill="none" stroke="#f7c948" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
+            fill="none" stroke="#a8e6a3" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
             strokeDasharray="120" strokeDashoffset="120"
             style={{ animation: 'rfpCheck .5s ease-out .5s both' }}
           />
@@ -898,7 +898,7 @@ function ReferralCelebration({ amount, name, onClose }) {
           Congratulations!
         </h2>
         <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'rgba(243,233,207,.7)' }}>
-          You earned <strong style={{ color: '#f7c948' }}>GHS {Number(amount || 0).toFixed(2)}</strong>
+          You earned <strong style={{ color: '#a8e6a3' }}>GHS {Number(amount || 0).toFixed(2)}</strong>
           {name ? ` from ${name}` : ''}. It&rsquo;s already in your wallet.
         </p>
         <button
@@ -907,9 +907,9 @@ function ReferralCelebration({ amount, name, onClose }) {
           style={{
             padding: '10px 20px', borderRadius: 10, border: 'none',
             fontWeight: 800, fontSize: 12.5, cursor: 'pointer',
-            background: 'linear-gradient(135deg, #f7c948 0%, #d4a72c 100%)',
+            background: 'linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%)',
             color: '#1a1300',
-            boxShadow: '0 8px 20px rgba(232,185,74,.3)',
+            boxShadow: '0 8px 20px rgba(126, 217, 87,.3)',
           }}
         >
           Awesome!

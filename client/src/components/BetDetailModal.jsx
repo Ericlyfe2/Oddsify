@@ -176,7 +176,7 @@ export default function BetDetailModal({ bet, open, onClose }) {
             <ActionBtn label="Rebook" icon="🔄" onClick={() => navigate(`/code/${code}?rebook=1`)} T={T} primary />
             <ActionBtn label="Share" icon="📤" onClick={() => {
               const url = `${window.location.origin}/code/${code}`;
-              if (navigator.share) navigator.share({ title: 'Oddsify Ticket', text: `Code ${code}`, url }).catch(() => {});
+              if (navigator.share) navigator.share({ title: 'BetNexa Ticket', text: `Code ${code}`, url }).catch(() => {});
               else navigator.clipboard?.writeText(url);
             }} T={T} />
           </div>

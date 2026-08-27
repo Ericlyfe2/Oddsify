@@ -86,7 +86,7 @@ export default function CodeHubPage() {
 
   function shareTo(target, c) {
     const url = shareUrl(c);
-    const text = `Check out this booking code ${c} on Oddsify`;
+    const text = `Check out this booking code ${c} on BetNexa`;
     const encodedText = encodeURIComponent(text);
     const encodedUrl = encodeURIComponent(url);
     let href = '';
@@ -105,7 +105,7 @@ export default function CodeHubPage() {
         break;
       case 'native':
         if (navigator.share) {
-          navigator.share({ title: 'Oddsify booking code', text, url }).catch(() => {});
+          navigator.share({ title: 'BetNexa booking code', text, url }).catch(() => {});
           return;
         }
         copyCode(url);

@@ -191,7 +191,7 @@ export default function BetDetailPage() {
   const handleShare = () => {
     const url = `${window.location.origin}/code/${code}`;
     if (navigator.share) {
-      navigator.share({ title: 'Oddsify Ticket', text: `Check out my ticket: ${code}`, url }).catch(() => {});
+      navigator.share({ title: 'BetNexa Ticket', text: `Check out my ticket: ${code}`, url }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(url);
       toast('Link copied!', 'success');

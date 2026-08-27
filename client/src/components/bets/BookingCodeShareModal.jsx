@@ -58,7 +58,7 @@ export default function BookingCodeShareModal({
     setImgSaving(true);
     try {
       const dataUrl = await toPng(cardRef.current, { quality: 0.95, pixelRatio: 2 });
-      saveAs(dataUrl, `oddsify-${bookingCode}.png`);
+      saveAs(dataUrl, `betnexa-${bookingCode}.png`);
     } catch {
       showToast('Could not save image');
     }
@@ -66,7 +66,7 @@ export default function BookingCodeShareModal({
   }, [bookingCode, imgSaving, showToast]);
 
   const shareText = useCallback((action) => {
-    const text = `I just booked a bet on Oddsify! 🎯\n\nBooking Code: ${bookingCode}\n\nLoad it here: ${shareUrl}`;
+    const text = `I just booked a bet on BetNexa! 🎯\n\nBooking Code: ${bookingCode}\n\nLoad it here: ${shareUrl}`;
     switch (action) {
       case 'twitter':
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
@@ -183,8 +183,8 @@ export default function BookingCodeShareModal({
               maxWidth: 400,
               borderRadius: 20,
               background: `linear-gradient(180deg, #1a1a1e 0%, #121214 100%)`,
-              border: '1px solid rgba(232,185,74,0.12)',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,185,74,0.06) inset',
+              border: '1px solid rgba(126, 217, 87,0.12)',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(126, 217, 87,0.06) inset',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
@@ -200,14 +200,14 @@ export default function BookingCodeShareModal({
                       width: 56,
                       height: 56,
                       borderRadius: '50%',
-                      border: '3px solid rgba(232,185,74,0.25)',
+                      border: '3px solid rgba(126, 217, 87,0.25)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       position: 'relative',
                     }}
                   >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e8b94a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7ed957" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                     </svg>
                   </div>
@@ -237,7 +237,7 @@ export default function BookingCodeShareModal({
                       onClick={copyCode}
                       aria-label="Copy booking code"
                       style={{
-                        background: 'rgba(232,185,74,0.12)',
+                        background: 'rgba(126, 217, 87,0.12)',
                         border: 0,
                         borderRadius: 8,
                         width: 32,
@@ -246,11 +246,11 @@ export default function BookingCodeShareModal({
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        color: '#e8b94a',
+                        color: '#7ed957',
                         transition: 'background 0.15s',
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(232,185,74,0.2)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(232,185,74,0.12)'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(126, 217, 87,0.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(126, 217, 87,0.12)'}
                     >
                       <Copy size={14} />
                     </button>
@@ -264,7 +264,7 @@ export default function BookingCodeShareModal({
                       marginTop: 4,
                       background: 'transparent',
                       border: 0,
-                      color: '#e8b94a',
+                      color: '#7ed957',
                       fontSize: 12,
                       fontWeight: 600,
                       display: 'inline-flex',
@@ -281,7 +281,7 @@ export default function BookingCodeShareModal({
             </div>
 
             {/* ─── DIVIDER ─── */}
-            <div style={{ height: 1, background: 'rgba(232,185,74,0.08)', margin: '0 24px' }} />
+            <div style={{ height: 1, background: 'rgba(126, 217, 87,0.08)', margin: '0 24px' }} />
 
             {/* ─── SHARE ROW ─── */}
             <div style={{ padding: '20px 24px 24px' }}>
@@ -311,7 +311,7 @@ export default function BookingCodeShareModal({
                         width: 48,
                         height: 48,
                         borderRadius: '50%',
-                        background: btn.key === 'save' && imgSaving ? 'rgba(232,185,74,0.2)' : btn.bg,
+                        background: btn.key === 'save' && imgSaving ? 'rgba(126, 217, 87,0.2)' : btn.bg,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -340,7 +340,7 @@ export default function BookingCodeShareModal({
               transition={{ delay: 0.2, duration: 0.3, ease: 'easeOut' }}
               style={{
                 width: '100%',
-                background: '#e8b94a',
+                background: '#7ed957',
                 height: 64,
                 display: 'flex',
                 alignItems: 'center',
@@ -389,7 +389,7 @@ export default function BookingCodeShareModal({
                 }}
               >
                 <Globe size={16} color="#1a1300" strokeWidth={2} />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{externalWebsite || 'oddsify.com'}</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{externalWebsite || 'betnexa.com'}</span>
                 <ExternalLink size={14} color="#1a1300" strokeWidth={2.5} />
               </button>
 
@@ -431,11 +431,11 @@ export default function BookingCodeShareModal({
                   padding: '10px 20px',
                   borderRadius: 10,
                   background: '#1a1a1e',
-                  color: '#e8b94a',
+                  color: '#7ed957',
                   fontWeight: 600,
                   fontSize: 13,
                   boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                  border: '1px solid rgba(232,185,74,0.2)',
+                  border: '1px solid rgba(126, 217, 87,0.2)',
                   zIndex: 10001,
                   fontFamily: "'Inter', system-ui, sans-serif",
                 }}

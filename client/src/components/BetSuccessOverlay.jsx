@@ -30,10 +30,10 @@ const SHARE_PLATFORMS = {
   whatsapp: { color: '#25D366', hover: '#20bd5a' },
   telegram: { color: '#229ED9', hover: '#1d8bc2' },
   twitter: { color: '#1DA1F2', hover: '#1a91da' },
-  copy: { color: 'var(--accent)', hover: 'rgba(232,185,74,0.2)' },
+  copy: { color: 'var(--accent)', hover: 'rgba(126, 217, 87,0.2)' },
 };
 
-const CONFETTI_COLORS = ['#f7c948', '#e8b94a', '#d4a72c', '#fff3b8', '#ffb800', '#f3e9cf', '#f59e0b', '#ef4444', '#3b82f6', '#10b981'];
+const CONFETTI_COLORS = ['#a8e6a3', '#7ed957', '#d4a72c', '#fff3b8', '#16a34a', '#f3e9cf', '#f59e0b', '#ef4444', '#3b82f6', '#10b981'];
 
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
@@ -108,7 +108,7 @@ function LightRays() {
               position: 'absolute',
               top: '50%', left: '50%',
               width: 2, height: '120%',
-              background: 'linear-gradient(to top, transparent 0%, rgba(232,185,74,0.12) 50%, transparent 100%)',
+              background: 'linear-gradient(to top, transparent 0%, rgba(126, 217, 87,0.12) 50%, transparent 100%)',
               transformOrigin: 'bottom center',
               transform: `translate(-50%, -100%) rotate(${angle}deg)`,
             }}
@@ -137,7 +137,7 @@ function SparkleStar({ delay, x, y }) {
       }}
       transition={{ duration: 2, delay, ease: 'easeInOut', repeat: Infinity }}
     >
-      <svg viewBox="0 0 24 24" fill="#f7c948" width="8" height="8">
+      <svg viewBox="0 0 24 24" fill="#a8e6a3" width="8" height="8">
         <path d="M12 0l3.09 6.26L22 7.27l-5 4.87 1.18 6.88L12 16.77l-6.18 3.25L7 12.14 2 7.27l6.91-1.01L12 0z" />
       </svg>
     </motion.span>
@@ -189,7 +189,7 @@ function CheckmarkAnimation() {
         <motion.circle
           cx="60" cy="60" r="52"
           fill="none"
-          stroke="#f7c948"
+          stroke="#a8e6a3"
           strokeWidth="4"
           strokeLinecap="round"
           initial={{ pathLength: 0, opacity: 0, scale: 0.5 }}
@@ -200,14 +200,14 @@ function CheckmarkAnimation() {
         <motion.path
           d="M38 62l14 14 30-32"
           fill="none"
-          stroke="#f7c948"
+          stroke="#a8e6a3"
           strokeWidth="6"
           strokeLinecap="round"
           strokeLinejoin="round"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: checkProgress, opacity: checkProgress }}
           transition={{ duration: 0.5, ease: 'easeOut', delay: 0.6 }}
-          style={{ filter: 'drop-shadow(0 0 8px rgba(247,201,72,0.6))' }}
+          style={{ filter: 'drop-shadow(0 0 8px rgba(168, 230, 163,0.6))' }}
         />
       </svg>
 
@@ -217,7 +217,7 @@ function CheckmarkAnimation() {
           width: 160, height: 160,
           transform: 'translate(-50%, -50%)',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(232,185,74,0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(126, 217, 87,0.15) 0%, transparent 70%)',
           pointerEvents: 'none', zIndex: 1,
         }}
         animate={{ opacity: [glowOpacity, glowOpacity + 0.3, glowOpacity], scale: [1, 1.08, 1] }}
@@ -230,7 +230,7 @@ function CheckmarkAnimation() {
           width: 130, height: 130,
           transform: 'translate(-50%, -50%)',
           borderRadius: '50%',
-          border: '2px solid rgba(247,201,72,0.2)',
+          border: '2px solid rgba(168, 230, 163,0.2)',
           pointerEvents: 'none', zIndex: 0,
         }}
         initial={{ scale: 0.5, opacity: 0 }}
@@ -282,7 +282,7 @@ function TicketImage({ bet, code, ts, formatShareDate }) {
         style={{
           width: 340, padding: 20, borderRadius: 16,
           background: 'linear-gradient(180deg, #161513 0%, #0a0a0a 100%)',
-          border: '1px solid rgba(232,185,74,0.3)',
+          border: '1px solid rgba(126, 217, 87,0.3)',
           fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
           color: '#f3e9cf', fontSize: 12,
           position: 'absolute', left: -9999, top: 0,
@@ -290,30 +290,30 @@ function TicketImage({ bet, code, ts, formatShareDate }) {
       >
         <div style={{ textAlign: 'center', marginBottom: 14 }}>
           <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'rgba(243,233,207,0.5)', marginBottom: 2 }}>STAKEPOINT</div>
-          <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.08em', color: '#f7c948' }}>BOOKING CODE</div>
-          <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace", color: '#f7c948', margin: '6px 0' }}>{code}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.08em', color: '#a8e6a3' }}>BOOKING CODE</div>
+          <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: '0.12em', fontFamily: "'JetBrains Mono', monospace", color: '#a8e6a3', margin: '6px 0' }}>{code}</div>
         </div>
-        <div style={{ borderTop: '1px solid rgba(232,185,74,0.15)', paddingTop: 10 }}>
+        <div style={{ borderTop: '1px solid rgba(126, 217, 87,0.15)', paddingTop: 10 }}>
           {(bet.legs || []).map((leg, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11 }}>
               <span style={{ color: 'rgba(243,233,207,0.7)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {leg.home || '?'} vs {leg.away || '?'}
               </span>
-              <span style={{ color: '#f7c948', fontWeight: 600, marginLeft: 8 }}>{leg.outcome} @ {Number(leg.odds).toFixed(2)}</span>
+              <span style={{ color: '#a8e6a3', fontWeight: 600, marginLeft: 8 }}>{leg.outcome} @ {Number(leg.odds).toFixed(2)}</span>
             </div>
           ))}
         </div>
-        <div style={{ borderTop: '1px solid rgba(232,185,74,0.15)', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+        <div style={{ borderTop: '1px solid rgba(126, 217, 87,0.15)', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
           <div>
             <div style={{ color: 'rgba(243,233,207,0.5)', fontSize: 9 }}>STAKE</div>
             <div style={{ fontWeight: 700 }}>GHS {fmt(bet.stake)}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: 'rgba(243,233,207,0.5)', fontSize: 9 }}>POT. WIN</div>
-            <div style={{ fontWeight: 700, color: '#f7c948' }}>GHS {fmt(bet.potentialWin)}</div>
+            <div style={{ fontWeight: 700, color: '#a8e6a3' }}>GHS {fmt(bet.potentialWin)}</div>
           </div>
         </div>
-        <div style={{ borderTop: '1px solid rgba(232,185,74,0.15)', marginTop: 8, paddingTop: 8, textAlign: 'center', fontSize: 9, color: 'rgba(243,233,207,0.4)' }}>
+        <div style={{ borderTop: '1px solid rgba(126, 217, 87,0.15)', marginTop: 8, paddingTop: 8, textAlign: 'center', fontSize: 9, color: 'rgba(243,233,207,0.4)' }}>
           {formatShareDate(bet.placedAt)}
         </div>
       </div>
@@ -322,8 +322,8 @@ function TicketImage({ bet, code, ts, formatShareDate }) {
           type="button"
           style={{
             flex: 1, padding: '8px 12px', borderRadius: 10,
-            border: '1px solid rgba(232,185,74,0.2)',
-            background: 'rgba(232,185,74,0.06)',
+            border: '1px solid rgba(126, 217, 87,0.2)',
+            background: 'rgba(126, 217, 87,0.06)',
             color: '#f3e9cf', fontWeight: 600, fontSize: 11,
             cursor: 'pointer', display: 'flex', alignItems: 'center',
             justifyContent: 'center', gap: 6, fontFamily: 'inherit',
@@ -344,8 +344,8 @@ function TicketImage({ bet, code, ts, formatShareDate }) {
           type="button"
           style={{
             flex: 1, padding: '8px 12px', borderRadius: 10,
-            border: '1px solid rgba(232,185,74,0.2)',
-            background: 'rgba(232,185,74,0.06)',
+            border: '1px solid rgba(126, 217, 87,0.2)',
+            background: 'rgba(126, 217, 87,0.06)',
             color: '#f3e9cf', fontWeight: 600, fontSize: 11,
             cursor: 'pointer', display: 'flex', alignItems: 'center',
             justifyContent: 'center', gap: 6, fontFamily: 'inherit',
@@ -402,15 +402,15 @@ function ShareButton({ platform, url, code, bet, onCopy, onShare }) {
       type="button"
       style={{
         flex: 1, padding: '10px 8px', borderRadius: 12,
-        border: '1px solid rgba(232,185,74,0.15)',
-        background: 'rgba(232,185,74,0.04)',
+        border: '1px solid rgba(126, 217, 87,0.15)',
+        background: 'rgba(126, 217, 87,0.04)',
         color: '#f3e9cf', cursor: 'pointer',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', gap: 4,
         fontFamily: 'inherit', minWidth: 0,
         transition: 'background 0.15s, border-color 0.15s',
       }}
-      whileHover={{ scale: 1.05, background: 'rgba(232,185,74,0.1)', borderColor: 'rgba(232,185,74,0.3)' }}
+      whileHover={{ scale: 1.05, background: 'rgba(126, 217, 87,0.1)', borderColor: 'rgba(126, 217, 87,0.3)' }}
       whileTap={{ scale: 0.95 }}
       onClick={handleClick}
     >
@@ -591,8 +591,8 @@ export default function BetSuccessOverlay({
               position: 'relative', zIndex: 2,
               width: 'min(460px, 100%)', maxHeight: '100%',
               overflowY: 'auto', borderRadius: 24, padding: '32px 24px 24px',
-              background: 'radial-gradient(500px 200px at 80% -10%, rgba(232,185,74,0.1), transparent 60%), linear-gradient(180deg, #161513 0%, #0a0a0a 100%)',
-              boxShadow: '0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,185,74,0.2) inset, 0 0 48px rgba(232,185,74,0.05)',
+              background: 'radial-gradient(500px 200px at 80% -10%, rgba(126, 217, 87,0.1), transparent 60%), linear-gradient(180deg, #161513 0%, #0a0a0a 100%)',
+              boxShadow: '0 32px 96px rgba(0,0,0,0.7), 0 0 0 1px rgba(126, 217, 87,0.2) inset, 0 0 48px rgba(126, 217, 87,0.05)',
               fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
               textAlign: 'center', color: '#f3e9cf',
               scrollbarWidth: 'thin',
@@ -625,15 +625,15 @@ export default function BetSuccessOverlay({
               initial="hidden"
               animate="visible"
             >
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(247,201,72,0.6)', letterSpacing: '0.08em' }}>STAKE</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(168, 230, 163,0.6)', letterSpacing: '0.08em' }}>STAKE</span>
               <span style={{
                 fontSize: 42, fontWeight: 900, letterSpacing: '-0.025em',
-                background: 'linear-gradient(110deg, #e8b94a 25%, #fff7d6 50%, #e8b94a 75%)',
+                background: 'linear-gradient(110deg, #7ed957 25%, #fff7d6 50%, #7ed957 75%)',
                 backgroundSize: '200% auto',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-                filter: 'drop-shadow(0 6px 28px rgba(232,185,74,0.35))',
+                filter: 'drop-shadow(0 6px 28px rgba(126, 217, 87,0.35))',
               }}>
                 GHS {fmt(bet.stake)}
               </span>
@@ -656,15 +656,15 @@ export default function BetSuccessOverlay({
               style={{
                 margin: '12px 0 16px', padding: '16px 20px',
                 borderRadius: 16,
-                background: 'linear-gradient(135deg, rgba(232,185,74,0.08) 0%, rgba(232,185,74,0.02) 100%)',
-                border: '1px solid rgba(232,185,74,0.2)',
+                background: 'linear-gradient(135deg, rgba(126, 217, 87,0.08) 0%, rgba(126, 217, 87,0.02) 100%)',
+                border: '1px solid rgba(126, 217, 87,0.2)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
             >
               <div style={{
                 position: 'absolute', inset: 0,
-                background: 'radial-gradient(ellipse at 50% 0%, rgba(232,185,74,0.06) 0%, transparent 70%)',
+                background: 'radial-gradient(ellipse at 50% 0%, rgba(126, 217, 87,0.06) 0%, transparent 70%)',
                 pointerEvents: 'none',
               }} />
               <div style={{ fontSize: 10, letterSpacing: '0.14em', color: 'rgba(243,233,207,0.4)', marginBottom: 6, textTransform: 'uppercase' }}>
@@ -674,8 +674,8 @@ export default function BetSuccessOverlay({
                 fontSize: 28, fontWeight: 900,
                 letterSpacing: '0.14em',
                 fontFamily: "'JetBrains Mono', 'Roboto Mono', monospace",
-                color: '#f7c948',
-                textShadow: '0 0 30px rgba(247,201,72,0.2)',
+                color: '#a8e6a3',
+                textShadow: '0 0 30px rgba(168, 230, 163,0.2)',
                 marginBottom: 12,
               }}>
                 {code}
@@ -687,7 +687,7 @@ export default function BetSuccessOverlay({
                   whileTap={{ scale: 0.96 }}
                   style={{
                     flex: 1, padding: '8px 12px', borderRadius: 10,
-                    background: 'linear-gradient(135deg, #f7c948 0%, #d4a72c 100%)',
+                    background: 'linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%)',
                     color: '#1a1300', fontWeight: 700, fontSize: 12,
                     border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center',
@@ -709,9 +709,9 @@ export default function BetSuccessOverlay({
                     whileTap={{ scale: 0.96 }}
                     style={{
                       flex: 1, padding: '8px 12px', borderRadius: 10,
-                      border: '1px solid rgba(232,185,74,0.3)',
-                      background: 'rgba(232,185,74,0.08)',
-                      color: '#f7c948', fontWeight: 700, fontSize: 12,
+                      border: '1px solid rgba(126, 217, 87,0.3)',
+                      background: 'rgba(126, 217, 87,0.08)',
+                      color: '#a8e6a3', fontWeight: 700, fontSize: 12,
                       cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', gap: 6, fontFamily: 'inherit',
                     }}
@@ -734,7 +734,7 @@ export default function BetSuccessOverlay({
                   transform: 'translate(-50%, -50%)',
                   width: '120%', height: '120%',
                   borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(232,185,74,0.04) 0%, transparent 60%)',
+                  background: 'radial-gradient(circle, rgba(126, 217, 87,0.04) 0%, transparent 60%)',
                   pointerEvents: 'none',
                 }}
                 animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.95, 1.05, 0.95] }}
@@ -753,7 +753,7 @@ export default function BetSuccessOverlay({
               }}
             >
               <motion.div variants={detailItemVariants} style={{
-                background: 'rgba(232,185,74,0.04)', border: '1px solid rgba(232,185,74,0.1)',
+                background: 'rgba(126, 217, 87,0.04)', border: '1px solid rgba(126, 217, 87,0.1)',
                 borderRadius: 12, padding: '10px 12px',
                 display: 'flex', flexDirection: 'column', gap: 2,
                 textAlign: 'left',
@@ -767,16 +767,16 @@ export default function BetSuccessOverlay({
                 </span>
               </motion.div>
               <motion.div variants={detailItemVariants} style={{
-                background: 'rgba(232,185,74,0.04)', border: '1px solid rgba(232,185,74,0.1)',
+                background: 'rgba(126, 217, 87,0.04)', border: '1px solid rgba(126, 217, 87,0.1)',
                 borderRadius: 12, padding: '10px 12px',
                 display: 'flex', flexDirection: 'column', gap: 2,
                 textAlign: 'left',
               }}>
                 <span style={{ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(243,233,207,0.45)' }}>Status</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#f7c948' }}>Open ✓</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#a8e6a3' }}>Open ✓</span>
               </motion.div>
               <motion.div variants={detailItemVariants} style={{
-                background: 'rgba(232,185,74,0.04)', border: '1px solid rgba(232,185,74,0.1)',
+                background: 'rgba(126, 217, 87,0.04)', border: '1px solid rgba(126, 217, 87,0.1)',
                 borderRadius: 12, padding: '10px 12px',
                 display: 'flex', flexDirection: 'column', gap: 2,
                 textAlign: 'left',
@@ -787,18 +787,18 @@ export default function BetSuccessOverlay({
                 </span>
               </motion.div>
               <motion.div variants={detailItemVariants} style={{
-                background: 'rgba(232,185,74,0.04)', border: '1px solid rgba(232,185,74,0.1)',
+                background: 'rgba(126, 217, 87,0.04)', border: '1px solid rgba(126, 217, 87,0.1)',
                 borderRadius: 12, padding: '10px 12px',
                 display: 'flex', flexDirection: 'column', gap: 2,
                 textAlign: 'left',
               }}>
                 <span style={{ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(243,233,207,0.45)' }}>Pot. Winnings</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#f7c948', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#a8e6a3', fontVariantNumeric: 'tabular-nums' }}>
                   GHS {fmt(bet.potentialWin)}
                 </span>
               </motion.div>
               <motion.div variants={detailItemVariants} style={{
-                background: 'rgba(232,185,74,0.04)', border: '1px solid rgba(232,185,74,0.1)',
+                background: 'rgba(126, 217, 87,0.04)', border: '1px solid rgba(126, 217, 87,0.1)',
                 borderRadius: 12, padding: '10px 12px',
                 display: 'flex', flexDirection: 'column', gap: 2,
                 textAlign: 'left', gridColumn: '1 / -1',
@@ -853,10 +853,10 @@ export default function BetSuccessOverlay({
                   padding: '12px 16px', borderRadius: 12, border: 'none',
                   fontWeight: 700, fontSize: 13, letterSpacing: '0.02em',
                   cursor: 'pointer', fontFamily: 'inherit',
-                  background: 'linear-gradient(135deg, #f7c948 0%, #d4a72c 100%)',
+                  background: 'linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%)',
                   color: '#1a1300',
                   gridColumn: '1 / -1',
-                  boxShadow: '0 10px 24px rgba(232,185,74,0.3)',
+                  boxShadow: '0 10px 24px rgba(126, 217, 87,0.3)',
                 }}
                 onClick={() => { onViewBet?.(); handleClose(); }}
               >
@@ -868,8 +868,8 @@ export default function BetSuccessOverlay({
                 whileTap={{ scale: 0.97 }}
                 style={{
                   padding: '10px 12px', borderRadius: 12,
-                  border: '1px solid rgba(232,185,74,0.2)',
-                  background: 'rgba(232,185,74,0.06)',
+                  border: '1px solid rgba(126, 217, 87,0.2)',
+                  background: 'rgba(126, 217, 87,0.06)',
                   color: '#f3e9cf', fontWeight: 600, fontSize: 12,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
@@ -883,8 +883,8 @@ export default function BetSuccessOverlay({
                 whileTap={{ scale: 0.97 }}
                 style={{
                   padding: '10px 12px', borderRadius: 12,
-                  border: '1px solid rgba(232,185,74,0.2)',
-                  background: 'rgba(232,185,74,0.06)',
+                  border: '1px solid rgba(126, 217, 87,0.2)',
+                  background: 'rgba(126, 217, 87,0.06)',
                   color: '#f3e9cf', fontWeight: 600, fontSize: 12,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
@@ -899,7 +899,7 @@ export default function BetSuccessOverlay({
                 style={{
                   position: 'absolute', bottom: 0, left: 0, right: 0,
                   height: 3,
-                  background: 'linear-gradient(90deg, #f7c948, #b8860b)',
+                  background: 'linear-gradient(90deg, #a8e6a3, #b8860b)',
                   transformOrigin: 'left',
                   borderRadius: '0 0 24px 24px',
                 }}
@@ -922,10 +922,10 @@ export default function BetSuccessOverlay({
                   position: 'fixed', bottom: 80, left: '50%',
                   transform: 'translateX(-50%)',
                   padding: '12px 24px', borderRadius: 12,
-                  background: '#1a1a1a', color: '#f7c948',
+                  background: '#1a1a1a', color: '#a8e6a3',
                   fontWeight: 600, fontSize: 13,
                   boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                  border: '1px solid rgba(232,185,74,0.2)',
+                  border: '1px solid rgba(126, 217, 87,0.2)',
                   zIndex: 10001, fontFamily: "'Inter', system-ui, sans-serif",
                 }}
               >

@@ -22,7 +22,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function ContactPage() {
   const { toast } = useToast();
   const { account } = useAccount();
-  const [name, setName] = useState('ODDSIFY');
+  const [name, setName] = useState('BETNEXA');
   const [msg, setMsg] = useState('');
   const [topic, setTopic] = useState('Wallet');
   const [busy, setBusy] = useState(false);
@@ -95,8 +95,8 @@ export default function ContactPage() {
         <h1 style={{ fontSize: 36, letterSpacing: '-0.02em' }}>Contact us</h1>
         <p style={{ color: 'var(--text-soft)', marginTop: 6 }}>
           We reply to most messages within 30 minutes. Or email{' '}
-          <a href="mailto:support@oddsify.gh" style={{ color: 'var(--accent)' }}>
-            support@oddsify.gh
+          <a href="mailto:support@betnexa.gh" style={{ color: 'var(--accent)' }}>
+            support@betnexa.gh
           </a>
           .
         </p>

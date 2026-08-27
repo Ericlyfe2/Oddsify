@@ -1,32 +1,33 @@
 :root {
-  /* Snapped to the Claude Design "Oddsify.html" black + gold tokens. */
-  --bg: #0a0a0a;
-  --bg-soft: #0f0e0c; /* header / hero "greenDeep" */
-  --surface: #161513; /* card surfaces */
-  --surface-2: #211f1a; /* alt panels, inputs */
-  --line: rgba(243, 233, 207, 0.08);
-  --line-strong: rgba(243, 233, 207, 0.16);
-  --text: #f3e9cf; /* warm cream "ink" */
-  --text-soft: #9c9277;
-  --text-dim: #5f5848;
-  --header-bg: rgba(15, 14, 12, 0.86);
-  --accent: #e8b94a; /* gold — primary CTA / brand */
-  --accent-warm: #f7c948; /* brighter gold — cash-out, best odds */
-  --accent-hot: #ff5b78; /* pink-red — LIVE, danger, alerts */
+  /* BetNexa dark adaptation — bright brand green on a near-black surface,
+     dark ink for text/icons placed on top of the bright accent fills. */
+  --bg: #0b120d;
+  --bg-soft: #0f1811;
+  --surface: #131d15; /* card surfaces */
+  --surface-2: #1c2a20; /* alt panels, inputs */
+  --line: rgba(234, 248, 232, 0.08);
+  --line-strong: rgba(234, 248, 232, 0.16);
+  --text: #eaf8e8; /* light-green-tinted near-white */
+  --text-soft: #9db89d;
+  --text-dim: #5e6e5e;
+  --header-bg: rgba(11, 18, 13, 0.86);
+  --accent: #7ed957; /* BetNexa primary green — CTA / brand */
+  --accent-warm: #a8e6a3; /* lighter green — cash-out, best odds */
+  --accent-hot: #ff6b6b; /* red — LIVE, danger, alerts */
   --accent-cool: #6ad0ff; /* informational, kept for back-compat */
-  --gold: #f7c948;
-  --gold-ink: #1a1300; /* dark text for use on gold */
-  --gold-soft: rgba(232, 185, 74, 0.16);
-  --green-bright: #e8b94a;
-  --green-deep: #0f0e0c;
-  --green-mid: #1a1814;
-  --danger: #ff5b78;
-  --warn: #f0a040;
-  --win: #e8b94a; /* Won status — gold, not green (brand choice) */
+  --gold: #a8e6a3; /* back-compat alias of --accent-warm */
+  --gold-ink: #0b2e12; /* dark text for use on the bright accent fills */
+  --gold-soft: rgba(126, 217, 87, 0.16);
+  --green-bright: #7ed957;
+  --green-deep: #0b120d;
+  --green-mid: #16221a;
+  --danger: #ff6b6b;
+  --warn: #e0a83d;
+  --win: #7ed957; /* Won status — brand green */
   /* RGB channels for translucent fills via rgba(var(--x-rgb), a). */
-  --accent-rgb: 232, 185, 74;
-  --danger-rgb: 255, 91, 120;
-  --warn-rgb: 240, 160, 64;
+  --accent-rgb: 126, 217, 87;
+  --danger-rgb: 255, 107, 107;
+  --warn-rgb: 224, 168, 61;
   --accent-cool-rgb: 106, 208, 255;
   /* Radius scale — design-system spec. --r kept at 10px for back-compat
      with existing cards; --r-md is the design's name for the same value. */
@@ -40,7 +41,7 @@
   /* Shadows — gold-glow CTA is the brand signature. */
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12);
   --shadow-pop: 0 12px 30px rgba(0, 0, 0, 0.5);
-  --shadow-cta: 0 4px 14px rgba(232, 185, 74, 0.3);
+  --shadow-cta: 0 4px 14px rgba(126, 217, 87, 0.3);
   --shadow-nav: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
   /* Layout — 414px mobile column is canonical. */
   --col-max: 414px;
@@ -67,41 +68,45 @@
    richer so it reads as gold (not olive) on a light background, and
    text-dim is tightened up so secondary copy hits ~4.5:1 contrast. */
 html[data-theme='light'] {
-  --bg: #f4f1e8;
-  --bg-soft: #fbf7ec; /* header surface — warm off-white, not blinding */
-  --surface: #fffdf6; /* card surfaces — barely tinted white */
-  --surface-2: #ece6d4;
-  --line: rgba(28, 22, 8, 0.1);
-  --line-strong: rgba(28, 22, 8, 0.22);
-  --text: #1a160a;
-  --text-soft: #4d4534;
-  --text-dim: #6f6856;
-  --header-bg: rgba(251, 247, 236, 0.86);
-  --accent: #c8980b; /* richer gold, less olive */
-  --accent-warm: #d8a808;
-  --accent-hot: #d6263f;
-  --accent-cool: #1f8dd0;
-  --gold: #c8980b;
-  --gold-ink: #1a1300;
-  --gold-soft: rgba(200, 152, 11, 0.18);
-  /* Used by the floating balance pill in OddTopHeader — stay gold in both
-     modes so the visual identity carries through. */
-  --green-bright: #d4a418;
-  --green-deep: #0f0e0c;
-  --green-mid: #e8e0d0;
-  --danger: #d6263f;
-  --warn: #b4720a;
-  --win: #c8980b; /* Won status — gold (richer in light mode) */
+  /* BetNexa flagship identity — white dominant, light-green accent.
+     --accent/--accent-warm are deepened from the raw brand swatches
+     (#7ed957 / #a8e6a3) so they stay legible as flat text/icon color on
+     white (~5:1 contrast) — the bright swatches live on in the dark
+     bucket above and in --gold-soft's tint here. */
+  --bg: #ffffff;
+  --bg-soft: #f7faf7;
+  --surface: #ffffff; /* card surfaces */
+  --surface-2: #f3fbf1;
+  --line: rgba(23, 33, 23, 0.08);
+  --line-strong: rgba(23, 33, 23, 0.16);
+  --text: #172117;
+  --text-soft: #657365;
+  --text-dim: #93a693;
+  --header-bg: rgba(255, 255, 255, 0.86);
+  --accent: #15803d;
+  --accent-warm: #16a34a;
+  --accent-hot: #dc2626;
+  --accent-cool: #2563eb;
+  --gold: #16a34a; /* back-compat alias of --accent-warm */
+  --gold-ink: #ffffff; /* light text for use on the accent/gold fills */
+  --gold-soft: rgba(21, 128, 61, 0.12);
+  /* Used by the floating balance pill in OddTopHeader — stays the brand
+     green in both modes so the visual identity carries through. */
+  --green-bright: #16a34a;
+  --green-deep: #f3fbf1;
+  --green-mid: #eaf8e8;
+  --danger: #dc2626;
+  --warn: #b45309;
+  --win: #16a34a; /* Won status — brand green */
   /* Light-mode RGB channels for translucent fills. */
-  --accent-rgb: 200, 152, 11;
-  --danger-rgb: 214, 38, 63;
-  --warn-rgb: 180, 114, 10;
-  --accent-cool-rgb: 31, 141, 208;
-  /* Gold CTA glow is dimmer in light mode (less contrast on cream). */
-  --shadow-cta: 0 4px 14px rgba(200, 152, 11, 0.25);
-  --overlay: rgba(28, 22, 8, 0.06);
-  --overlay-strong: rgba(28, 22, 8, 0.1);
-  --scrim: rgba(28, 22, 8, 0.45);
+  --accent-rgb: 21, 128, 61;
+  --danger-rgb: 220, 38, 38;
+  --warn-rgb: 180, 83, 9;
+  --accent-cool-rgb: 37, 99, 235;
+  --shadow-cta: 0 4px 14px rgba(22, 163, 74, 0.25);
+  --overlay: rgba(23, 33, 23, 0.06);
+  --overlay-strong: rgba(23, 33, 23, 0.1);
+  --scrim: rgba(23, 33, 23, 0.45);
 }
 
 /* ===== Design-system primitives shared across new pages (Oddsify.html port).
@@ -331,14 +336,14 @@ html[data-theme='light'] {
   border-radius: 999px;
   border: 0;
   cursor: pointer;
-  background: var(--gold, #e8b94a);
+  background: var(--gold, #7ed957);
   color: #1a1300;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.45),
-    0 0 0 4px rgba(232, 185, 74, 0.14);
+    0 0 0 4px rgba(126, 217, 87, 0.14);
   animation: supportSlowBounce 3.8s ease-in-out infinite;
 }
 .odd-support-bubble:active {
@@ -491,7 +496,7 @@ body {
 }
 body {
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(255, 184, 0, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 85% -10%, rgba(34, 197, 94, 0.08), transparent 60%),
     radial-gradient(700px 400px at -10% 30%, rgba(106, 208, 255, 0.05), transparent 60%), var(--bg);
   min-height: 100vh;
 }
@@ -665,7 +670,7 @@ html[data-theme='light'] .skl {
   place-items: center;
   color: var(--accent);
   transform: rotate(-6deg);
-  box-shadow: 0 0 20px rgba(255, 184, 0, 0.3);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
   overflow: hidden;
 }
 .logo-mark svg {
@@ -761,7 +766,7 @@ nav a .live-dot {
 }
 .btn-primary:hover {
   background: #d4ff5a;
-  box-shadow: 0 8px 28px rgba(255, 184, 0, 0.4);
+  box-shadow: 0 8px 28px rgba(34, 197, 94, 0.4);
   transform: translateY(-1px);
 }
 
@@ -789,7 +794,7 @@ nav a .live-dot {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 90% 80%, rgba(255, 184, 0, 0.18), transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.18), transparent 50%),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 400'><g stroke='rgba(255,255,255,0.04)' fill='none' stroke-width='1'><circle cx='400' cy='200' r='80'/><line x1='400' y1='0' x2='400' y2='400'/><line x1='0' y1='200' x2='800' y2='200'/><rect x='100' y='100' width='200' height='200'/><rect x='500' y='100' width='200' height='200'/></g></svg>");
   background-size: cover;
   background-position: center;
@@ -932,7 +937,7 @@ nav a .live-dot {
   background: var(--accent);
   color: var(--gold-ink);
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(255, 184, 0, 0.25);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
 }
 .odd-pill.selected .label {
   color: rgba(0, 0, 0, 0.7);
@@ -1687,7 +1692,7 @@ nav a .live-dot {
 }
 .place-bet:hover {
   background: #d4ff5a;
-  box-shadow: 0 12px 32px rgba(255, 184, 0, 0.4);
+  box-shadow: 0 12px 32px rgba(34, 197, 94, 0.4);
   transform: translateY(-1px);
 }
 .place-bet .arrow {
@@ -2989,7 +2994,7 @@ nav a:active {
 .sb-cta-join {
   background: var(--accent);
   color: var(--gold-ink);
-  box-shadow: 0 4px 14px rgba(255, 184, 0, 0.22);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.22);
 }
 .sb-cta-login {
   background: transparent;
@@ -3065,11 +3070,11 @@ nav a:active {
 .sb-sport-tab.active {
   background: var(--surface);
   color: var(--accent);
-  border-color: rgba(255, 184, 0, 0.25);
+  border-color: rgba(34, 197, 94, 0.25);
 }
 .sb-sport-tab.active .ct {
   color: var(--accent);
-  background: rgba(255, 184, 0, 0.12);
+  background: rgba(34, 197, 94, 0.12);
 }
 
 /* ----- secondary tabs ----- */
@@ -3284,7 +3289,7 @@ nav a:active {
   border-color: var(--accent);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 4px 14px rgba(255, 184, 0, 0.28);
+    0 4px 14px rgba(34, 197, 94, 0.28);
   animation: sb-odd-pulse 320ms cubic-bezier(0.2, 1.3, 0.4, 1) 1;
 }
 @keyframes sb-odd-pulse {
@@ -3619,7 +3624,7 @@ nav a:active {
   border-radius: 999px;
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.4),
-    0 4px 12px rgba(255, 184, 0, 0.3);
+    0 4px 12px rgba(34, 197, 94, 0.3);
   font-weight: 800;
   font-size: 13px;
   animation: sbPillIn 0.25s ease both;
@@ -3949,8 +3954,8 @@ nav a:active {
 .sb-quick-action:hover .sb-qa-icon,
 .sb-quick-action.active .sb-qa-icon {
   color: var(--accent);
-  border-color: rgba(255, 184, 0, 0.3);
-  background: rgba(255, 184, 0, 0.08);
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.08);
 }
 .sb-quick-action span:last-child {
   font-size: 10px;
@@ -4162,7 +4167,7 @@ nav a:active {
   border-right: 1px solid var(--line);
 }
 .sb-code-share:hover {
-  background: rgba(255, 184, 0, 0.06);
+  background: rgba(34, 197, 94, 0.06);
 }
 .sb-code-add {
   background: var(--accent);
@@ -4193,7 +4198,7 @@ nav a:active {
     padding: 0 14px;
     font-size: 13px;
     border-radius: 6px;
-    box-shadow: 0 4px 14px rgba(255, 184, 0, 0.25);
+    box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
   }
   .sb-cta-login {
     height: 34px;

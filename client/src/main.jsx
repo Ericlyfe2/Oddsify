@@ -16,7 +16,7 @@ import './styles/games.css';
 // the user on a crashed page. Guarded so a genuinely offline/broken load
 // doesn't reload forever.
 window.addEventListener('vite:preloadError', () => {
-  const key = 'oddsify:chunk-reload-at';
+  const key = 'betnexa:chunk-reload-at';
   const last = Number(sessionStorage.getItem(key) || 0);
   if (Date.now() - last > 10_000) {
     sessionStorage.setItem(key, String(Date.now()));

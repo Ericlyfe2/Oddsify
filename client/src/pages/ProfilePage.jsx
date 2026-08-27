@@ -274,7 +274,7 @@ export default function ProfilePage() {
         <OddPageHeader title="Account" subtitle="Sign in to access your account" />
         <div style={{ padding: '40px 24px', textAlign: 'center' }}>
           <OddIcon name="user" size={32} color={T.inkDim} />
-          <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>Sign in to Oddsify</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: T.ink, marginTop: 12 }}>Sign in to BetNexa</div>
           <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 6 }}>
             Track balance, deposits, bets and verification in one place.
           </div>
@@ -798,15 +798,15 @@ export default function ProfilePage() {
                 whiteSpace: 'nowrap',
                 maxWidth: 200,
               }}
-              title={`https://oddsify.com/register?ref=${account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}`}
+              title={`https://betnexa.com/register?ref=${account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}`}
             >
-              oddsify.com/register?ref={account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}
+              betnexa.com/register?ref={account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}
             </div>
           </div>
           <button
             type="button"
             onClick={() => {
-              const link = `https://oddsify.com/register?ref=${account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}`;
+              const link = `https://betnexa.com/register?ref=${account.referralCode || (account.id || '').slice(0, 6).toUpperCase()}`;
               try {
                 navigator.clipboard?.writeText(link);
                 toast('Link copied.', 'success');

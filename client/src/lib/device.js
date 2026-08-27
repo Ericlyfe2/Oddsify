@@ -2,7 +2,7 @@
  * Stable per-browser device identifier, used by the referral fraud checks
  * (shared_device heuristic). Random — carries no personal data.
  */
-const KEY = 'oddsify_device';
+const KEY = 'betnexa_device';
 
 export function getDeviceId() {
   try {

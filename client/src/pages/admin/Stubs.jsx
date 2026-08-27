@@ -332,7 +332,7 @@ export function StubSettingsPage() {
         <Card title="Branding">
           <dl className="adm-kv">
             <dt>Site name</dt>
-            <dd>Oddsify Gaming</dd>
+            <dd>BetNexa Gaming</dd>
             <dt>Default currency</dt>
             <dd>GHS</dd>
             <dt>Locale</dt>

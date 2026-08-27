@@ -115,8 +115,8 @@ export default function ReferralsPage() {
                   fontSize: 12,
                   padding: '6px 10px',
                   borderRadius: 999,
-                  background: 'rgba(232,185,74,.08)',
-                  border: '1px solid rgba(232,185,74,.25)',
+                  background: 'rgba(126, 217, 87,.08)',
+                  border: '1px solid rgba(126, 217, 87,.25)',
                 }}
               >
                 #{i + 1} {t.name} — {t.rewarded}/{t.total} · GHS {moneyFmt(t.earned)}

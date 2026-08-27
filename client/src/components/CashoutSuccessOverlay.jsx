@@ -67,7 +67,7 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
               '--x': `${Math.random() * 100}%`,
               '--d': `${Math.random() * 1.6}s`,
               '--r': `${Math.random() * 360}deg`,
-              '--c': ['#f7c948', '#e8b94a', '#d4a72c', '#fff3b8', '#ffb800', '#b8860b', '#f3e9cf'][i % 7],
+              '--c': ['#a8e6a3', '#7ed957', '#d4a72c', '#fff3b8', '#16a34a', '#b8860b', '#f3e9cf'][i % 7],
               '--w': `${5 + Math.random() * 6}px`,
               '--h': `${8 + Math.random() * 12}px`,
               '--tx': `${-40 + Math.random() * 80}px`,
@@ -85,7 +85,7 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
               '--x': `${20 + Math.random() * 60}%`,
               '--d': `${Math.random() * 2}s`,
               '--s': `${3 + Math.random() * 5}px`,
-              '--c': ['#f7c948', '#e8b94a', '#fff3b8'][i % 3],
+              '--c': ['#a8e6a3', '#7ed957', '#fff3b8'][i % 3],
             }}
           />
         ))}
@@ -129,7 +129,7 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
 
         <div className="cso-profit-row">
           <span className="cso-profit-label">Profit / Loss</span>
-          <span className="cso-profit-val" style={{ color: isProfit ? '#f7c948' : '#ff5b78' }}>
+          <span className="cso-profit-val" style={{ color: isProfit ? '#a8e6a3' : '#ff5b78' }}>
             {isProfit ? '+' : ''}GHS {fmtCedi(Math.abs(profit))} {isProfit ? 'profit' : 'loss'}
           </span>
         </div>
@@ -218,8 +218,8 @@ const CSO_CSS = `
 @keyframes csoTrophyPop { 0% { transform: scale(0) rotate(-30deg); opacity: 0; } 70% { transform: scale(1.15) rotate(6deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
 @keyframes csoRingPulse { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(2); opacity: 0; } }
 @keyframes csoShimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-@keyframes csoBorderGlow { 0%, 100% { box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(232,185,74,.2) inset, 0 0 24px rgba(232,185,74,.05); } 50% { box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(247,201,72,.45) inset, 0 0 48px rgba(232,185,74,.14); } }
-@keyframes csoBtnGlow { 0%, 100% { box-shadow: 0 10px 24px rgba(232,185,74,.3); } 50% { box-shadow: 0 12px 36px rgba(247,201,72,.55); } }
+@keyframes csoBorderGlow { 0%, 100% { box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(126, 217, 87,.2) inset, 0 0 24px rgba(126, 217, 87,.05); } 50% { box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(168, 230, 163,.45) inset, 0 0 48px rgba(126, 217, 87,.14); } }
+@keyframes csoBtnGlow { 0%, 100% { box-shadow: 0 10px 24px rgba(126, 217, 87,.3); } 50% { box-shadow: 0 12px 36px rgba(168, 230, 163,.55); } }
 
 .cso-overlay {
   position: fixed; inset: 0; z-index: 9999;
@@ -251,11 +251,11 @@ const CSO_CSS = `
   max-height: 100%;
   overflow-y: auto;
   background:
-    radial-gradient(500px 200px at 80% -10%, rgba(232,185,74,.12), transparent 60%),
+    radial-gradient(500px 200px at 80% -10%, rgba(126, 217, 87,.12), transparent 60%),
     linear-gradient(180deg, #161513 0%, #0a0a0a 100%);
   border-radius: 24px;
   padding: 28px 24px 22px;
-  box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(232,185,74,.2) inset;
+  box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(126, 217, 87,.2) inset;
   font-family: 'Inter','Segoe UI',system-ui,sans-serif;
   text-align: center;
   animation: csoCardIn .55s cubic-bezier(.18,.88,.36,1.2) both, csoBorderGlow 3s ease-in-out 1s infinite;
@@ -265,7 +265,7 @@ const CSO_CSS = `
 .cso-exiting .cso-card { animation: csoCardOut .3s ease both; }
 
 .cso-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.cso-badge { font-size: 10px; letter-spacing: .18em; font-weight: 800; color: #f7c948; background: rgba(232,185,74,.1); border: 1px solid rgba(232,185,74,.35); padding: 5px 10px; border-radius: 999px; animation: csoUp .4s ease .15s both; }
+.cso-badge { font-size: 10px; letter-spacing: .18em; font-weight: 800; color: #a8e6a3; background: rgba(126, 217, 87,.1); border: 1px solid rgba(126, 217, 87,.35); padding: 5px 10px; border-radius: 999px; animation: csoUp .4s ease .15s both; }
 .cso-x { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(255,255,255,.65); cursor: pointer; display: grid; place-items: center; transition: color .15s, border-color .15s; }
 .cso-x:hover { color: #fff; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.06); }
 
@@ -274,26 +274,26 @@ const CSO_CSS = `
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 120px; height: 120px;
-  background: radial-gradient(circle, rgba(232,185,74,.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(126, 217, 87,.18) 0%, transparent 70%);
   pointer-events: none;
   animation: csoGlow 2s ease-in-out infinite;
 }
-.cso-disc { position: relative; width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff3b8 0%, #e8b94a 55%, #b8860b 100%); box-shadow: 0 14px 36px rgba(232,185,74,.35), 0 0 0 4px rgba(232,185,74,.18); animation: csoBounce 2.6s ease-in-out 1s infinite; }
-.cso-disc::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(247,201,72,.5); opacity: 0; animation: csoRingPulse 2s ease-out .9s infinite; }
+.cso-disc { position: relative; width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff3b8 0%, #7ed957 55%, #b8860b 100%); box-shadow: 0 14px 36px rgba(126, 217, 87,.35), 0 0 0 4px rgba(126, 217, 87,.18); animation: csoBounce 2.6s ease-in-out 1s infinite; }
+.cso-disc::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(168, 230, 163,.5); opacity: 0; animation: csoRingPulse 2s ease-out .9s infinite; }
 
 .cso-title { margin: 10px 0 4px; font-size: 26px; font-weight: 900; letter-spacing: -.01em; animation: csoUp .4s ease .35s both; }
 .cso-sub { margin: 0 0 14px; font-size: 13px; color: rgba(243,233,207,.72); animation: csoUp .4s ease .45s both; }
 
 .cso-amount { display: flex; align-items: baseline; justify-content: center; gap: 8px; font-variant-numeric: tabular-nums; margin: 4px 0 4px; animation: csoUp .4s ease .55s both; }
-.cso-amount .cso-cur { font-size: 14px; font-weight: 700; color: rgba(247,201,72,.6); letter-spacing: .08em; }
-.cso-amount .cso-amt { font-size: 40px; font-weight: 900; letter-spacing: -.025em; background: linear-gradient(110deg, #e8b94a 25%, #fff7d6 50%, #e8b94a 75%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: csoShimmer 2.8s linear 1.2s infinite; filter: drop-shadow(0 6px 24px rgba(232,185,74,.35)); }
+.cso-amount .cso-cur { font-size: 14px; font-weight: 700; color: rgba(168, 230, 163,.6); letter-spacing: .08em; }
+.cso-amount .cso-amt { font-size: 40px; font-weight: 900; letter-spacing: -.025em; background: linear-gradient(110deg, #7ed957 25%, #fff7d6 50%, #7ed957 75%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: csoShimmer 2.8s linear 1.2s infinite; filter: drop-shadow(0 6px 24px rgba(126, 217, 87,.35)); }
 
-.cso-profit-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 14px; margin: 6px auto 12px; width: fit-content; background: rgba(232,185,74,.06); border: 1px solid rgba(232,185,74,.12); border-radius: 999px; animation: csoUp .4s ease .65s both; }
+.cso-profit-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 14px; margin: 6px auto 12px; width: fit-content; background: rgba(126, 217, 87,.06); border: 1px solid rgba(126, 217, 87,.12); border-radius: 999px; animation: csoUp .4s ease .65s both; }
 .cso-profit-label { font-size: 11px; color: rgba(243,233,207,.5); }
 .cso-profit-val { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 .cso-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
-.cso-stat { background: rgba(232,185,74,.05); border: 1px solid rgba(232,185,74,.1); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; text-align: left; animation: csoUp .4s ease both; }
+.cso-stat { background: rgba(126, 217, 87,.05); border: 1px solid rgba(126, 217, 87,.1); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; text-align: left; animation: csoUp .4s ease both; }
 .cso-stat:nth-child(1) { animation-delay: .7s; }
 .cso-stat:nth-child(2) { animation-delay: .78s; }
 .cso-stat:nth-child(3) { animation-delay: .86s; }
@@ -305,12 +305,12 @@ const CSO_CSS = `
 .cso-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; animation: csoUp .4s ease 1.05s both; }
 .cso-btn { padding: 12px 16px; border-radius: 12px; border: none; font-weight: 800; font-size: 13px; cursor: pointer; transition: transform .12s, box-shadow .15s, background .15s; font-family: inherit; }
 .cso-btn:active { transform: scale(.97); }
-.cso-btn-primary { background: linear-gradient(135deg, #f7c948 0%, #d4a72c 100%); color: #1a1300; box-shadow: 0 10px 24px rgba(232,185,74,.3); animation: csoBtnGlow 2.4s ease-in-out 1.6s infinite; }
+.cso-btn-primary { background: linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%); color: #1a1300; box-shadow: 0 10px 24px rgba(126, 217, 87,.3); animation: csoBtnGlow 2.4s ease-in-out 1.6s infinite; }
 .cso-btn-primary:hover { transform: translateY(-1px); }
-.cso-btn-ghost { background: rgba(232,185,74,.06); color: #f3e9cf; border: 1px solid rgba(232,185,74,.2); }
-.cso-btn-ghost:hover { background: rgba(232,185,74,.12); border-color: rgba(232,185,74,.4); }
+.cso-btn-ghost { background: rgba(126, 217, 87,.06); color: #f3e9cf; border: 1px solid rgba(126, 217, 87,.2); }
+.cso-btn-ghost:hover { background: rgba(126, 217, 87,.12); border-color: rgba(126, 217, 87,.4); }
 
-.cso-countdown { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #f7c948, #b8860b); transform-origin: left; animation: csoCountdown 2.5s linear both; border-radius: 0 0 24px 24px; }
+.cso-countdown { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #a8e6a3, #b8860b); transform-origin: left; animation: csoCountdown 2.5s linear both; border-radius: 0 0 24px 24px; }
 
 @media (max-width: 380px) {
   .cso-card { padding: 22px 16px 18px; }

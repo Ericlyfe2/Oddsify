@@ -157,7 +157,7 @@ export default function AdminShell() {
             </svg>
           </div>
           <div className="text">
-            <div className="name">Oddsify</div>
+            <div className="name">BetNexa</div>
             <div className="sub">Admin OS</div>
           </div>
         </div>

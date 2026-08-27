@@ -1,18 +1,21 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
 
 const ThemeCtx = createContext(null);
-const STORAGE_KEY = 'oddsify_theme';
+const STORAGE_KEY = 'betnexa_theme';
 
 function readInitial() {
-  if (typeof window === 'undefined') return 'dark';
+  // BetNexa's flagship identity is white + light green, so a first-time
+  // visitor with no saved preference and no explicit dark OS preference
+  // lands on that look rather than the dark adaptation.
+  if (typeof window === 'undefined') return 'light';
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'light' || saved === 'dark') return saved;
   } catch {}
-  if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: light)').matches) {
-    return 'light';
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
   }
-  return 'dark';
+  return 'light';
 }
 
 export function ThemeProvider({ children }) {
@@ -26,7 +29,7 @@ export function ThemeProvider({ children }) {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = theme === 'dark' ? '#000000' : '#f4f1e8';
+    if (meta) meta.content = theme === 'dark' ? '#0b120d' : '#ffffff';
   }, [theme]);
 
   const setTheme = useCallback((t) => {

@@ -9,9 +9,9 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Oddsify — premium sports betting for Ghana. Sharper odds, live betting, instant MoMo payouts." />
-    <meta property="og:title" content="Oddsify — Premium Sports Betting" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="BetNexa — premium sports betting for Ghana. Sharper odds, live betting, instant MoMo payouts." />
+    <meta property="og:title" content="BetNexa — Premium Sports Betting" />
     <meta property="og:description" content="Sharper odds across 30+ leagues, live & pre-match. Instant MoMo, Vodafone Cash & card deposits." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/og-image.png" />
@@ -19,7 +19,7 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:image" content="/og-image.png" />
-    <title>Oddsify — Premium Sports Betting</title>
+    <title>BetNexa — Premium Sports Betting</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -29,7 +29,7 @@
   </head>
   <body>
     <!-- Inline script applies saved theme before React renders, preventing a flash of wrong colors. -->
-    <script>(function(){try{var t=localStorage.getItem('oddsify_theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t;}document.documentElement.classList.add('preload');setTimeout(function(){document.documentElement.classList.remove('preload')},100);}catch(e){}})()</script>
+    <script>(function(){try{var t=localStorage.getItem('betnexa_theme');if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t;document.documentElement.classList.add('preload');setTimeout(function(){document.documentElement.classList.remove('preload')},100);}catch(e){}})()</script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

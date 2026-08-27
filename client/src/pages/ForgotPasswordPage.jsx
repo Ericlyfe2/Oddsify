@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
       <div className="lp">
         <div className="lp-glow" />
         <div className="lp-brand">
-          <span className="lp-brand-text">ODDSIFY</span>
+          <span className="lp-brand-text">BETNEXA</span>
         </div>
         <h1 className="lp-title">Check Your Phone or Email</h1>
         <div className="lp-form">
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
     <div className="lp">
       <div className="lp-glow" />
       <div className="lp-brand">
-        <span className="lp-brand-text">ODDSIFY</span>
+        <span className="lp-brand-text">BETNEXA</span>
       </div>
       <h1 className="lp-title">Reset Your Password</h1>
       <form className="lp-form" onSubmit={submit} noValidate>

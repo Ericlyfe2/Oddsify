@@ -634,7 +634,7 @@ export const CASINO_GAMES = [
   {
     id: 'dice',
     title: 'Dice',
-    provider: 'Oddsify Originals',
+    provider: 'BetNexa Originals',
     category: 'Instant',
     rtp: 99.0,
     hot: true,
@@ -645,7 +645,7 @@ export const CASINO_GAMES = [
   {
     id: 'spin2win',
     title: 'Spin2Win',
-    provider: 'Oddsify Originals',
+    provider: 'BetNexa Originals',
     category: 'Instant',
     rtp: 97.3,
     hot: true,
@@ -656,7 +656,7 @@ export const CASINO_GAMES = [
   {
     id: 'red-black',
     title: 'Red Black',
-    provider: 'Oddsify Originals',
+    provider: 'BetNexa Originals',
     category: 'Instant',
     rtp: 98.0,
     hue: '#0ea5e9',

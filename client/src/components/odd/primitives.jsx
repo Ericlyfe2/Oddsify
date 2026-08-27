@@ -18,8 +18,8 @@ import { humanizePick } from '../../lib/marketNames.js';
 import { fetchMatchDetail, fetchMatchStats, fetchH2H } from '../../api/betApi.js';
 import { ensure1X2Order, sortOddsEntries } from '../../lib/marketUtils.js';
 
-/* ─── Oddsify wordmark ─────────────────────────────────────── */
-export function OddsifyWordmark({ size = 22, color = '#ffffff', accent = T.greenBright }) {
+/* ─── BetNexa wordmark ─────────────────────────────────────── */
+export function BetNexaWordmark({ size = 22, color = 'var(--text)', accent = T.greenBright }) {
   return (
     <div
       style={{
@@ -34,9 +34,9 @@ export function OddsifyWordmark({ size = 22, color = '#ffffff', accent = T.green
         lineHeight: 1,
       }}
     >
+      <span>Bet</span>
       <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'baseline' }}>
-        <span style={{ color: accent }}>O</span>
-        <span>ddsify</span>
+        <span style={{ color: accent }}>Nexa</span>
         <span
           style={{
             position: 'absolute',
@@ -400,7 +400,7 @@ export function OddTopHeader({ user, onAuth, onSearch, onBalanceClick }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <OddsifyWordmark size={22} color="var(--text)" accent="var(--green-bright)" />
+        <BetNexaWordmark size={22} color="var(--text)" accent="var(--green-bright)" />
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
@@ -539,7 +539,7 @@ const DEFAULT_BANNERS = [
     body: 'Topup any wallet with MTN, Telecel, Vodafone or AirtelTigo in seconds.',
     cta: 'Get bonus',
     tint: '#0a0a0a',
-    accent: '#e8b94a',
+    accent: '#7ed957',
     glyph: 'wallet',
   },
   {
@@ -549,7 +549,7 @@ const DEFAULT_BANNERS = [
     body: '100% bonus up to GHS 50,000 when you stake your first slip this week.',
     cta: 'Learn more',
     tint: '#1a1306',
-    accent: '#f7c948',
+    accent: '#a8e6a3',
     glyph: 'fire',
   },
   {
@@ -726,9 +726,9 @@ export function OddPromoBanner({ items = DEFAULT_BANNERS, onAction }) {
 
 /* ─── Category quick-grid (Upcoming / Live / Casino / Jackpot) ─ */
 const DEFAULT_CATEGORIES = [
-  { id: 'upc', label: 'Upcoming', icon: 'soccer', tint: '#e8b94a', to: '/sports?filter=soon' },
+  { id: 'upc', label: 'Upcoming', icon: 'soccer', tint: '#7ed957', to: '/sports?filter=soon' },
   { id: 'live', label: 'Live', icon: 'bolt', tint: '#ff5b78', to: '/sports?filter=live' },
-  { id: 'casino', label: 'Casino', icon: 'cards', tint: '#f7c948', to: '/casino' },
+  { id: 'casino', label: 'Casino', icon: 'cards', tint: '#a8e6a3', to: '/casino' },
   { id: 'jack', label: 'Jackpot', icon: 'trophy', tint: '#c9a3ff', to: '/jackpot' },
 ];
 export function OddCategoryGrid({ items = DEFAULT_CATEGORIES, onPick, liveCount }) {

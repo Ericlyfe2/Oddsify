@@ -68,11 +68,11 @@ export default function LoginPage() {
   useEffect(() => {
     const fromUrl = (params.get('ref') || '').trim().toUpperCase();
     if (fromUrl) {
-      try { localStorage.setItem('oddsify_ref', fromUrl); } catch {}
+      try { localStorage.setItem('betnexa_ref', fromUrl); } catch {}
       recordReferralClick(fromUrl).catch(() => {});
     }
     const code = fromUrl || (() => {
-      try { return localStorage.getItem('oddsify_ref') || ''; } catch { return ''; }
+      try { return localStorage.getItem('betnexa_ref') || ''; } catch { return ''; }
     })();
     if (!code) return;
     validateReferralCode(code)
@@ -81,7 +81,7 @@ export default function LoginPage() {
           setRefInfo({ code, referrerName: r.referrerName });
           setRefCodeInput(code);
           setRefState('valid');
-        } else localStorage.removeItem('oddsify_ref');
+        } else localStorage.removeItem('betnexa_ref');
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,7 +93,7 @@ export default function LoginPage() {
       setRefState('idle');
       if (refInfo) {
         setRefInfo(null);
-        try { localStorage.removeItem('oddsify_ref'); } catch {}
+        try { localStorage.removeItem('betnexa_ref'); } catch {}
       }
       return undefined;
     }
@@ -105,11 +105,11 @@ export default function LoginPage() {
           if (r?.valid) {
             setRefInfo({ code, referrerName: r.referrerName });
             setRefState('valid');
-            try { localStorage.setItem('oddsify_ref', code); } catch {}
+            try { localStorage.setItem('betnexa_ref', code); } catch {}
           } else {
             setRefInfo(null);
             setRefState('invalid');
-            try { localStorage.removeItem('oddsify_ref'); } catch {}
+            try { localStorage.removeItem('betnexa_ref'); } catch {}
           }
         })
         .catch(() => setRefState('idle'));
@@ -155,13 +155,13 @@ export default function LoginPage() {
           setBusy(true);
           let refCode = refInfo?.code || null;
           if (!refCode) {
-            try { refCode = localStorage.getItem('oddsify_ref') || null; } catch {}
+            try { refCode = localStorage.getItem('betnexa_ref') || null; } catch {}
           }
           const data = await googleSignIn(credential, country, {
             ...(refCode ? { referralCode: refCode } : {}),
             ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
           });
-          try { localStorage.removeItem('oddsify_ref'); } catch {}
+          try { localStorage.removeItem('betnexa_ref'); } catch {}
           signIn(data);
           navigate('/', { replace: true });
         } catch (e) {
@@ -254,7 +254,7 @@ export default function LoginPage() {
           ...(refInfo?.code ? { referralCode: refInfo.code } : {}),
           ...(getDeviceId() ? { deviceId: getDeviceId() } : {}),
         });
-        try { localStorage.removeItem('oddsify_ref'); } catch {}
+        try { localStorage.removeItem('betnexa_ref'); } catch {}
         const storedId = data.account?.email || idValue;
         toast(`Account created. Sign in next time with ${storedId} — write it down.`, 'success', { ttl: 12000 });
         routeAfterLogin(data);
@@ -274,11 +274,11 @@ export default function LoginPage() {
       <div className="lp-glow" />
 
       <div className="lp-brand">
-        <span className="lp-brand-text">ODDSIFY</span>
+        <span className="lp-brand-text">BETNEXA</span>
       </div>
 
       <h1 className="lp-title">
-        {mode === 'signin' ? 'Log In to Oddsify' : 'Sign Up for Oddsify'}
+        {mode === 'signin' ? 'Log In to BetNexa' : 'Sign Up for BetNexa'}
       </h1>
 
       <form className="lp-form" onSubmit={submit} noValidate>

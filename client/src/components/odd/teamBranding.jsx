@@ -230,7 +230,7 @@ import { useState } from 'react';
 // Once any <img> proves a URL dead, remember it in localStorage (not just
 // this session) so it's never requested again on this device — otherwise
 // every fresh page load re-triggers the same failed fetch indefinitely.
-const BAD_URL_KEY = 'oddsify_bad_crest_urls';
+const BAD_URL_KEY = 'betnexa_bad_crest_urls';
 const MAX_BAD_URLS = 300;
 
 function loadBadUrls() {

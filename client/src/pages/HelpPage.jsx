@@ -28,7 +28,7 @@ const FAQ = [
   },
   {
     q: 'I forgot my password — what do I do?',
-    a: 'Email support@oddsify.gh from your registered address with the subject “Password reset”. We will verify and re-set it within an hour.',
+    a: 'Email support@betnexa.gh from your registered address with the subject “Password reset”. We will verify and re-set it within an hour.',
   },
 ];
 
@@ -115,8 +115,8 @@ export default function HelpPage() {
         <h2 style={{ fontSize: 18, marginBottom: 6 }}>Contact us</h2>
         <p style={{ color: 'var(--text-soft)', fontSize: 13, marginBottom: 18 }}>
           We reply to most messages within 30 minutes. Or email{' '}
-          <a href="mailto:support@oddsify.gh" style={{ color: 'var(--accent)' }}>
-            support@oddsify.gh
+          <a href="mailto:support@betnexa.gh" style={{ color: 'var(--accent)' }}>
+            support@betnexa.gh
           </a>
           .
         </p>
