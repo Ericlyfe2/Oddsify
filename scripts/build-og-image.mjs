@@ -18,35 +18,35 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
     <radialGradient id="g" cx="80%" cy="100%" r="80%">
-      <stop offset="0%"  stop-color="#e8b94a" stop-opacity="0.28"/>
-      <stop offset="60%" stop-color="#e8b94a" stop-opacity="0.06"/>
-      <stop offset="100%" stop-color="#e8b94a" stop-opacity="0"/>
+      <stop offset="0%"  stop-color="#7ed957" stop-opacity="0.22"/>
+      <stop offset="60%" stop-color="#7ed957" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#7ed957" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <rect width="${W}" height="${H}" fill="#0a0a0a"/>
+  <rect width="${W}" height="${H}" fill="#ffffff"/>
   <rect width="${W}" height="${H}" fill="url(#g)"/>
 
-  <!-- Wordmark: O in gold, rest in cream, plus a small gold dot at baseline -->
+  <!-- Wordmark: Bet in dark ink, Nexa in brand green, plus a small green dot at baseline -->
   <g font-family="sans-serif" font-weight="800" letter-spacing="-4">
-    <text x="80" y="350" font-size="180" fill="#e8b94a">O</text>
-    <text x="200" y="350" font-size="180" fill="#f3e9cf">ddsify</text>
-    <circle cx="640" cy="345" r="14" fill="#e8b94a"/>
+    <text x="80" y="350" font-size="180" fill="#172117">Bet</text>
+    <text x="330" y="350" font-size="180" fill="#15803d">Nexa</text>
+    <circle cx="850" cy="345" r="14" fill="#15803d"/>
   </g>
 
   <!-- Tagline -->
-  <text x="80" y="420" font-family="sans-serif" font-weight="500" font-size="32" fill="#9c9277">
+  <text x="80" y="420" font-family="sans-serif" font-weight="500" font-size="32" fill="#657365">
     Premium Sports Betting · Ghana
   </text>
 
   <!-- 18+ chip bottom-left -->
   <g transform="translate(80, 530)">
-    <rect width="84" height="40" rx="20" fill="#161513" stroke="#e8b94a" stroke-opacity="0.5"/>
-    <text x="42" y="27" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16" fill="#e8b94a">18+</text>
+    <rect width="84" height="40" rx="20" fill="#f3fbf1" stroke="#15803d" stroke-opacity="0.5"/>
+    <text x="42" y="27" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16" fill="#15803d">18+</text>
   </g>
 
   <!-- License caption bottom-right -->
-  <text x="${W - 80}" y="555" text-anchor="end" font-family="sans-serif" font-size="18" fill="#5f5848">
+  <text x="${W - 80}" y="555" text-anchor="end" font-family="sans-serif" font-size="18" fill="#93a693">
     Licensed · Gaming Commission of Ghana
   </text>
 </svg>`;
