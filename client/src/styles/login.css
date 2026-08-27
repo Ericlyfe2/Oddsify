@@ -1,4 +1,4 @@
-/* Oddsify login / signup — dark centered layout */
+/* BetNexa login / signup — dark centered layout */
 
 .lp {
   --bg: #0d0d0d;
@@ -6,8 +6,9 @@
   --border: rgba(255, 255, 255, 0.08);
   --text: #f0f0f0;
   --text-dim: #888;
-  --accent: #16a34a;
-  --accent-dark: #c89000;
+  --accent: #7ed957;
+  --accent-dark: #5fb83a;
+  --accent-ink: #0b2e12;
   --danger: #ff3554;
 
   min-height: 100dvh;
@@ -318,8 +319,8 @@
 /* Submit button */
 .lp-submit {
   width: 100%;
-  background: linear-gradient(135deg, var(--accent), #e6a600);
-  color: #000;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: var(--accent-ink);
   font-weight: 800;
   font-size: 16px;
   border: 0;
@@ -402,11 +403,12 @@ html[data-theme='light'] .lp {
   --border: rgba(0, 0, 0, 0.10);
   --text: #111;
   --text-dim: #777;
-  --accent: #b8860b;
-  --accent-dark: #96700a;
+  --accent: #15803d;
+  --accent-dark: #0f6b32;
+  --accent-ink: #ffffff;
 }
 html[data-theme='light'] .lp-glow {
-  background: radial-gradient(circle, rgba(184, 134, 11, 0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(21, 128, 61, 0.06) 0%, transparent 70%);
 }
 html[data-theme='light'] .lp-country-drop {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);

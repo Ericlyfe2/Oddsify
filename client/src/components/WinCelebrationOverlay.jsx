@@ -104,7 +104,7 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
                 className="wco-burst-particle"
                 style={{
                   '--a': `${p * 45}deg`,
-                  '--c': ['#ffd76d', '#16a34a', '#ff9f1c', '#ffe28a', '#ffcc33', '#a8e6a3', '#d4a857', '#fff3b8'][p],
+                  '--c': ['#a8e6a3', '#16a34a', '#7ed957', '#15803d', '#a8e6a3', '#a8e6a3', '#16a34a', '#fff3b8'][p],
                 }}
               />
             ))}
@@ -122,16 +122,16 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
               '--d': `${Math.random() * 1.8}s`,
               '--r': `${Math.random() * 360}deg`,
               '--c': [
-                '#ffd76d',
-                '#16a34a',
-                '#ffd54f',
-                '#d4a857',
-                '#ffcc33',
-                '#ff9f1c',
                 '#a8e6a3',
-                '#ffe28a',
+                '#16a34a',
+                '#7ed957',
+                '#a8e6a3',
+                '#15803d',
+                '#7ed957',
+                '#a8e6a3',
+                '#16a34a',
                 '#ff5b78',
-                '#ffb347',
+                '#a8e6a3',
               ][i % 10],
               '--w': `${5 + Math.random() * 7}px`,
               '--h': `${8 + Math.random() * 12}px`,
@@ -181,7 +181,7 @@ export default function WinCelebrationOverlay({ wins = [], onClose, onViewSlip }
               '--x': `${20 + Math.random() * 60}%`,
               '--d': `${Math.random() * 2.5}s`,
               '--s': `${3 + Math.random() * 5}px`,
-              '--c': ['#ffd76d', '#ffc44d', '#fff3b8', '#f3a01a', '#ff9f1c'][i % 5],
+              '--c': ['#a8e6a3', '#7ed957', '#fff3b8', '#16a34a', '#a8e6a3'][i % 5],
             }}
           />
         ))}
@@ -337,7 +337,7 @@ const WCO_CSS = `
 
 .wco-bg {
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 40%, rgba(40, 20, 0, 0.92), rgba(0, 0, 0, 0.95));
+  background: radial-gradient(ellipse at 50% 40%, rgba(11, 46, 18, 0.92), rgba(0, 0, 0, 0.95));
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -357,7 +357,7 @@ const WCO_CSS = `
 
 .wco-sparkle-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 .wco-sparkle { position: absolute; top: var(--y); left: var(--x); width: var(--s); height: var(--s); animation: wcoSparkleAnim 2.2s ease-in-out var(--d) infinite; }
-.wco-sparkle::after { content: ''; display: block; width: 100%; height: 100%; background: #ffd76d; clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+.wco-sparkle::after { content: ''; display: block; width: 100%; height: 100%; background: #a8e6a3; clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
 
 .wco-card {
   position: relative; z-index: 2;
@@ -365,11 +365,11 @@ const WCO_CSS = `
   max-height: 100%;
   overflow-y: auto;
   background:
-    radial-gradient(600px 240px at 80% -10%, rgba(255,200,80,.14), transparent 60%),
-    linear-gradient(180deg, #1a0f00 0%, #0d0800 100%);
+    radial-gradient(600px 240px at 80% -10%, rgba(126,217,87,.14), transparent 60%),
+    linear-gradient(180deg, #0f1d12 0%, #08120a 100%);
   border-radius: 24px;
   padding: 28px 24px 24px;
-  box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(255,200,80,.15) inset;
+  box-shadow: 0 32px 96px rgba(0,0,0,.7), 0 0 0 1px rgba(126,217,87,.15) inset;
   font-family: 'Inter','Segoe UI',system-ui,sans-serif;
   text-align: center;
   animation: wcoCardIn .5s cubic-bezier(.18,.88,.36,1.2) both;
@@ -381,9 +381,9 @@ const WCO_CSS = `
 .wco-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .wco-badge {
   font-size: 10px; letter-spacing: .18em; font-weight: 800;
-  color: #ffd76d;
-  background: rgba(255,200,80,.1);
-  border: 1px solid rgba(255,200,80,.35);
+  color: #a8e6a3;
+  background: rgba(126,217,87,.1);
+  border: 1px solid rgba(126,217,87,.35);
   padding: 5px 10px; border-radius: 999px;
 }
 .wco-x {
@@ -425,7 +425,7 @@ const WCO_CSS = `
 .wco-wordmark-text {
   font-size: 22px; font-weight: 900;
   letter-spacing: -.02em;
-  color: #ffd76d;
+  color: #a8e6a3;
   text-shadow: 0 2px 12px rgba(126,217,87,.3);
 }
 
@@ -449,11 +449,11 @@ const WCO_CSS = `
   margin: 6px 0 2px;
   animation: wcoTitleIn .4s ease .5s both;
 }
-.wco-amount .wco-cur { font-size: 16px; font-weight: 700; color: rgba(255,200,80,.65); letter-spacing: .08em; }
+.wco-amount .wco-cur { font-size: 16px; font-weight: 700; color: rgba(126,217,87,.85); letter-spacing: .08em; }
 .wco-amount .wco-amt {
   font-size: 46px; font-weight: 900;
   letter-spacing: -.025em;
-  color: #ffd76d;
+  color: #a8e6a3;
   text-shadow: 0 6px 28px rgba(126,217,87,.35);
 }
 .wco-meta {
@@ -502,12 +502,12 @@ const WCO_CSS = `
 }
 .wco-stat .wco-lbl { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.42); }
 .wco-stat .wco-val { font-size: 14px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
-.wco-stat .wco-val-mono { font-family: 'JetBrains Mono','Roboto Mono',monospace; letter-spacing: .06em; color: #ffd76d; font-size: 13px; }
+.wco-stat .wco-val-mono { font-family: 'JetBrains Mono','Roboto Mono',monospace; letter-spacing: .06em; color: #a8e6a3; font-size: 13px; }
 .wco-stat .wco-val-id { font-family: 'JetBrains Mono','Roboto Mono',monospace; color: rgba(255,255,255,.6); font-size: 12px; }
 
 .wco-pager { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }
 .wco-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.25); border: none; padding: 0; cursor: pointer; transition: background .15s, transform .15s; }
-.wco-dot.active { background: #ffd76d; transform: scale(1.4); }
+.wco-dot.active { background: #a8e6a3; transform: scale(1.4); }
 
 .wco-actions {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -528,11 +528,11 @@ const WCO_CSS = `
 .wco-btn-ghost { background: rgba(255,255,255,.06); color: #fff; border: 1px solid rgba(255,255,255,.14); }
 .wco-btn-ghost:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); }
 .wco-btn-primary {
-  background: linear-gradient(135deg, #ffd76d 0%, #f3a01a 100%);
-  color: #2a1700;
-  box-shadow: 0 12px 28px rgba(246,162,0,.35);
+  background: linear-gradient(135deg, #a8e6a3 0%, #16a34a 100%);
+  color: #0b2e12;
+  box-shadow: 0 12px 28px rgba(22,163,74,.35);
 }
-.wco-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(246,162,0,.55); }
+.wco-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(22,163,74,.55); }
 
 @media (max-width: 380px) {
   .wco-card { padding: 22px 16px 18px; }

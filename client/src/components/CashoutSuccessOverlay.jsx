@@ -67,7 +67,7 @@ export default function CashoutSuccessOverlay({ bet, cashoutAmount, open, onClos
               '--x': `${Math.random() * 100}%`,
               '--d': `${Math.random() * 1.6}s`,
               '--r': `${Math.random() * 360}deg`,
-              '--c': ['#a8e6a3', '#7ed957', '#d4a72c', '#fff3b8', '#16a34a', '#b8860b', '#f3e9cf'][i % 7],
+              '--c': ['#a8e6a3', '#7ed957', '#16a34a', '#fff3b8', '#16a34a', '#15803d', '#f3e9cf'][i % 7],
               '--w': `${5 + Math.random() * 6}px`,
               '--h': `${8 + Math.random() * 12}px`,
               '--tx': `${-40 + Math.random() * 80}px`,
@@ -184,8 +184,8 @@ function TrophyBadge() {
         <defs>
           <linearGradient id="csoCup" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#fff3b8" />
-            <stop offset=".55" stopColor="#f3a01a" />
-            <stop offset="1" stopColor="#a86200" />
+            <stop offset=".55" stopColor="#7ed957" />
+            <stop offset="1" stopColor="#15803d" />
           </linearGradient>
         </defs>
         <path d="M14 12 H50 V30 C50 40 42 46 32 46 C22 46 14 40 14 30 Z" fill="url(#csoCup)" />
@@ -278,7 +278,7 @@ const CSO_CSS = `
   pointer-events: none;
   animation: csoGlow 2s ease-in-out infinite;
 }
-.cso-disc { position: relative; width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff3b8 0%, #7ed957 55%, #b8860b 100%); box-shadow: 0 14px 36px rgba(126, 217, 87,.35), 0 0 0 4px rgba(126, 217, 87,.18); animation: csoBounce 2.6s ease-in-out 1s infinite; }
+.cso-disc { position: relative; width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff3b8 0%, #7ed957 55%, #15803d 100%); box-shadow: 0 14px 36px rgba(126, 217, 87,.35), 0 0 0 4px rgba(126, 217, 87,.18); animation: csoBounce 2.6s ease-in-out 1s infinite; }
 .cso-disc::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(168, 230, 163,.5); opacity: 0; animation: csoRingPulse 2s ease-out .9s infinite; }
 
 .cso-title { margin: 10px 0 4px; font-size: 26px; font-weight: 900; letter-spacing: -.01em; animation: csoUp .4s ease .35s both; }
@@ -305,12 +305,12 @@ const CSO_CSS = `
 .cso-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; animation: csoUp .4s ease 1.05s both; }
 .cso-btn { padding: 12px 16px; border-radius: 12px; border: none; font-weight: 800; font-size: 13px; cursor: pointer; transition: transform .12s, box-shadow .15s, background .15s; font-family: inherit; }
 .cso-btn:active { transform: scale(.97); }
-.cso-btn-primary { background: linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%); color: #1a1300; box-shadow: 0 10px 24px rgba(126, 217, 87,.3); animation: csoBtnGlow 2.4s ease-in-out 1.6s infinite; }
+.cso-btn-primary { background: linear-gradient(135deg, #a8e6a3 0%, #16a34a 100%); color: #1a1300; box-shadow: 0 10px 24px rgba(126, 217, 87,.3); animation: csoBtnGlow 2.4s ease-in-out 1.6s infinite; }
 .cso-btn-primary:hover { transform: translateY(-1px); }
 .cso-btn-ghost { background: rgba(126, 217, 87,.06); color: #f3e9cf; border: 1px solid rgba(126, 217, 87,.2); }
 .cso-btn-ghost:hover { background: rgba(126, 217, 87,.12); border-color: rgba(126, 217, 87,.4); }
 
-.cso-countdown { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #a8e6a3, #b8860b); transform-origin: left; animation: csoCountdown 2.5s linear both; border-radius: 0 0 24px 24px; }
+.cso-countdown { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #a8e6a3, #16a34a); transform-origin: left; animation: csoCountdown 2.5s linear both; border-radius: 0 0 24px 24px; }
 
 @media (max-width: 380px) {
   .cso-card { padding: 22px 16px 18px; }

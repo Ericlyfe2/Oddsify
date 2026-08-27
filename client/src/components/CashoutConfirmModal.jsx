@@ -258,7 +258,7 @@ const CASHOUT_CONFIRM_CSS = `
 }
 .bv-cashout-btn-cancel:hover { background: rgba(126, 217, 87,.12); border-color: rgba(126, 217, 87,.4); }
 .bv-cashout-btn-confirm {
-  background: linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%);
+  background: linear-gradient(135deg, #a8e6a3 0%, #16a34a 100%);
   color: #1a1300;
   box-shadow: 0 10px 24px rgba(126, 217, 87,.3);
   animation: ccoBtnGlow 2.4s ease-in-out 1.2s infinite;

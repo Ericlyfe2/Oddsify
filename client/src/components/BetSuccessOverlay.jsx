@@ -33,7 +33,7 @@ const SHARE_PLATFORMS = {
   copy: { color: 'var(--accent)', hover: 'rgba(126, 217, 87,0.2)' },
 };
 
-const CONFETTI_COLORS = ['#a8e6a3', '#7ed957', '#d4a72c', '#fff3b8', '#16a34a', '#f3e9cf', '#f59e0b', '#ef4444', '#3b82f6', '#10b981'];
+const CONFETTI_COLORS = ['#a8e6a3', '#7ed957', '#16a34a', '#fff3b8', '#16a34a', '#f3e9cf', '#15803d', '#ef4444', '#3b82f6', '#10b981'];
 
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
@@ -687,7 +687,7 @@ export default function BetSuccessOverlay({
                   whileTap={{ scale: 0.96 }}
                   style={{
                     flex: 1, padding: '8px 12px', borderRadius: 10,
-                    background: 'linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%)',
+                    background: 'linear-gradient(135deg, #a8e6a3 0%, #16a34a 100%)',
                     color: '#1a1300', fontWeight: 700, fontSize: 12,
                     border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center',
@@ -853,7 +853,7 @@ export default function BetSuccessOverlay({
                   padding: '12px 16px', borderRadius: 12, border: 'none',
                   fontWeight: 700, fontSize: 13, letterSpacing: '0.02em',
                   cursor: 'pointer', fontFamily: 'inherit',
-                  background: 'linear-gradient(135deg, #a8e6a3 0%, #d4a72c 100%)',
+                  background: 'linear-gradient(135deg, #a8e6a3 0%, #16a34a 100%)',
                   color: '#1a1300',
                   gridColumn: '1 / -1',
                   boxShadow: '0 10px 24px rgba(126, 217, 87,0.3)',
@@ -899,7 +899,7 @@ export default function BetSuccessOverlay({
                 style={{
                   position: 'absolute', bottom: 0, left: 0, right: 0,
                   height: 3,
-                  background: 'linear-gradient(90deg, #a8e6a3, #b8860b)',
+                  background: 'linear-gradient(90deg, #a8e6a3, #16a34a)',
                   transformOrigin: 'left',
                   borderRadius: '0 0 24px 24px',
                 }}
