@@ -18,6 +18,19 @@ import { humanizePick } from '../../lib/marketNames.js';
 import { fetchMatchDetail, fetchMatchStats, fetchH2H } from '../../api/betApi.js';
 import { ensure1X2Order, sortOddsEntries } from '../../lib/marketUtils.js';
 
+/* ─── BetNexa mark — concentric-circle "target" icon. Same symbol as the
+   favicon and the admin sidebar so the brand reads as one system across
+   browser tab, storefront header, and admin. ───────────────────────── */
+export function BetNexaMark({ size = 22, color = 'var(--green-bright)' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" stroke={color} strokeWidth="2.2" />
+      <circle cx="11" cy="11" r="3.5" stroke={color} strokeWidth="1.8" />
+      <circle cx="11" cy="11" r="1.2" fill={color} />
+    </svg>
+  );
+}
+
 /* ─── BetNexa wordmark ─────────────────────────────────────── */
 export function BetNexaWordmark({ size = 22, color = 'var(--text)', accent = T.greenBright }) {
   return (
@@ -400,7 +413,10 @@ export function OddTopHeader({ user, onAuth, onSearch, onBalanceClick }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <BetNexaWordmark size={22} color="var(--text)" accent="var(--green-bright)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <BetNexaMark size={20} color="var(--green-bright)" />
+          <BetNexaWordmark size={22} color="var(--text)" accent="var(--green-bright)" />
+        </div>
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button

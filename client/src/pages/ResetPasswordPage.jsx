@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../providers/AccountProvider.jsx';
 import { autoFormatPhoneInput } from '../lib/phone.js';
+import { BetNexaMark } from '../components/odd/primitives.jsx';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ export default function ResetPasswordPage() {
       <div className="lp">
         <div className="lp-glow" />
         <div className="lp-brand">
+          <BetNexaMark size={30} color="var(--accent)" />
           <span className="lp-brand-text">BETNEXA</span>
         </div>
         <h1 className="lp-title">Password Reset</h1>
@@ -66,6 +68,7 @@ export default function ResetPasswordPage() {
     <div className="lp">
       <div className="lp-glow" />
       <div className="lp-brand">
+        <BetNexaMark size={30} color="var(--accent)" />
         <span className="lp-brand-text">BETNEXA</span>
       </div>
       <h1 className="lp-title">Enter Reset Code</h1>

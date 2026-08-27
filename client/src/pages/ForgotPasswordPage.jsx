@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '../providers/AccountProvider.jsx';
 import { parseIdentifier, autoFormatPhoneInput } from '../lib/phone.js';
 import { fetchAuthConfig } from '../api/betApi.js';
+import { BetNexaMark } from '../components/odd/primitives.jsx';
 
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
@@ -41,6 +42,7 @@ export default function ForgotPasswordPage() {
       <div className="lp">
         <div className="lp-glow" />
         <div className="lp-brand">
+          <BetNexaMark size={30} color="var(--accent)" />
           <span className="lp-brand-text">BETNEXA</span>
         </div>
         <h1 className="lp-title">Check Your Phone or Email</h1>
@@ -63,6 +65,7 @@ export default function ForgotPasswordPage() {
     <div className="lp">
       <div className="lp-glow" />
       <div className="lp-brand">
+        <BetNexaMark size={30} color="var(--accent)" />
         <span className="lp-brand-text">BETNEXA</span>
       </div>
       <h1 className="lp-title">Reset Your Password</h1>

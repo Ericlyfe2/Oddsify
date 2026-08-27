@@ -40,6 +40,9 @@
   position: relative;
   z-index: 1;
   margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .lp-brand-text {
   font-size: 32px;

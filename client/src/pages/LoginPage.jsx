@@ -13,6 +13,7 @@ import { useAccount, useToast } from '../providers/AccountProvider.jsx';
 import { COUNTRIES, countryByCode } from '../data/countries.js';
 import { parseIdentifier, autoFormatPhoneInput, E164_PLACEHOLDER, E164_HINT } from '../lib/phone.js';
 import { getDeviceId } from '../lib/device.js';
+import { BetNexaMark } from '../components/odd/primitives.jsx';
 
 function EyeIcon({ open }) {
   return open ? (
@@ -274,6 +275,7 @@ export default function LoginPage() {
       <div className="lp-glow" />
 
       <div className="lp-brand">
+        <BetNexaMark size={30} color="var(--accent)" />
         <span className="lp-brand-text">BETNEXA</span>
       </div>
 
