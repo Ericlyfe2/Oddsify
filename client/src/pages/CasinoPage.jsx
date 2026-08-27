@@ -71,7 +71,7 @@ function Spin2WinArt() {
       </defs>
       <g transform="translate(160 110)" filter="url(#s-shadow)">
         {/* Outer ring */}
-        <circle r="92" fill="#0b1410" stroke="#ffd166" strokeWidth="3" />
+        <circle r="92" fill="#0b1410" stroke="#7ed957" strokeWidth="3" />
         <circle r="92" fill="url(#s-felt)" />
         {/* Color segments (12 wedges alternating red/black with one green) */}
         {Array.from({ length: 12 }).map((_, i) => {
@@ -90,19 +90,19 @@ function Spin2WinArt() {
               key={i}
               d={`M0 0 L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`}
               fill={color}
-              stroke="#ffd166"
+              stroke="#7ed957"
               strokeWidth="1"
               opacity="0.92"
             />
           );
         })}
         {/* Hub */}
-        <circle r="34" fill="#0b1410" stroke="#ffd166" strokeWidth="2" />
+        <circle r="34" fill="#0b1410" stroke="#7ed957" strokeWidth="2" />
         <circle r="20" fill="#1f2937" />
         <text
           textAnchor="middle"
           y="6"
-          fill="#ffd166"
+          fill="#7ed957"
           fontSize="14"
           fontWeight="900"
           fontFamily="Bricolage Grotesque, sans-serif"
@@ -136,7 +136,7 @@ function RedBlackArt() {
       </defs>
       {/* Black card (back) */}
       <g transform="translate(170 30) rotate(14)" filter="url(#rb-shadow)">
-        <rect x="0" y="0" width="110" height="160" rx="14" fill="url(#rb-blk)" stroke="#ffd166" strokeWidth="2" />
+        <rect x="0" y="0" width="110" height="160" rx="14" fill="url(#rb-blk)" stroke="#7ed957" strokeWidth="2" />
         <text x="14" y="32" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">
           A
         </text>
@@ -169,7 +169,7 @@ function RedBlackArt() {
       </g>
       {/* Red card (front) */}
       <g transform="translate(50 50) rotate(-10)" filter="url(#rb-shadow)">
-        <rect x="0" y="0" width="110" height="160" rx="14" fill="url(#rb-red)" stroke="#ffd166" strokeWidth="2" />
+        <rect x="0" y="0" width="110" height="160" rx="14" fill="url(#rb-red)" stroke="#7ed957" strokeWidth="2" />
         <text x="14" y="32" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Bricolage Grotesque, sans-serif">
           A
         </text>
