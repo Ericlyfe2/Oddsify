@@ -17,7 +17,7 @@ const DRY_RUN = process.argv.includes('--dry-run');
 
 if (!process.env.DATABASE_URL) {
   console.error('FATAL: DATABASE_URL is not set.');
-  console.error('Pull it from Render → oddsify-api → Environment, then re-run.');
+  console.error('Pull it from Railway → the API service → Variables, then re-run.');
   process.exit(1);
 }
 
