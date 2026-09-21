@@ -17,14 +17,16 @@ import {
   IconKey,
 } from '../../components/admin/Icons.jsx';
 
-export default function AdminLogin() {
+export default function AdminLogin({ landing }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { admin, signIn, theme } = useAdmin();
+  // `landing` pins the destination (the /maintance entry point); otherwise ?next= wins.
+  const target = landing || params.get('next') || '/admin';
 
   useEffect(() => {
-    if (admin) navigate(params.get('next') || '/admin', { replace: true });
-  }, [admin, navigate, params]);
+    if (admin) navigate(target, { replace: true });
+  }, [admin, navigate, target]);
 
   const [step, setStep] = useState('credentials'); // 'credentials' | '2fa'
   const [email, setEmail] = useState('');
@@ -48,7 +50,7 @@ export default function AdminLogin() {
         setOk(`A 6-digit code was sent to ${res.email}.`);
       } else {
         signIn(res);
-        navigate(params.get('next') || '/admin', { replace: true });
+        navigate(target, { replace: true });
       }
     } catch (e) {
       setErr(e.message || 'Sign-in failed.');
@@ -64,7 +66,7 @@ export default function AdminLogin() {
     try {
       const res = await adminVerify2fa({ challenge, code });
       signIn(res);
-      navigate(params.get('next') || '/admin', { replace: true });
+      navigate(target, { replace: true });
     } catch (e) {
       setErr(e.message || 'Verification failed.');
     } finally {

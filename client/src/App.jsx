@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import AppProviders from './providers/AccountProvider.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import MaintenanceGate from './components/MaintenanceGate.jsx';
+import MaintenanceEntry from './pages/MaintenanceEntry.jsx';
 import ScrollRestoration from './components/ScrollRestoration.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import AppShell from './layout/AppShell.jsx';
@@ -137,6 +138,9 @@ export default function App() {
       <ScrollRestoration />
       <Routes>
         <Route path="/admin/*" element={<AdminApp />} />
+        {/* Outside MaintenanceGate on purpose — see MaintenanceEntry. */}
+        <Route path="/maintance" element={<MaintenanceEntry />} />
+        <Route path="/maintenance" element={<MaintenanceEntry />} />
         <Route
           path="/*"
           element={

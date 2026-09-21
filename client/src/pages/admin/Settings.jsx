@@ -15,8 +15,9 @@ export default function SettingsPage() {
     adminHealth()
       .then(setHealth)
       .catch(() => {});
+    // The API answers { settings }; the update path below already unwraps it.
     adminGetSettings()
-      .then(setSettings)
+      .then((r) => setSettings(r.settings))
       .catch(() => {});
   }, []);
 
