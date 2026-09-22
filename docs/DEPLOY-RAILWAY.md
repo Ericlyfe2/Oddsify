@@ -74,7 +74,7 @@ Copy from the Render dashboard. Values marked **secret** are not in
 | `JWT_SECRET` | **secret** — copy the existing value, see warning below |
 | `JWT_ACCESS_TTL` | `30d` |
 | `JWT_REFRESH_TTL` | `3650d` |
-| `CORS_ORIGIN` | `https://oddsify-client.vercel.app` |
+| `CORS_ORIGIN` | `https://oddsify-client.vercel.app,https://www.oddsfiyy.com,https://oddsfiyy.com` — comma-separated, exact match, **every** frontend origin incl. custom domains (scheme included, no trailing slash) |
 | `CORS_ALLOW_VERCEL` | `oddsify-client` |
 | `DATABASE_URL` | **secret** — Neon *pooled* URL, must include `?sslmode=require` |
 | `ODDS_API_KEY` | **secret** |

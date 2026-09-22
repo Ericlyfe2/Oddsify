@@ -9,9 +9,9 @@
  *   - maintenance on, signed out                 → admin sign-in, then /admin/settings
  *   - maintenance off (or status unreachable)    → the normal storefront
  */
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
-import { API_ORIGIN } from '../api/apiBase.js';
+import useMaintenanceStatus from '../hooks/useMaintenanceStatus.js';
 import { AdminProvider, useAdmin } from '../providers/AdminProvider.jsx';
 
 const AdminLogin = lazy(() => import('./admin/AdminLogin.jsx'));
@@ -27,19 +27,7 @@ function Entry() {
 }
 
 export default function MaintenanceEntry() {
-  // null = still checking
-  const [maintenance, setMaintenance] = useState(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetch(`${API_ORIGIN}/api/settings/public`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s) => alive && setMaintenance(!!s?.maintenance))
-      .catch(() => alive && setMaintenance(false));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const maintenance = useMaintenanceStatus();
 
   if (maintenance === null) return BLANK;
   if (!maintenance) return <Navigate to="/" replace />;
