@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch-path=src src/index.js",
     "start": "node src/index.js",
-    "test": "node --test test/*.test.js"
+    "pretest": "node -e \"require('fs').rmSync(require('path').join(require('os').tmpdir(),'oddsify-test-data'),{recursive:true,force:true})\"",
+    "test": "cross-env NODE_ENV=test node --test test/*.test.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

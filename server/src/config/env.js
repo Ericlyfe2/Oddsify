@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -70,9 +71,18 @@ export const CORS_ORIGINS = (env.CORS_ORIGIN || '')
 // explicit entry in CORS_ORIGIN. Leave unset if not deploying to Vercel.
 export const CORS_ALLOW_VERCEL = (env.CORS_ALLOW_VERCEL || '').trim();
 
+// Tests run against a disposable temp directory, never the real server/data —
+// otherwise `npm test` permanently writes fixtures/users/bets that leak into
+// whatever a developer is running locally (see server/test/*.test.js, which
+// hit createStore() directly with no cleanup).
+const dataDir =
+  env.NODE_ENV === 'test'
+    ? path.join(os.tmpdir(), 'oddsify-test-data')
+    : path.resolve(__dirname, '../../data');
+
 export const PATHS = {
   root: path.resolve(__dirname, '../..'),
-  data: path.resolve(__dirname, '../../data'),
+  data: dataDir,
   clientDist: path.resolve(__dirname, '../../../client/dist'),
 };
 
