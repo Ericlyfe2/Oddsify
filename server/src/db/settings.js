@@ -34,5 +34,10 @@ export function updateSettings(patch) {
   const current = store.get('platform') || {};
   const merged = { ...current, ...patch };
   store.set('platform', merged);
-  return merged;
+  // Apply defaults before returning — same as getSettings() — so the PUT
+  // response reflects every feature's real state, not just the keys that
+  // happen to be persisted. Without this, saving one toggle made every
+  // never-explicitly-set feature flash "OFF" in the admin UI until the next
+  // reload re-fetched via getSettings().
+  return { ...DEFAULTS, ...merged };
 }
