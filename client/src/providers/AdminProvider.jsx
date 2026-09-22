@@ -148,17 +148,20 @@ export function AdminProvider({ children }) {
   return <AdminCtx.Provider value={value}>{children}</AdminCtx.Provider>;
 }
 
-/** Guard component to be used around protected routes. */
-export function AdminGuard({ children }) {
+/**
+ * Guard component to be used around protected routes. Signed-out visitors are
+ * sent to /login, unless a `signedOut` element is given to render instead.
+ */
+export function AdminGuard({ children, signedOut }) {
   const { admin, loading } = useAdmin();
   const navigate = useNavigate();
   const loc = useLocation();
 
   useEffect(() => {
-    if (!loading && !admin) {
+    if (!loading && !admin && !signedOut) {
       navigate(`/login?next=${encodeURIComponent(loc.pathname)}`, { replace: true });
     }
-  }, [admin, loading, navigate, loc.pathname]);
+  }, [admin, loading, signedOut, navigate, loc.pathname]);
 
   if (loading) {
     return (
@@ -178,6 +181,6 @@ export function AdminGuard({ children }) {
       </div>
     );
   }
-  if (!admin) return null;
+  if (!admin) return signedOut ?? null;
   return children;
 }

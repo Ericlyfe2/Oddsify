@@ -23,6 +23,7 @@ import CodeHubPage from './pages/CodeHubPage.jsx';
 
 import { AdminProvider, AdminGuard } from './providers/AdminProvider.jsx';
 import AdminShell from './layout/AdminShell.jsx';
+import AdminSignedOut from './pages/admin/AdminSignedOut.jsx';
 import {
   LiveBettingPage,
   AuditLogsPage,
@@ -79,11 +80,11 @@ function AdminApp() {
     <AdminProvider>
       <Suspense fallback={PAGE_FALLBACK}>
         <Routes>
-          <Route path="login" element={<Navigate to="/login?next=/admin" replace />} />
+          <Route path="login" element={<AdminSignedOut landing="/admin" />} />
           <Route path="signup" element={<AdminSignup />} />
           <Route
             element={
-              <AdminGuard>
+              <AdminGuard signedOut={<AdminSignedOut />}>
                 <AdminShell />
               </AdminGuard>
             }
